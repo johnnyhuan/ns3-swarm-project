@@ -227,6 +227,11 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < numNodes; i++) {
         Ptr<LrWpanNetDevice> dev = DynamicCast<LrWpanNetDevice>(devices.Get(i));
         
+        // 必須設定 Extended Address (64-bit)，這是 ns-3 lr-wpan 的強制規定
+        char extMacStr[32];
+        snprintf(extMacStr, sizeof(extMacStr), "00:00:00:00:00:00:00:%02x", i);
+        dev->GetMac()->SetExtendedAddress(Mac64Address(extMacStr));
+        
         // 設定 Short Address (例如 "00:00", "00:01", "00:02"...)
         char macStr[16];
         snprintf(macStr, sizeof(macStr), "00:%02x", i);

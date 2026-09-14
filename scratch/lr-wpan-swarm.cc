@@ -165,9 +165,9 @@ private:
         }
 
         // 排程階段二的各個 Data Slot 動作
-        double phase2StartUs = NUM_MICRO_SLOTS * MICRO_SLOT_US + GAP_US;
+        // ComputeSchedule() 本身已經在 phase2StartUs 執行，所以只需加上 i * DATA_SLOT_US
         for (int i = 0; i < NUM_DATA_SLOTS; i++) {
-            Simulator::Schedule(MicroSeconds(phase2StartUs + i * DATA_SLOT_US), &SwarmSchedulerApp::ExecuteDataSlot, this, i);
+            Simulator::Schedule(MicroSeconds(i * DATA_SLOT_US), &SwarmSchedulerApp::ExecuteDataSlot, this, i);
         }
     }
 

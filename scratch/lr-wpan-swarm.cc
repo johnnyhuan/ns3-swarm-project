@@ -17,8 +17,8 @@ NS_LOG_COMPONENT_DEFINE("LrWpanSwarm");
 const uint32_t MINI_BEACON_SIZE = 4;
 const uint32_t DATA_PACKET_SIZE = 50;
 
-const double CYCLE_MS = 11.0;
-const int NUM_MICRO_SLOTS = 3;  // 3 架飛機，3 個微時槽
+const double CYCLE_MS = 14.0;
+const int NUM_MICRO_SLOTS = 6;  // 6 架飛機，6 個微時槽
 const double MICRO_SLOT_US = 1000.0; // 給 beacon 1ms 絕對夠 (4B payload 實際發送約 0.8ms)
 const double GAP_US = 500.0; 
 // 50B 的 MAC+PHY 負載約需 2.27ms，加上 guard time 抓 2.5ms
@@ -143,7 +143,7 @@ private:
         }
 
         // 標記本機發射 (TX)
-        int mySlot = m_id % NUM_DATA_SLOTS;
+        int mySlot = (m_id + (m_id / NUM_DATA_SLOTS) * m_epoch) % NUM_DATA_SLOTS;
         int myCh = (m_id * 7 + m_epoch) % NUM_DATA_CHANNELS + 12;
         m_schedule[mySlot].action = ScheduleSlot::TX;
         m_schedule[mySlot].channel = myCh;
@@ -152,7 +152,7 @@ private:
         int assigned = 0;
         for (auto& n : m_monitorList) {
             if (assigned >= NUM_DATA_SLOTS - 1) break; // 最多聽 N-1 個
-            int nSlot = n.id % NUM_DATA_SLOTS;
+            int nSlot = (n.id + (n.id / NUM_DATA_SLOTS) * m_epoch) % NUM_DATA_SLOTS;
             int nCh = (n.id * 7 + m_epoch) % NUM_DATA_CHANNELS + 12;
 
             if (nSlot == mySlot) continue; // 時槽與本機發射重疊，無法分身
@@ -220,8 +220,7 @@ int main(int argc, char *argv[]) {
     // LogComponentEnable("LrWpanCsmaCa", LOG_LEVEL_ALL); // 會觸發 ns-3 內部 bug (m_mac 為空時印 log 導致 crash)
     LogComponentEnable("LrWpanPhy", LOG_LEVEL_ALL);
 
-    int numNodes = 3; // 臨時改為 3 架無人機，排除時槽重疊的變因
-
+    int numNodes = 6;
     NodeContainer nodes;
     nodes.Create(numNodes);
 

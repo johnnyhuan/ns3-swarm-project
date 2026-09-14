@@ -17,10 +17,10 @@ NS_LOG_COMPONENT_DEFINE("LrWpanSwarm");
 const uint32_t MINI_BEACON_SIZE = 4;
 const uint32_t DATA_PACKET_SIZE = 50;
 
-const double CYCLE_MS = 14.0;
+const double CYCLE_MS = 18.0;
 const int NUM_MICRO_SLOTS = 6;  // 6 架飛機，6 個微時槽
-const double MICRO_SLOT_US = 1000.0; // 給 beacon 1ms 絕對夠 (4B payload 實際發送約 0.8ms)
-const double GAP_US = 500.0; 
+const double MICRO_SLOT_US = 1500.0; // 給 beacon 1.5ms，避免初次啟動延遲與 CCA 造成的極限重疊 (992us)
+const double GAP_US = 1000.0; 
 // 50B 的 MAC+PHY 負載約需 2.27ms，加上 guard time 抓 2.5ms
 const int NUM_DATA_SLOTS = 3;
 const double DATA_SLOT_US = 2500.0; 

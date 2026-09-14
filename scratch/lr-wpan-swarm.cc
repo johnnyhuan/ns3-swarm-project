@@ -57,9 +57,11 @@ public:
         csma->SetMacMaxCSMABackoffs(0);
         mac->SetCsmaCa(csma);
         csma->SetMac(mac); // 必須把 MAC 的指標也設給 CSMA，否則底層發送會出現 null pointer crash
-        
         // 設定統一的 PAN ID，避免預設 0xFFFF 被當成未初始化而濾除
         mac->SetPanId(1);
+        
+        // 必須開啟閒置時接收，否則 PHY 預設會處於 TRX_OFF 狀態，完全聽不到封包！
+        mac->SetRxOnWhenIdle(true);
 
         // 掛載接收回呼，獲取 RSSI
         mac->SetMcpsDataIndicationCallback(MakeCallback(&SwarmSchedulerApp::ReceivePacket, this));

@@ -174,7 +174,7 @@ private:
     }
 
     void DataConfirm(McpsDataConfirmParams params) {
-        if (params.m_status != LrWpanMacStatus::SUCCESS) {
+        if (params.m_status != MacStatus::SUCCESS) {
             std::cout << "[Epoch " << std::setw(3) << m_epoch << " | " 
                       << std::fixed << std::setprecision(2) << Simulator::Now().GetMilliSeconds() << " ms] "
                       << "Drone " << (int)m_id << " TX Failed! Status: " << (int)params.m_status << std::endl;

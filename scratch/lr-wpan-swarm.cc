@@ -58,6 +58,9 @@ public:
         mac->SetCsmaCa(csma);
         csma->SetMac(mac); // 必須把 MAC 的指標也設給 CSMA，否則底層發送會出現 null pointer crash
         
+        // 設定統一的 PAN ID，避免預設 0xFFFF 被當成未初始化而濾除
+        mac->SetPanId(1);
+
         // 掛載接收回呼，獲取 RSSI
         mac->SetMcpsDataIndicationCallback(MakeCallback(&SwarmSchedulerApp::ReceivePacket, this));
     }
@@ -86,7 +89,7 @@ private:
         McpsDataRequestParams params;
         params.m_srcAddrMode = SHORT_ADDR;
         params.m_dstAddrMode = SHORT_ADDR;
-        params.m_dstPanId = 0;
+        params.m_dstPanId = 1; // 必須與接收端相同
         // 使用 Broadcast Address，確保所有人都能收到，免去 Promiscuous 模式設定
         params.m_dstAddr = Mac16Address("FF:FF"); 
         params.m_msduHandle = 0;

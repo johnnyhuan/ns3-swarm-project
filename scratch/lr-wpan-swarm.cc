@@ -69,6 +69,7 @@ public:
     }
 
     void StartApplication() override {
+        std::cout << "Drone " << (int)m_id << " StartApplication called!" << std::endl;
         ScheduleCycle();
     }
     
@@ -88,6 +89,7 @@ private:
     }
 
     void SendPacket(uint32_t size) {
+        std::cout << "[Time " << Simulator::Now().GetMilliSeconds() << "ms] Drone " << (int)m_id << " calling SendPacket (" << size << "B)..." << std::endl;
         Ptr<Packet> p = Create<Packet>(size);
         McpsDataRequestParams params;
         params.m_srcAddrMode = SHORT_ADDR;

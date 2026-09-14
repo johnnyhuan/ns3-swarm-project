@@ -168,7 +168,9 @@ private:
 
     void ReceivePacket(McpsDataIndicationParams params, Ptr<Packet> p) {
         // 從 Short Address 解析出 Drone ID (例如 00:03 -> ID 3)
-        uint8_t srcId = params.m_srcAddr.GetAddress()[1]; 
+        uint8_t addrBuffer[2];
+        params.m_srcAddr.CopyTo(addrBuffer);
+        uint8_t srcId = addrBuffer[1];
         int8_t rssi = params.m_rssi;
 
         if (p->GetSize() == MINI_BEACON_SIZE) {

@@ -210,6 +210,10 @@ int main(int argc, char *argv[]) {
     CommandLine cmd;
     cmd.Parse(argc, argv);
 
+    LogComponentEnable("LrWpanMac", LOG_LEVEL_ALL);
+    LogComponentEnable("LrWpanCsmaCa", LOG_LEVEL_ALL);
+    LogComponentEnable("LrWpanPhy", LOG_LEVEL_ALL);
+
     int numNodes = 3; // 臨時改為 3 架無人機，排除時槽重疊的變因
 
     NodeContainer nodes;

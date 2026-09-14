@@ -56,6 +56,7 @@ public:
         csma->SetMacMinBE(0);
         csma->SetMacMaxCSMABackoffs(0);
         mac->SetCsmaCa(csma);
+        csma->SetMac(mac); // 必須把 MAC 的指標也設給 CSMA，否則底層發送會出現 null pointer crash
         
         // 掛載接收回呼，獲取 RSSI
         mac->SetMcpsDataIndicationCallback(MakeCallback(&SwarmSchedulerApp::ReceivePacket, this));

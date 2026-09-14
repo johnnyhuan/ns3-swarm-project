@@ -9,6 +9,7 @@
 #include <iomanip>
 
 using namespace ns3;
+using namespace ns3::lrwpan;
 
 NS_LOG_COMPONENT_DEFINE("LrWpanSwarm");
 

@@ -56,7 +56,13 @@ public:
         csma->SetMacMinBE(0);
         csma->SetMacMaxCSMABackoffs(0);
         mac->SetCsmaCa(csma);
-        csma->SetMac(mac); // 必須把 MAC 的指標也設給 CSMA，否則底層發送會出現 null pointer crash
+        csma->SetMac(mac); // 必須把 MAC 的指標也設給 CSMA
+        
+        // 【極度關鍵】手動替換 CSMA 之後，必須重新綁定 MAC 狀態機與 PHY 的 CCA 回呼！
+        // 否則 CSMA 呼叫空回呼會直接 null pointer crash，或者 PHY 找不到正確的 CSMA 來回報 CCA！
+        csma->SetLrWpanMacStateCallback(MakeCallback(&LrWpanMac::SetLrWpanMacState, mac));
+        m_device->GetPhy()->SetPlmeCcaConfirmCallback(MakeCallback(&LrWpanCsmaCa::PlmeCcaConfirm, csma));
+
         // 設定統一的 PAN ID，避免預設 0xFFFF 被當成未初始化而濾除
         mac->SetPanId(1);
         

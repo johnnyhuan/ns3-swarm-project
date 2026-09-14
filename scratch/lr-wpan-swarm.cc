@@ -218,9 +218,10 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < numNodes; i++) {
         Ptr<LrWpanNetDevice> dev = DynamicCast<LrWpanNetDevice>(devices.Get(i));
         
-        // 設定 Short Address (例如 00:00, 00:01, 00:02...)
-        uint8_t macAddr[2] = { 0x00, (uint8_t)i };
-        dev->GetMac()->SetShortAddress(Mac16Address(macAddr));
+        // 設定 Short Address (例如 "00:00", "00:01", "00:02"...)
+        char macStr[16];
+        snprintf(macStr, sizeof(macStr), "00:%02x", i);
+        dev->GetMac()->SetShortAddress(Mac16Address(macStr));
 
         Ptr<SwarmSchedulerApp> app = CreateObject<SwarmSchedulerApp>();
         app->Setup(dev, i);

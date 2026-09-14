@@ -65,6 +65,7 @@ public:
 
         // 掛載接收回呼，獲取 RSSI
         mac->SetMcpsDataIndicationCallback(MakeCallback(&SwarmSchedulerApp::ReceivePacket, this));
+        mac->SetMcpsDataConfirmCallback(MakeCallback(&SwarmSchedulerApp::DataConfirm, this));
     }
 
     void StartApplication() override {
@@ -172,12 +173,25 @@ private:
         }
     }
 
+    void DataConfirm(McpsDataConfirmParams params) {
+        if (params.m_status != LrWpanMacStatus::SUCCESS) {
+            std::cout << "[Epoch " << std::setw(3) << m_epoch << " | " 
+                      << std::fixed << std::setprecision(2) << Simulator::Now().GetMilliSeconds() << " ms] "
+                      << "Drone " << (int)m_id << " TX Failed! Status: " << (int)params.m_status << std::endl;
+        }
+    }
+
     void ReceivePacket(McpsDataIndicationParams params, Ptr<Packet> p) {
         // 從 Short Address 解析出 Drone ID (例如 00:03 -> ID 3)
         uint8_t addrBuffer[2];
         params.m_srcAddr.CopyTo(addrBuffer);
         uint8_t srcId = addrBuffer[1];
         int8_t rssi = params.m_rssi;
+
+        std::cout << "[Epoch " << std::setw(3) << m_epoch << " | " 
+                  << std::fixed << std::setprecision(2) << Simulator::Now().GetMilliSeconds() << " ms] "
+                  << "Drone " << (int)m_id << " 收到來自 Drone " << (int)srcId 
+                  << " 的封包, 大小: " << p->GetSize() << "B, RSSI: " << (int)rssi << " dBm" << std::endl;
 
         if (p->GetSize() == MINI_BEACON_SIZE) {
             m_monitorList.push_back({srcId, rssi, m_epoch});
@@ -194,7 +208,7 @@ int main(int argc, char *argv[]) {
     CommandLine cmd;
     cmd.Parse(argc, argv);
 
-    int numNodes = 6; // 建立 6 架無人機進行驗證
+    int numNodes = 3; // 臨時改為 3 架無人機，排除時槽重疊的變因
 
     NodeContainer nodes;
     nodes.Create(numNodes);

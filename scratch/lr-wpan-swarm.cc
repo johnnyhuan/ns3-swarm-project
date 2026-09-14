@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
     cmd.Parse(argc, argv);
 
     LogComponentEnable("LrWpanMac", LOG_LEVEL_ALL);
-    LogComponentEnable("LrWpanCsmaCa", LOG_LEVEL_ALL);
+    // LogComponentEnable("LrWpanCsmaCa", LOG_LEVEL_ALL); // 會觸發 ns-3 內部 bug (m_mac 為空時印 log 導致 crash)
     LogComponentEnable("LrWpanPhy", LOG_LEVEL_ALL);
 
     int numNodes = 3; // 臨時改為 3 架無人機，排除時槽重疊的變因

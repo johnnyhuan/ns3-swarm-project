@@ -7,6 +7,7 @@
 #include <vector>
 #include <algorithm>
 #include <iomanip>
+#include <map>
 
 using namespace ns3;
 using namespace ns3::lrwpan;
@@ -14,19 +15,21 @@ using namespace ns3::lrwpan;
 NS_LOG_COMPONENT_DEFINE("LrWpanSwarm");
 
 // --- 系統常數設定 ---
-const uint32_t MINI_BEACON_SIZE = 2; // 壓縮為 2 Bytes
+const uint32_t MINI_BEACON_SIZE = 2; 
 const uint32_t DATA_PACKET_SIZE = 50;
 
 const double CYCLE_MS = 33.5;
-const double PHASE1_DURATION_US = 15000.0; // 給 beacon 隨機競爭 15ms
+const double PHASE1_DURATION_US = 15000.0; 
 const double GAP_US = 1000.0; 
 const int NUM_DATA_SLOTS = 7;
-const int NUM_DATA_CHANNELS = 3; // 對應 Ch 12, 13, 14
+const int NUM_DATA_CHANNELS = 3; 
 const double DATA_SLOT_US = 2500.0; 
 
 const uint8_t BROADCAST_CHANNEL = 11;
 
-// 鄰機資訊結構體
+// 全域 SRF 統計
+static int g_totalDataPacketsReceived = 0;
+
 struct NeighborInfo {
     uint8_t id;
     int8_t rssi;
@@ -35,7 +38,6 @@ struct NeighborInfo {
     uint8_t claimedChannel;
 };
 
-// 時槽排程結構體
 struct ScheduleSlot {
     enum Action { IDLE, TX, RX } action;
     uint8_t channel;
@@ -44,7 +46,7 @@ struct ScheduleSlot {
 
 class SwarmSchedulerApp : public Application {
 public:
-    SwarmSchedulerApp() : m_epoch(0), m_myClaimedSlot(0), m_myClaimedChannel(0) {}
+    SwarmSchedulerApp() : m_epoch(0), m_myClaimedSlot(0), m_myClaimedChannel(0), m_topologyMatchCount(0), m_topologyCheckCount(0) {}
 
     void Setup(Ptr<LrWpanNetDevice> dev, uint8_t id) {
         m_device = dev;
@@ -52,8 +54,8 @@ public:
         
         Ptr<LrWpanMac> mac = m_device->GetMac();
         Ptr<LrWpanCsmaCa> csma = CreateObject<LrWpanCsmaCa>();
-        csma->SetMacMinBE(0); // 降低退避延遲
-        csma->SetMacMaxCSMABackoffs(4); // 恢復 CSMA 退避以支援隨機競爭
+        csma->SetMacMinBE(0); 
+        csma->SetMacMaxCSMABackoffs(4); 
         mac->SetCsmaCa(csma);
         csma->SetMac(mac);
         
@@ -65,10 +67,14 @@ public:
 
         mac->SetMcpsDataIndicationCallback(MakeCallback(&SwarmSchedulerApp::ReceivePacket, this));
         mac->SetMcpsDataConfirmCallback(MakeCallback(&SwarmSchedulerApp::DataConfirm, this));
+        
+        // 安排在模擬結束前一刻印出報表
+        Simulator::Schedule(Seconds(0.999), &SwarmSchedulerApp::PrintMetrics, this);
     }
 
     void StartApplication() override {
-        std::cout << "Drone " << (int)m_id << " StartApplication called!" << std::endl;
+        // 減少 Log 輸出，避免洗版
+        if (m_id == 0) std::cout << "All Drones StartApplication called! Running for 1.0s..." << std::endl;
         ScheduleCycle();
     }
     
@@ -82,6 +88,18 @@ private:
     uint8_t m_myClaimedChannel;
     std::vector<NeighborInfo> m_monitorList;
     ScheduleSlot m_schedule[NUM_DATA_SLOTS];
+
+    // 數據統計變數
+    std::map<uint8_t, int> m_beaconReceivedCount;
+    std::map<uint8_t, int> m_dataReceivedCount;
+    std::map<uint8_t, double> m_lastDataTime;
+    std::map<uint8_t, double> m_sumIat;
+    std::map<uint8_t, int> m_countIat;
+    std::map<uint8_t, double> m_maxIat;
+    
+    std::vector<uint8_t> m_lastScheduledRx;
+    int m_topologyMatchCount;
+    int m_topologyCheckCount;
 
     void SwitchChannel(uint8_t ch) {
         Ptr<PhyPibAttributes> attrs = Create<PhyPibAttributes>();
@@ -105,19 +123,13 @@ private:
         m_epoch++;
         m_monitorList.clear();
 
-        // 階段一：切換至廣播頻道
         SwitchChannel(BROADCAST_CHANNEL);
         
-        // 隨機抽選 0 ~ (15ms - 2ms) 作為發送時間
         Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
         double randomDelayUs = uv->GetValue(0, PHASE1_DURATION_US - 2000.0);
         
         Simulator::Schedule(MicroSeconds(randomDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
-        
-        // 安排運算間隔
         Simulator::Schedule(MicroSeconds(PHASE1_DURATION_US + GAP_US), &SwarmSchedulerApp::ComputeSchedule, this);
-        
-        // 安排下一次循環
         Simulator::Schedule(MilliSeconds(CYCLE_MS), &SwarmSchedulerApp::ScheduleCycle, this);
     }
 
@@ -153,18 +165,9 @@ private:
         m_myClaimedSlot = bestOptions[pickIdx].first;
         m_myClaimedChannel = bestOptions[pickIdx].second;
 
-        // 位元封裝 (Bit-packing) 到 2 Bytes
         uint16_t payload = (m_id & 0x1F) | ((m_myClaimedSlot & 0x07) << 5) | ((m_myClaimedChannel & 0x03) << 8);
-        uint8_t buffer[2];
-        buffer[0] = payload & 0xFF;
-        buffer[1] = (payload >> 8) & 0xFF;
-        
+        uint8_t buffer[2] = { (uint8_t)(payload & 0xFF), (uint8_t)((payload >> 8) & 0xFF) };
         Ptr<Packet> p = Create<Packet>(buffer, 2);
-        
-        std::cout << "[Epoch " << std::setw(3) << m_epoch << " | "
-                  << std::fixed << std::setprecision(2) << Simulator::Now().GetMilliSeconds() 
-                  << "ms] Drone " << (int)m_id << " 宣告 Slot: " << (int)m_myClaimedSlot 
-                  << ", Ch: " << (int)(m_myClaimedChannel + 12) << " (Cost: " << minCost << ")" << std::endl;
                   
         SendPacket(MINI_BEACON_SIZE, p);
     }
@@ -182,6 +185,7 @@ private:
         m_schedule[m_myClaimedSlot].channel = m_myClaimedChannel + 12;
 
         int assigned = 0;
+        m_lastScheduledRx.clear();
         for (auto& n : m_monitorList) {
             if (assigned >= 5) break; 
             if (n.claimedSlot == m_myClaimedSlot) continue; 
@@ -190,8 +194,33 @@ private:
             m_schedule[n.claimedSlot].action = ScheduleSlot::RX;
             m_schedule[n.claimedSlot].channel = n.claimedChannel + 12;
             m_schedule[n.claimedSlot].targetId = n.id;
+            m_lastScheduledRx.push_back(n.id);
             assigned++;
         }
+
+        // 上帝視角：計算拓樸準確度
+        Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
+        std::vector<std::pair<uint8_t, double>> godDistances;
+        for (uint32_t i = 0; i < NodeList::GetNodeNum(); i++) {
+            if (i == m_id) continue;
+            Ptr<MobilityModel> otherMobility = NodeList::GetNode(i)->GetObject<MobilityModel>();
+            double dist = myMobility->GetDistanceFrom(otherMobility);
+            godDistances.push_back({i, dist});
+        }
+        std::sort(godDistances.begin(), godDistances.end(), [](const auto& a, const auto& b) {
+            return a.second < b.second;
+        });
+
+        int match = 0;
+        int expectedTop = std::min(5, (int)godDistances.size());
+        for (int i = 0; i < expectedTop; i++) {
+            uint8_t target = godDistances[i].first;
+            if (std::find(m_lastScheduledRx.begin(), m_lastScheduledRx.end(), target) != m_lastScheduledRx.end()) {
+                match++;
+            }
+        }
+        m_topologyMatchCount += match;
+        m_topologyCheckCount += expectedTop;
 
         for (int i = 0; i < NUM_DATA_SLOTS; i++) {
             Simulator::Schedule(MicroSeconds(i * DATA_SLOT_US), &SwarmSchedulerApp::ExecuteDataSlot, this, i);
@@ -210,11 +239,7 @@ private:
     }
 
     void DataConfirm(McpsDataConfirmParams params) {
-        if (params.m_status != MacStatus::SUCCESS) {
-            std::cout << "[Epoch " << std::setw(3) << m_epoch << " | " 
-                      << std::fixed << std::setprecision(2) << Simulator::Now().GetMilliSeconds() << " ms] "
-                      << "Drone " << (int)m_id << " TX Failed! Status: " << (int)params.m_status << std::endl;
-        }
+        // 隱藏錯誤 Log，保持報表整潔
     }
 
     void ReceivePacket(McpsDataIndicationParams params, Ptr<Packet> p) {
@@ -230,26 +255,69 @@ private:
             uint8_t claimedChannel = (payload >> 8) & 0x03;
             
             m_monitorList.push_back({senderId, rssi, m_epoch, claimedSlot, claimedChannel});
+            m_beaconReceivedCount[senderId]++;
         } else if (p->GetSize() == DATA_PACKET_SIZE) {
             uint8_t addrBuffer[2];
             params.m_srcAddr.CopyTo(addrBuffer);
             uint8_t srcId = addrBuffer[1];
             
-            std::cout << "[Epoch " << std::setw(3) << m_epoch << " | " 
-                      << std::fixed << std::setprecision(2) << Simulator::Now().GetMilliSeconds() << " ms] "
-                      << "Drone " << (int)m_id << " 成功收到 Drone " << (int)srcId 
-                      << " 的 50B 資料 (RSSI: " << (int)rssi << " dBm)" << std::endl;
+            m_dataReceivedCount[srcId]++;
+            g_totalDataPacketsReceived++;
+            
+            double now = Simulator::Now().GetMilliSeconds();
+            if (m_lastDataTime.find(srcId) != m_lastDataTime.end()) {
+                double iat = now - m_lastDataTime[srcId];
+                m_sumIat[srcId] += iat;
+                m_countIat[srcId]++;
+                if (m_maxIat.find(srcId) == m_maxIat.end() || iat > m_maxIat[srcId]) {
+                    m_maxIat[srcId] = iat;
+                }
+            }
+            m_lastDataTime[srcId] = now;
         }
+    }
+
+    void PrintMetrics() {
+        Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
+        std::vector<std::pair<uint8_t, double>> godDistances;
+        for (uint32_t i = 0; i < NodeList::GetNodeNum(); i++) {
+            if (i == m_id) continue;
+            Ptr<MobilityModel> otherMobility = NodeList::GetNode(i)->GetObject<MobilityModel>();
+            double dist = myMobility->GetDistanceFrom(otherMobility);
+            godDistances.push_back({i, dist});
+        }
+        std::sort(godDistances.begin(), godDistances.end(), [](const auto& a, const auto& b) {
+            return a.second < b.second;
+        });
+
+        std::cout << "\n=== Drone " << std::setw(2) << (int)m_id << " Metrics Report ===" << std::endl;
+        std::cout << "Target (True Dist) | BDR (%) | DDR (%) | Avg IAT(ms) | Max IAT(ms)" << std::endl;
+        std::cout << "------------------------------------------------------------------" << std::endl;
+        
+        for (int i = 0; i < std::min(5, (int)godDistances.size()); i++) {
+            uint8_t target = godDistances[i].first;
+            double dist = godDistances[i].second;
+            
+            double bdr = (double)m_beaconReceivedCount[target] / m_epoch;
+            double ddr = (double)m_dataReceivedCount[target] / m_epoch;
+            double avgIat = (m_countIat[target] > 0) ? (m_sumIat[target] / m_countIat[target]) : 0;
+            double maxIat = (m_maxIat.find(target) != m_maxIat.end()) ? m_maxIat[target] : 0;
+            
+            std::cout << "Drone " << std::setw(2) << (int)target << " (" << std::setw(4) << dist << "m) | "
+                      << std::fixed << std::setprecision(1) << std::setw(6) << bdr * 100 << " | "
+                      << std::fixed << std::setprecision(1) << std::setw(6) << ddr * 100 << " | "
+                      << std::fixed << std::setprecision(1) << std::setw(11) << avgIat << " | "
+                      << std::fixed << std::setprecision(1) << std::setw(11) << maxIat << std::endl;
+        }
+        
+        double topAcc = (m_topologyCheckCount > 0) ? ((double)m_topologyMatchCount / m_topologyCheckCount) : 0;
+        std::cout << "--> Topology Accuracy (Top-5 Match Rate): " << std::fixed << std::setprecision(1) << topAcc * 100 << "%" << std::endl;
     }
 };
 
 int main(int argc, char *argv[]) {
     CommandLine cmd;
     cmd.Parse(argc, argv);
-
-    // 關閉過於冗長的底層 Log，只留下自己的 Log 方便觀察
-    // LogComponentEnable("LrWpanMac", LOG_LEVEL_ALL);
-    // LogComponentEnable("LrWpanPhy", LOG_LEVEL_ALL);
 
     int numNodes = 12; // 測試 12 台無人機
     NodeContainer nodes;
@@ -290,12 +358,26 @@ int main(int argc, char *argv[]) {
         app->Setup(dev, i);
         nodes.Get(i)->AddApplication(app);
         app->SetStartTime(Seconds(0.0));
-        app->SetStopTime(Seconds(0.1)); // 模擬約 3 個週期 (100ms)
+        app->SetStopTime(Seconds(1.0)); // 模擬延長至 1.0 秒
     }
 
-    std::cout << "Starting Simulation for 100ms..." << std::endl;
-    Simulator::Stop(Seconds(0.1));
+    std::cout << "Starting Simulation for 1.0s..." << std::endl;
+    Simulator::Stop(Seconds(1.0));
     Simulator::Run();
+    
+    // 結算全域 SRF (空間復用率)
+    int totalEpochs = 1000 / CYCLE_MS; // 1.0秒約 29 回合
+    int totalSlots = totalEpochs * NUM_DATA_SLOTS;
+    double srf = (double)g_totalDataPacketsReceived / totalSlots;
+    
+    std::cout << "\n=================================================" << std::endl;
+    std::cout << "          GLOBAL NETWORK METRICS (1.0s)          " << std::endl;
+    std::cout << "=================================================" << std::endl;
+    std::cout << "Total Data Packets Delivered : " << g_totalDataPacketsReceived << std::endl;
+    std::cout << "Total Network Slots Elapsed  : " << totalSlots << " slots" << std::endl;
+    std::cout << "Spatial Reuse Factor (SRF)   : " << std::fixed << std::setprecision(2) << srf << " packets/slot" << std::endl;
+    std::cout << "=================================================\n" << std::endl;
+
     Simulator::Destroy();
 
     return 0;

@@ -201,7 +201,7 @@ private:
         // 上帝視角：計算拓樸準確度
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
         std::vector<std::pair<uint8_t, double>> godDistances;
-        for (uint32_t i = 0; i < NodeList::GetNodeNum(); i++) {
+        for (uint32_t i = 0; i < NodeList::GetNNodes(); i++) {
             if (i == m_id) continue;
             Ptr<MobilityModel> otherMobility = NodeList::GetNode(i)->GetObject<MobilityModel>();
             double dist = myMobility->GetDistanceFrom(otherMobility);
@@ -280,7 +280,7 @@ private:
     void PrintMetrics() {
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
         std::vector<std::pair<uint8_t, double>> godDistances;
-        for (uint32_t i = 0; i < NodeList::GetNodeNum(); i++) {
+        for (uint32_t i = 0; i < NodeList::GetNNodes(); i++) {
             if (i == m_id) continue;
             Ptr<MobilityModel> otherMobility = NodeList::GetNode(i)->GetObject<MobilityModel>();
             double dist = myMobility->GetDistanceFrom(otherMobility);

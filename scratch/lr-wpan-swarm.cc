@@ -63,25 +63,38 @@ class SwarmSchedulerApp : public Application {
 public:
     SwarmSchedulerApp() : m_epoch(0), m_myClaimedSlot(0), m_myClaimedChannel(0), m_topologyMatchCount(0), m_topologyCheckCount(0), m_epochStartTime(0) {}
 
-    void Setup(Ptr<LrWpanNetDevice> dev, uint8_t id) {
-        m_device = dev;
+    void Setup(Ptr<LrWpanNetDevice> dev1, Ptr<LrWpanNetDevice> dev2, uint8_t id) {
+        m_device1 = dev1;
+        m_device2 = dev2;
         m_id = id;
         
-        Ptr<LrWpanMac> mac = m_device->GetMac();
-        Ptr<LrWpanCsmaCa> csma = CreateObject<LrWpanCsmaCa>();
-        csma->SetMacMinBE(0); 
-        csma->SetMacMaxCSMABackoffs(4); 
-        mac->SetCsmaCa(csma);
-        csma->SetMac(mac);
-        
-        csma->SetLrWpanMacStateCallback(MakeCallback(&LrWpanMac::SetLrWpanMacState, mac));
-        m_device->GetPhy()->SetPlmeCcaConfirmCallback(MakeCallback(&LrWpanCsmaCa::PlmeCcaConfirm, csma));
+        // Setup Radio 1
+        Ptr<LrWpanMac> mac1 = m_device1->GetMac();
+        Ptr<LrWpanCsmaCa> csma1 = CreateObject<LrWpanCsmaCa>();
+        csma1->SetMacMinBE(0); 
+        csma1->SetMacMaxCSMABackoffs(0); 
+        mac1->SetCsmaCa(csma1);
+        csma1->SetMac(mac1);
+        csma1->SetLrWpanMacStateCallback(MakeCallback(&LrWpanMac::SetLrWpanMacState, mac1));
+        m_device1->GetPhy()->SetPlmeCcaConfirmCallback(MakeCallback(&LrWpanCsmaCa::PlmeCcaConfirm, csma1));
+        mac1->SetPanId(1);
+        mac1->SetRxOnWhenIdle(true);
+        mac1->SetMcpsDataIndicationCallback(MakeCallback(&SwarmSchedulerApp::ReceivePacket, this));
+        mac1->SetMcpsDataConfirmCallback(MakeCallback(&SwarmSchedulerApp::DataConfirm, this));
 
-        mac->SetPanId(1);
-        mac->SetRxOnWhenIdle(true);
-
-        mac->SetMcpsDataIndicationCallback(MakeCallback(&SwarmSchedulerApp::ReceivePacket, this));
-        mac->SetMcpsDataConfirmCallback(MakeCallback(&SwarmSchedulerApp::DataConfirm, this));
+        // Setup Radio 2
+        Ptr<LrWpanMac> mac2 = m_device2->GetMac();
+        Ptr<LrWpanCsmaCa> csma2 = CreateObject<LrWpanCsmaCa>();
+        csma2->SetMacMinBE(0); 
+        csma2->SetMacMaxCSMABackoffs(0); 
+        mac2->SetCsmaCa(csma2);
+        csma2->SetMac(mac2);
+        csma2->SetLrWpanMacStateCallback(MakeCallback(&LrWpanMac::SetLrWpanMacState, mac2));
+        m_device2->GetPhy()->SetPlmeCcaConfirmCallback(MakeCallback(&LrWpanCsmaCa::PlmeCcaConfirm, csma2));
+        mac2->SetPanId(1);
+        mac2->SetRxOnWhenIdle(true);
+        mac2->SetMcpsDataIndicationCallback(MakeCallback(&SwarmSchedulerApp::ReceivePacket, this));
+        mac2->SetMcpsDataConfirmCallback(MakeCallback(&SwarmSchedulerApp::DataConfirm, this));
         
         Simulator::Schedule(Seconds(0.999), &SwarmSchedulerApp::PrintMetrics, this);
     }
@@ -94,14 +107,16 @@ public:
     void StopApplication() override {}
 
 private:
-    Ptr<LrWpanNetDevice> m_device;
+    Ptr<LrWpanNetDevice> m_device1;
+    Ptr<LrWpanNetDevice> m_device2;
     uint8_t m_id;
     uint32_t m_epoch;
     double m_epochStartTime;
     uint8_t m_myClaimedSlot;
     uint8_t m_myClaimedChannel;
     std::vector<NeighborInfo> m_monitorList;
-    ScheduleSlot m_schedule[NUM_DATA_SLOTS];
+    ScheduleSlot m_schedule1[NUM_DATA_SLOTS];
+    ScheduleSlot m_schedule2[NUM_DATA_SLOTS];
 
     // 數據統計變數
     std::map<uint8_t, int> m_discoveryReceivedCount;
@@ -122,10 +137,15 @@ private:
     int m_topologyMatchCount;
     int m_topologyCheckCount;
 
-    void SwitchChannel(uint8_t ch) {
+    void SwitchChannel1(uint8_t ch) {
         Ptr<PhyPibAttributes> attrs = Create<PhyPibAttributes>();
         attrs->phyCurrentChannel = ch;
-        m_device->GetPhy()->PlmeSetAttributeRequest(phyCurrentChannel, attrs);
+        m_device1->GetPhy()->PlmeSetAttributeRequest(phyCurrentChannel, attrs);
+    }
+    void SwitchChannel2(uint8_t ch) {
+        Ptr<PhyPibAttributes> attrs = Create<PhyPibAttributes>();
+        attrs->phyCurrentChannel = ch;
+        m_device2->GetPhy()->PlmeSetAttributeRequest(phyCurrentChannel, attrs);
     }
 
     void SendPacket(uint32_t size, Ptr<Packet> p) {
@@ -136,7 +156,7 @@ private:
         params.m_dstAddr = Mac16Address("FF:FF"); 
         params.m_msduHandle = 0;
         params.m_txOptions = TX_OPTION_NONE;
-        m_device->GetMac()->McpsDataRequest(params, p);
+        m_device1->GetMac()->McpsDataRequest(params, p);
     }
 
     void ScheduleCycle() {
@@ -163,7 +183,8 @@ private:
         }
         m_epochStartTime = now;
 
-        SwitchChannel(BROADCAST_CHANNEL);
+        SwitchChannel1(BROADCAST_CHANNEL);
+        SwitchChannel2(26); // Radio 2 inactive on dummy channel
         
         Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
         double randomDelayUs = uv->GetValue(0, PHASE1_DURATION_US - 2000.0);
@@ -176,7 +197,7 @@ private:
     void PickResourceAndSendBeacon() {
         int cost[NUM_DATA_SLOTS][NUM_DATA_CHANNELS] = {0};
         
-        Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
+        Ptr<MobilityModel> myMobility = m_device1->GetNode()->GetObject<MobilityModel>();
         for (const auto& n : m_monitorList) {
             cost[n.claimedSlot][n.claimedChannel] += 10000;
             
@@ -218,9 +239,9 @@ private:
         SendPacket(MINI_BEACON_SIZE, p);
     }
 
+    
     void ComputeSchedule() {
-        // 第一步：根據半徑 M 過濾真正靠近的鄰機，模擬真實系統中根據 GPS 交換算出的距離
-        Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
+        Ptr<MobilityModel> myMobility = m_device1->GetNode()->GetObject<MobilityModel>();
         std::vector<NeighborInfo> filteredList;
         for (auto& n : m_monitorList) {
             Ptr<MobilityModel> otherMobility = NodeList::GetNode(n.id)->GetObject<MobilityModel>();
@@ -235,41 +256,51 @@ private:
         });
 
         for (int i = 0; i < NUM_DATA_SLOTS; i++) {
-            m_schedule[i].action = ScheduleSlot::IDLE;
+            m_schedule1[i].action = ScheduleSlot::IDLE;
+            m_schedule2[i].action = ScheduleSlot::IDLE;
         }
 
-        m_schedule[m_myClaimedSlot].action = ScheduleSlot::TX;
-        m_schedule[m_myClaimedSlot].channel = m_myClaimedChannel + 12;
+        m_schedule1[m_myClaimedSlot].action = ScheduleSlot::TX;
+        m_schedule1[m_myClaimedSlot].channel = m_myClaimedChannel + 12;
 
         int assigned = 0;
         m_lastScheduledRx.clear();
         for (auto& n : filteredList) {
             if (assigned >= K_CLOSEST) break; 
             if (n.claimedSlot == m_myClaimedSlot) continue; 
-            if (m_schedule[n.claimedSlot].action != ScheduleSlot::IDLE) continue; 
-
-            m_schedule[n.claimedSlot].action = ScheduleSlot::RX;
-            m_schedule[n.claimedSlot].channel = n.claimedChannel + 12;
-            m_schedule[n.claimedSlot].targetId = n.id;
-            m_lastScheduledRx.push_back(n.id);
-            assigned++;
+            
+            // Assign to Radio 1 if idle
+            if (m_schedule1[n.claimedSlot].action == ScheduleSlot::IDLE) {
+                m_schedule1[n.claimedSlot].action = ScheduleSlot::RX;
+                m_schedule1[n.claimedSlot].channel = n.claimedChannel + 12;
+                m_schedule1[n.claimedSlot].targetId = n.id;
+                m_lastScheduledRx.push_back(n.id);
+                assigned++;
+            } 
+            // Assign to Radio 2 if Radio 1 is busy but Radio 2 is idle
+            else if (m_schedule2[n.claimedSlot].action == ScheduleSlot::IDLE) {
+                m_schedule2[n.claimedSlot].action = ScheduleSlot::RX;
+                m_schedule2[n.claimedSlot].channel = n.claimedChannel + 12;
+                m_schedule2[n.claimedSlot].targetId = n.id;
+                m_lastScheduledRx.push_back(n.id);
+                assigned++;
+            }
         }
 
-        // 上帝視角：計算拓樸準確度
+        int match = 0;
         std::vector<std::pair<uint8_t, double>> godDistances;
-        for (uint32_t i = 0; i < NodeList::GetNNodes(); i++) {
+        for (int i = 0; i < 50; i++) {
             if (i == m_id) continue;
-            Ptr<MobilityModel> otherMobility = NodeList::GetNode(i)->GetObject<MobilityModel>();
-            double dist = myMobility->GetDistanceFrom(otherMobility);
+            Ptr<MobilityModel> otherMob = NodeList::GetNode(i)->GetObject<MobilityModel>();
+            double dist = myMobility->GetDistanceFrom(otherMob);
             if (dist <= M_RADIUS_METERS) {
                 godDistances.push_back({i, dist});
             }
         }
-        std::sort(godDistances.begin(), godDistances.end(), [](const auto& a, const auto& b) {
+        std::sort(godDistances.begin(), godDistances.end(), [](const std::pair<uint8_t, double>& a, const std::pair<uint8_t, double>& b) {
             return a.second < b.second;
         });
 
-        int match = 0;
         int expectedTop = std::min(K_CLOSEST, (int)godDistances.size());
         for (int i = 0; i < expectedTop; i++) {
             uint8_t target = godDistances[i].first;
@@ -286,17 +317,28 @@ private:
     }
 
     void ExecuteDataSlot(int slotIndex) {
-        ScheduleSlot s = m_schedule[slotIndex];
-        if (s.action == ScheduleSlot::TX) {
-            SwitchChannel(s.channel);
+        ScheduleSlot s1 = m_schedule1[slotIndex];
+        if (s1.action == ScheduleSlot::TX) {
+            SwitchChannel1(s1.channel);
+            SwitchChannel2(26); // Radio 2 inactive
             Ptr<Packet> p = Create<Packet>(DATA_PACKET_SIZE);
             SendPacket(DATA_PACKET_SIZE, p);
-        } else if (s.action == ScheduleSlot::RX) {
-            SwitchChannel(s.channel);
+        } else {
+            if (s1.action == ScheduleSlot::RX) {
+                SwitchChannel1(s1.channel);
+            } else {
+                SwitchChannel1(26);
+            }
+            
+            ScheduleSlot s2 = m_schedule2[slotIndex];
+            if (s2.action == ScheduleSlot::RX) {
+                SwitchChannel2(s2.channel);
+            } else {
+                SwitchChannel2(26);
+            }
         }
     }
-
-    void DataConfirm(McpsDataConfirmParams params) {}
+void DataConfirm(McpsDataConfirmParams params) {}
 
     void ReceivePacket(McpsDataIndicationParams params, Ptr<Packet> p) {
         int8_t rssi = params.m_rssi;
@@ -339,7 +381,7 @@ private:
     }
 
     void PrintMetrics() {
-        Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
+        Ptr<MobilityModel> myMobility = m_device1->GetNode()->GetObject<MobilityModel>();
         std::vector<std::pair<uint8_t, double>> godDistances;
         for (uint32_t i = 0; i < NodeList::GetNNodes(); i++) {
             if (i == m_id) continue;
@@ -422,11 +464,17 @@ int main(int argc, char *argv[]) {
     channel->AddPropagationLossModel(propModel);
     channel->SetPropagationDelayModel(delayModel);
 
-    LrWpanHelper lrWpanHelper;
-    lrWpanHelper.SetChannel(channel);
-    NetDeviceContainer devices = lrWpanHelper.Install(nodes);
+    
+    LrWpanHelper lrWpanHelper1;
+    lrWpanHelper1.SetChannel(channel);
+    NetDeviceContainer devices1 = lrWpanHelper1.Install(nodes);
+    
+    LrWpanHelper lrWpanHelper2;
+    lrWpanHelper2.SetChannel(channel);
+    NetDeviceContainer devices2 = lrWpanHelper2.Install(nodes);
 
     MobilityHelper mobility;
+
     
     // 3D Random Box Topology (300m x 300m x 100m)
     Ptr<RandomBoxPositionAllocator> alloc = CreateObject<RandomBoxPositionAllocator>();
@@ -449,25 +497,34 @@ int main(int argc, char *argv[]) {
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     mobility.Install(nodes);
 
+    
     for (int i = 0; i < numNodes; i++) {
-        Ptr<LrWpanNetDevice> dev = DynamicCast<LrWpanNetDevice>(devices.Get(i));
+        Ptr<LrWpanNetDevice> dev1 = DynamicCast<LrWpanNetDevice>(devices1.Get(i));
+        Ptr<LrWpanNetDevice> dev2 = DynamicCast<LrWpanNetDevice>(devices2.Get(i));
         
-        char extMacStr[32];
-        snprintf(extMacStr, sizeof(extMacStr), "00:00:00:00:00:00:00:%02x", i);
-        dev->GetMac()->SetExtendedAddress(Mac64Address(extMacStr));
+        char extMacStr1[32];
+        snprintf(extMacStr1, sizeof(extMacStr1), "00:00:00:00:00:00:01:%02x", i);
+        dev1->GetMac()->SetExtendedAddress(Mac64Address(extMacStr1));
         
-        char macStr[16];
-        snprintf(macStr, sizeof(macStr), "00:%02x", i);
-        dev->GetMac()->SetShortAddress(Mac16Address(macStr));
+        char macStr1[16];
+        snprintf(macStr1, sizeof(macStr1), "01:%02x", i);
+        dev1->GetMac()->SetShortAddress(Mac16Address(macStr1));
+
+        char extMacStr2[32];
+        snprintf(extMacStr2, sizeof(extMacStr2), "00:00:00:00:00:00:02:%02x", i);
+        dev2->GetMac()->SetExtendedAddress(Mac64Address(extMacStr2));
+        
+        char macStr2[16];
+        snprintf(macStr2, sizeof(macStr2), "02:%02x", i);
+        dev2->GetMac()->SetShortAddress(Mac16Address(macStr2));
 
         Ptr<SwarmSchedulerApp> app = CreateObject<SwarmSchedulerApp>();
-        app->Setup(dev, i);
+        app->Setup(dev1, dev2, i);
         nodes.Get(i)->AddApplication(app);
         app->SetStartTime(Seconds(0.0));
         app->SetStopTime(Seconds(1.0)); 
     }
-
-    std::cout << "Starting Simulation for 1.0s..." << std::endl;
+std::cout << "Starting Simulation for 1.0s..." << std::endl;
     Simulator::Stop(Seconds(1.0));
     Simulator::Run();
     

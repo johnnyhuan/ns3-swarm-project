@@ -332,8 +332,9 @@ private:
             }
             m_lastDataTime[srcId] = now;
             
-            // 更新 AoI Generation Time
-            m_lastGenerationTime[srcId] = m_epochStartTime;
+            // 更新 AoI Generation Time (Just-in-Time 採樣模型：在專屬時槽起點才採樣)
+            // 每個時槽 2.5ms，所以封包產生的時間大約是抵達時間 (now) 往前推 2.5ms
+            m_lastGenerationTime[srcId] = now - 2.5;
         }
     }
 

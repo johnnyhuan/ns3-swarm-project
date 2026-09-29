@@ -39,9 +39,9 @@ static int g_totalReceivedDataTopK = 0;
 static double g_totalSumIatTopK = 0;
 static int g_totalCountIatTopK = 0;
 static double g_globalMaxIatTopK = 0;
-static double g_totalSumAoITopK = 0;
-static int g_totalCountAoITopK = 0;
-static double g_globalMaxAoITopK = 0;
+static double g_totalSumBeaconIatTopK = 0;
+static int g_totalCountBeaconIatTopK = 0;
+static double g_globalMaxBeaconIatTopK = 0;
 static int g_totalTopologyMatchCount = 0;
 static int g_totalTopologyCheckCount = 0;
 
@@ -111,11 +111,11 @@ private:
     std::map<uint8_t, int> m_countIat;
     std::map<uint8_t, double> m_maxIat;
     
-    // AoI 統計變數
-    std::map<uint8_t, double> m_lastGenerationTime;
-    std::map<uint8_t, double> m_sumAoI;
-    std::map<uint8_t, int> m_countAoI;
-    std::map<uint8_t, double> m_maxAoI;
+    // Beacon IAT 統計變數
+    std::map<uint8_t, double> m_lastBeaconTime;
+    std::map<uint8_t, double> m_sumBeaconIat;
+    std::map<uint8_t, int> m_countBeaconIat;
+    std::map<uint8_t, double> m_maxBeaconIat;
     
     std::vector<uint8_t> m_lastScheduledRx;
     int m_topologyMatchCount;
@@ -144,22 +144,7 @@ private:
 
         double now = Simulator::Now().GetMilliSeconds();
         
-        // 結算上一回合的 AoI
-        if (m_epoch > 1) {
-            for (uint8_t i = 0; i < NodeList::GetNNodes(); i++) {
-                if (i == m_id) continue;
-                if (m_lastGenerationTime.find(i) == m_lastGenerationTime.end()) {
-                    m_lastGenerationTime[i] = now; // Initialize
-                    m_maxAoI[i] = 0;
-                    m_sumAoI[i] = 0;
-                    m_countAoI[i] = 0;
-                }
-                double aoi = now - m_lastGenerationTime[i];
-                m_sumAoI[i] += aoi;
-                m_countAoI[i]++;
-                if (aoi > m_maxAoI[i]) m_maxAoI[i] = aoi;
-            }
-        }
+        // AoI calculation removed
         m_epochStartTime = now;
 
         SwitchChannel(BROADCAST_CHANNEL);
@@ -311,6 +296,17 @@ private:
             
             m_monitorList.push_back({senderId, rssi, m_epoch, claimedSlot, claimedChannel});
             m_beaconReceivedCount[senderId]++;
+            
+            double now = Simulator::Now().GetMilliSeconds();
+            if (m_lastBeaconTime.find(senderId) != m_lastBeaconTime.end()) {
+                double iat = now - m_lastBeaconTime[senderId];
+                m_sumBeaconIat[senderId] += iat;
+                m_countBeaconIat[senderId]++;
+                if (m_maxBeaconIat.find(senderId) == m_maxBeaconIat.end() || iat > m_maxBeaconIat[senderId]) {
+                    m_maxBeaconIat[senderId] = iat;
+                }
+            }
+            m_lastBeaconTime[senderId] = now;
         } else if (p->GetSize() == DATA_PACKET_SIZE) {
             uint8_t addrBuffer[2];
             params.m_srcAddr.CopyTo(addrBuffer);
@@ -332,9 +328,7 @@ private:
             }
             m_lastDataTime[srcId] = now;
             
-            // 更新 AoI Generation Time (Just-in-Time 採樣模型：在專屬時槽起點才採樣)
-            // 每個時槽 2.5ms，所以封包產生的時間大約是抵達時間 (now) 往前推 2.5ms
-            m_lastGenerationTime[srcId] = now - 2.5;
+            // AoI calculation removed
         }
     }
 
@@ -367,10 +361,10 @@ private:
                 g_globalMaxIatTopK = m_maxIat[target];
             }
             
-            g_totalSumAoITopK += m_sumAoI[target];
-            g_totalCountAoITopK += m_countAoI[target];
-            if (m_maxAoI.find(target) != m_maxAoI.end() && m_maxAoI[target] > g_globalMaxAoITopK) {
-                g_globalMaxAoITopK = m_maxAoI[target];
+            g_totalSumBeaconIatTopK += m_sumBeaconIat[target];
+            g_totalCountBeaconIatTopK += m_countBeaconIat[target];
+            if (m_maxBeaconIat.find(target) != m_maxBeaconIat.end() && m_maxBeaconIat[target] > g_globalMaxBeaconIatTopK) {
+                g_globalMaxBeaconIatTopK = m_maxBeaconIat[target];
             }
         }
         
@@ -380,8 +374,8 @@ private:
         if (m_id != 0 && m_id != 25 && m_id != 49) return; // 只印出幾台代表性的無人機避免洗版
 
         std::cout << "\n=== Drone " << std::setw(2) << (int)m_id << " Metrics Report (Top " << K_CLOSEST << " within " << M_RADIUS_METERS << "m) ===" << std::endl;
-        std::cout << "Target (Dist)  | BDR (%) | DDR (%) | Avg IAT | Max IAT | Mean AoI | Max AoI" << std::endl;
-        std::cout << "-----------------------------------------------------------------------------" << std::endl;
+        std::cout << "Target (Dist)  | BDR (%) | DDR (%) | Avg Data IAT | Max Data IAT | Avg Bcn IAT | Max Bcn IAT" << std::endl;
+        std::cout << "---------------------------------------------------------------------------------------" << std::endl;
         
         for (int i = 0; i < std::min(K_CLOSEST, (int)godDistances.size()); i++) {
             uint8_t target = godDistances[i].first;
@@ -391,16 +385,16 @@ private:
             double ddr = (double)m_dataReceivedCount[target] / m_epoch;
             double avgIat = (m_countIat[target] > 0) ? (m_sumIat[target] / m_countIat[target]) : 0;
             double maxIat = (m_maxIat.find(target) != m_maxIat.end()) ? m_maxIat[target] : 0;
-            double meanAoI = (m_countAoI[target] > 0) ? (m_sumAoI[target] / m_countAoI[target]) : 0;
-            double maxAoI = (m_maxAoI.find(target) != m_maxAoI.end()) ? m_maxAoI[target] : 0;
+            double avgBeaconIat = (m_countBeaconIat[target] > 0) ? (m_sumBeaconIat[target] / m_countBeaconIat[target]) : 0;
+            double maxBeaconIat = (m_maxBeaconIat.find(target) != m_maxBeaconIat.end()) ? m_maxBeaconIat[target] : 0;
             
             std::cout << "Drone " << std::setw(2) << (int)target << " (" << std::setw(3) << (int)dist << "m) | "
                       << std::fixed << std::setprecision(1) << std::setw(6) << bdr * 100 << " | "
                       << std::fixed << std::setprecision(1) << std::setw(6) << ddr * 100 << " | "
-                      << std::fixed << std::setprecision(1) << std::setw(7) << avgIat << " | "
-                      << std::fixed << std::setprecision(1) << std::setw(7) << maxIat << " | "
-                      << std::fixed << std::setprecision(1) << std::setw(8) << meanAoI << " | "
-                      << std::fixed << std::setprecision(1) << std::setw(7) << maxAoI << std::endl;
+                      << std::fixed << std::setprecision(1) << std::setw(12) << avgIat << " | "
+                      << std::fixed << std::setprecision(1) << std::setw(12) << maxIat << " | "
+                      << std::fixed << std::setprecision(1) << std::setw(11) << avgBeaconIat << " | "
+                      << std::fixed << std::setprecision(1) << std::setw(11) << maxBeaconIat << std::endl;
         }
         
         double topAcc = (m_topologyCheckCount > 0) ? ((double)m_topologyMatchCount / m_topologyCheckCount) : 0;
@@ -477,7 +471,7 @@ int main(int argc, char *argv[]) {
     double globalBdr = (g_totalExpectedTopKxEpochs > 0) ? (double)g_totalReceivedBeaconsTopK / g_totalExpectedTopKxEpochs : 0;
     double globalDdr = (g_totalExpectedTopKxEpochs > 0) ? (double)g_totalReceivedDataTopK / g_totalExpectedTopKxEpochs : 0;
     double globalAvgIat = (g_totalCountIatTopK > 0) ? (g_totalSumIatTopK / g_totalCountIatTopK) : 0;
-    double globalMeanAoI = (g_totalCountAoITopK > 0) ? (g_totalSumAoITopK / g_totalCountAoITopK) : 0;
+    double globalAvgBeaconIat = (g_totalCountBeaconIatTopK > 0) ? (g_totalSumBeaconIatTopK / g_totalCountBeaconIatTopK) : 0;
     double globalTopAcc = (g_totalTopologyCheckCount > 0) ? ((double)g_totalTopologyMatchCount / g_totalTopologyCheckCount) : 0;
     
     std::cout << "\n=================================================" << std::endl;
@@ -488,10 +482,10 @@ int main(int argc, char *argv[]) {
     std::cout << "Spatial Reuse Factor (SRF)      : " << std::fixed << std::setprecision(2) << srf << " packets/slot" << std::endl;
     std::cout << "Global BDR (Target Top-K)       : " << std::fixed << std::setprecision(1) << globalBdr * 100 << "%" << std::endl;
     std::cout << "Global DDR (Target Top-K)       : " << std::fixed << std::setprecision(1) << globalDdr * 100 << "%" << std::endl;
-    std::cout << "Global Avg IAT (Target Top-K)   : " << std::fixed << std::setprecision(1) << globalAvgIat << " ms" << std::endl;
-    std::cout << "Global Max IAT (Target Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxIatTopK << " ms" << std::endl;
-    std::cout << "Global Mean AoI (Target Top-K)  : " << std::fixed << std::setprecision(1) << globalMeanAoI << " ms" << std::endl;
-    std::cout << "Global Max AoI (Target Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxAoITopK << " ms" << std::endl;
+    std::cout << "Global Avg Data IAT (Top-K)     : " << std::fixed << std::setprecision(1) << globalAvgIat << " ms" << std::endl;
+    std::cout << "Global Max Data IAT (Top-K)     : " << std::fixed << std::setprecision(1) << g_globalMaxIatTopK << " ms" << std::endl;
+    std::cout << "Global Avg Beacon IAT (Top-K)   : " << std::fixed << std::setprecision(1) << globalAvgBeaconIat << " ms" << std::endl;
+    std::cout << "Global Max Beacon IAT (Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxBeaconIatTopK << " ms" << std::endl;
     std::cout << "Global Topology Accuracy        : " << std::fixed << std::setprecision(1) << globalTopAcc * 100 << "%" << std::endl;
     std::cout << "=================================================\n" << std::endl;
 

@@ -333,9 +333,8 @@ private:
             
             double now = Simulator::Now().GetMilliSeconds();
             
-            // 更新 AoI Generation Time (Just-in-Time 採樣模型：在專屬時槽起點才採樣)
-            // 每個時槽 2.5ms，所以封包產生的時間大約是抵達時間 (now) 往前推 2.5ms
-            m_lastGenerationTime[srcId] = now - 2.5;
+            // 更新 AoI Generation Time (將產生時間直接設為收到的瞬間，不計算空中傳輸延遲)
+            m_lastGenerationTime[srcId] = now;
         }
     }
 

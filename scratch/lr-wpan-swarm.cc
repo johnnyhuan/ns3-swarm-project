@@ -18,8 +18,8 @@ NS_LOG_COMPONENT_DEFINE("LrWpanSwarm");
 const uint32_t MINI_BEACON_SIZE = 2; 
 const uint32_t DATA_PACKET_SIZE = 50;
 
-const double CYCLE_MS = 41.0;            // 15 + 1 + 25
-const double PHASE1_DURATION_US = 15000.0; // 縮短廣播期為15ms
+const double CYCLE_MS = 51.0;            // 25 + 1 + 25
+const double PHASE1_DURATION_US = 25000.0; // 恢復至最佳甜蜜點 25ms
 const double GAP_US = 1000.0;
 const int NUM_DATA_SLOTS = 10;
 const int NUM_DATA_CHANNELS = 6;         // 6 channels * 10 slots = 60 blocks

@@ -36,6 +36,14 @@ static int g_totalDataPacketsReceived = 0;
 static int g_totalExpectedTopKxEpochs = 0;
 static int g_totalReceivedBeaconsTopK = 0;
 static int g_totalReceivedDataTopK = 0;
+static double g_totalSumIatTopK = 0;
+static int g_totalCountIatTopK = 0;
+static double g_globalMaxIatTopK = 0;
+static double g_totalSumAoITopK = 0;
+static int g_totalCountAoITopK = 0;
+static double g_globalMaxAoITopK = 0;
+static int g_totalTopologyMatchCount = 0;
+static int g_totalTopologyCheckCount = 0;
 
 struct NeighborInfo {
     uint8_t id;
@@ -351,7 +359,22 @@ private:
             uint8_t target = godDistances[i].first;
             g_totalReceivedBeaconsTopK += m_beaconReceivedCount[target];
             g_totalReceivedDataTopK += m_dataReceivedCount[target];
+            
+            g_totalSumIatTopK += m_sumIat[target];
+            g_totalCountIatTopK += m_countIat[target];
+            if (m_maxIat.find(target) != m_maxIat.end() && m_maxIat[target] > g_globalMaxIatTopK) {
+                g_globalMaxIatTopK = m_maxIat[target];
+            }
+            
+            g_totalSumAoITopK += m_sumAoI[target];
+            g_totalCountAoITopK += m_countAoI[target];
+            if (m_maxAoI.find(target) != m_maxAoI.end() && m_maxAoI[target] > g_globalMaxAoITopK) {
+                g_globalMaxAoITopK = m_maxAoI[target];
+            }
         }
+        
+        g_totalTopologyMatchCount += m_topologyMatchCount;
+        g_totalTopologyCheckCount += m_topologyCheckCount;
 
         if (m_id != 0 && m_id != 25 && m_id != 49) return; // 只印出幾台代表性的無人機避免洗版
 
@@ -452,6 +475,9 @@ int main(int argc, char *argv[]) {
     double srf = (double)g_totalDataPacketsReceived / totalSlots;
     double globalBdr = (g_totalExpectedTopKxEpochs > 0) ? (double)g_totalReceivedBeaconsTopK / g_totalExpectedTopKxEpochs : 0;
     double globalDdr = (g_totalExpectedTopKxEpochs > 0) ? (double)g_totalReceivedDataTopK / g_totalExpectedTopKxEpochs : 0;
+    double globalAvgIat = (g_totalCountIatTopK > 0) ? (g_totalSumIatTopK / g_totalCountIatTopK) : 0;
+    double globalMeanAoI = (g_totalCountAoITopK > 0) ? (g_totalSumAoITopK / g_totalCountAoITopK) : 0;
+    double globalTopAcc = (g_totalTopologyCheckCount > 0) ? ((double)g_totalTopologyMatchCount / g_totalTopologyCheckCount) : 0;
     
     std::cout << "\n=================================================" << std::endl;
     std::cout << "          GLOBAL NETWORK METRICS (1.0s)          " << std::endl;
@@ -461,6 +487,11 @@ int main(int argc, char *argv[]) {
     std::cout << "Spatial Reuse Factor (SRF)      : " << std::fixed << std::setprecision(2) << srf << " packets/slot" << std::endl;
     std::cout << "Global BDR (Target Top-K)       : " << std::fixed << std::setprecision(1) << globalBdr * 100 << "%" << std::endl;
     std::cout << "Global DDR (Target Top-K)       : " << std::fixed << std::setprecision(1) << globalDdr * 100 << "%" << std::endl;
+    std::cout << "Global Avg IAT (Target Top-K)   : " << std::fixed << std::setprecision(1) << globalAvgIat << " ms" << std::endl;
+    std::cout << "Global Max IAT (Target Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxIatTopK << " ms" << std::endl;
+    std::cout << "Global Mean AoI (Target Top-K)  : " << std::fixed << std::setprecision(1) << globalMeanAoI << " ms" << std::endl;
+    std::cout << "Global Max AoI (Target Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxAoITopK << " ms" << std::endl;
+    std::cout << "Global Topology Accuracy        : " << std::fixed << std::setprecision(1) << globalTopAcc * 100 << "%" << std::endl;
     std::cout << "=================================================\n" << std::endl;
 
     Simulator::Destroy();

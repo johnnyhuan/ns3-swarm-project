@@ -31,8 +31,11 @@ const uint8_t BROADCAST_CHANNEL = 11;
 const double M_RADIUS_METERS = 100.0;    // 只考慮半徑 M 公尺內的無人機
 const int K_CLOSEST = 5;                 // 從 M 公尺內挑選最近的 K 個
 
-// 全域 SRF 統計
+// 全域 SRF 與 BDR/DDR 統計
 static int g_totalDataPacketsReceived = 0;
+static int g_totalExpectedTopKxEpochs = 0;
+static int g_totalReceivedBeaconsTopK = 0;
+static int g_totalReceivedDataTopK = 0;
 
 struct NeighborInfo {
     uint8_t id;
@@ -327,8 +330,6 @@ private:
     }
 
     void PrintMetrics() {
-        if (m_id != 0 && m_id != 25 && m_id != 49) return; // 只印出幾台代表性的無人機避免洗版
-
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
         std::vector<std::pair<uint8_t, double>> godDistances;
         for (uint32_t i = 0; i < NodeList::GetNNodes(); i++) {
@@ -342,6 +343,17 @@ private:
         std::sort(godDistances.begin(), godDistances.end(), [](const auto& a, const auto& b) {
             return a.second < b.second;
         });
+
+        int expectedTop = std::min(K_CLOSEST, (int)godDistances.size());
+        g_totalExpectedTopKxEpochs += expectedTop * m_epoch;
+        
+        for (int i = 0; i < expectedTop; i++) {
+            uint8_t target = godDistances[i].first;
+            g_totalReceivedBeaconsTopK += m_beaconReceivedCount[target];
+            g_totalReceivedDataTopK += m_dataReceivedCount[target];
+        }
+
+        if (m_id != 0 && m_id != 25 && m_id != 49) return; // 只印出幾台代表性的無人機避免洗版
 
         std::cout << "\n=== Drone " << std::setw(2) << (int)m_id << " Metrics Report (Top " << K_CLOSEST << " within " << M_RADIUS_METERS << "m) ===" << std::endl;
         std::cout << "Target (Dist)  | BDR (%) | DDR (%) | Avg IAT | Max IAT | Mean AoI | Max AoI" << std::endl;
@@ -438,6 +450,8 @@ int main(int argc, char *argv[]) {
     int totalEpochs = 1000 / CYCLE_MS; 
     int totalSlots = totalEpochs * NUM_DATA_SLOTS;
     double srf = (double)g_totalDataPacketsReceived / totalSlots;
+    double globalBdr = (g_totalExpectedTopKxEpochs > 0) ? (double)g_totalReceivedBeaconsTopK / g_totalExpectedTopKxEpochs : 0;
+    double globalDdr = (g_totalExpectedTopKxEpochs > 0) ? (double)g_totalReceivedDataTopK / g_totalExpectedTopKxEpochs : 0;
     
     std::cout << "\n=================================================" << std::endl;
     std::cout << "          GLOBAL NETWORK METRICS (1.0s)          " << std::endl;
@@ -445,6 +459,8 @@ int main(int argc, char *argv[]) {
     std::cout << "Total 50B Data Packets Delivered: " << g_totalDataPacketsReceived << std::endl;
     std::cout << "Total Network Slots Elapsed     : " << totalSlots << " slots" << std::endl;
     std::cout << "Spatial Reuse Factor (SRF)      : " << std::fixed << std::setprecision(2) << srf << " packets/slot" << std::endl;
+    std::cout << "Global BDR (Target Top-K)       : " << std::fixed << std::setprecision(1) << globalBdr * 100 << "%" << std::endl;
+    std::cout << "Global DDR (Target Top-K)       : " << std::fixed << std::setprecision(1) << globalDdr * 100 << "%" << std::endl;
     std::cout << "=================================================\n" << std::endl;
 
     Simulator::Destroy();

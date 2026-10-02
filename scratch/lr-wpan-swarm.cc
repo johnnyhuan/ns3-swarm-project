@@ -281,14 +281,14 @@ private:
             return a.rssi > b.rssi;
         });
 
-        // Re-enable CSMA for Phase 2 to allow staggering of collided transmissions
-        m_csma1->SetMacMinBE(3);
-        m_csma1->SetMacMaxBE(5);
-        m_csma1->SetMacMaxCSMABackoffs(4);
+        // Re-enable CSMA for Phase 2 with tight parameters to ensure it fits within 6ms
+        m_csma1->SetMacMinBE(1);
+        m_csma1->SetMacMaxBE(2);
+        m_csma1->SetMacMaxCSMABackoffs(2);
 
-        m_csma2->SetMacMinBE(3);
-        m_csma2->SetMacMaxBE(5);
-        m_csma2->SetMacMaxCSMABackoffs(4);
+        m_csma2->SetMacMinBE(1);
+        m_csma2->SetMacMaxBE(2);
+        m_csma2->SetMacMaxCSMABackoffs(2);
 
         for (int i = 0; i < NUM_DATA_SLOTS; i++) {
             m_schedule1[i].action = ScheduleSlot::IDLE;

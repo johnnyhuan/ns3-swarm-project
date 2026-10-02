@@ -15,7 +15,7 @@ using namespace ns3;
 using namespace ns3::lrwpan;
 
 NS_LOG_COMPONENT_DEFINE("LrWpanSwarm");
-std::ofstream g_log;
+std::ofstream g_debugLogFile;
 // --- 系統常數設定 ---
 const uint32_t MINI_BEACON_SIZE = 2; 
 const uint32_t DATA_PACKET_SIZE = 50;
@@ -246,7 +246,7 @@ private:
         Ptr<UniformRandomVariable> radioUv = CreateObject<UniformRandomVariable>();
         int chosenRadio = radioUv->GetInteger(1, 2);
         
-        g_log << "[PHASE1_TX] Time: " << Simulator::Now().GetMilliSeconds() 
+        g_debugLogFile << "[PHASE1_TX] Time: " << Simulator::Now().GetMilliSeconds() 
               << "ms, Drone: " << (int)m_id << ", Radio: " << chosenRadio 
               << ", ClaimedSlot: " << (int)m_myClaimedSlot 
               << ", ClaimedCh: " << (int)m_myClaimedChannel << "\n";
@@ -278,7 +278,7 @@ private:
         m_schedule1[m_myClaimedSlot].action = ScheduleSlot::TX;
         m_schedule1[m_myClaimedSlot].channel = m_myClaimedChannel + 12;
 
-        g_log << "[COMPUTE_SCHED] Time: " << Simulator::Now().GetMilliSeconds() 
+        g_debugLogFile << "[COMPUTE_SCHED] Time: " << Simulator::Now().GetMilliSeconds() 
               << "ms, Drone: " << (int)m_id << ", MySlot: " << (int)m_myClaimedSlot 
               << ", MyCh: " << (int)m_myClaimedChannel << "\n";
 
@@ -286,11 +286,11 @@ private:
         m_lastScheduledRx.clear();
         for (auto& n : filteredList) {
             if (assigned >= K_CLOSEST) {
-                g_log << "  [SCHED_IGNORE] Target: " << (int)n.id << ", Reason: AssignedMax\n";
+                g_debugLogFile << "  [SCHED_IGNORE] Target: " << (int)n.id << ", Reason: AssignedMax\n";
                 break; 
             }
             if (n.claimedSlot == m_myClaimedSlot) {
-                g_log << "  [SCHED_CONFLICT] Target: " << (int)n.id 
+                g_debugLogFile << "  [SCHED_CONFLICT] Target: " << (int)n.id 
                       << ", TargetSlot: " << (int)n.claimedSlot 
                       << ", TargetCh: " << (int)n.claimedChannel 
                       << ", Reason: MyTxSlot\n";
@@ -306,7 +306,7 @@ private:
                 m_schedule1[n.claimedSlot].targetId = n.id;
                 m_lastScheduledRx.push_back(n.id);
                 assigned++;
-                g_log << "  [SCHED_ASSIGN] Target: " << (int)n.id 
+                g_debugLogFile << "  [SCHED_ASSIGN] Target: " << (int)n.id 
                       << ", TargetSlot: " << (int)n.claimedSlot 
                       << ", TargetCh: " << (int)n.claimedChannel 
                       << ", AssignedTo: Radio1\n";
@@ -318,12 +318,12 @@ private:
                 m_schedule2[n.claimedSlot].targetId = n.id;
                 m_lastScheduledRx.push_back(n.id);
                 assigned++;
-                g_log << "  [SCHED_ASSIGN] Target: " << (int)n.id 
+                g_debugLogFile << "  [SCHED_ASSIGN] Target: " << (int)n.id 
                       << ", TargetSlot: " << (int)n.claimedSlot 
                       << ", TargetCh: " << (int)n.claimedChannel 
                       << ", AssignedTo: Radio2\n";
             } else {
-                g_log << "  [SCHED_CONFLICT] Target: " << (int)n.id 
+                g_debugLogFile << "  [SCHED_CONFLICT] Target: " << (int)n.id 
                       << ", TargetSlot: " << (int)n.claimedSlot 
                       << ", TargetCh: " << (int)n.claimedChannel 
                       << ", Reason: BothRadiosBusy\n";
@@ -364,7 +364,7 @@ private:
         ScheduleSlot s2 = m_schedule2[slotIndex];
 
         if (m_id == 0 || m_id == 25 || m_id == 49) {
-            g_log << "[PHASE2_SLOT] Time: " << Simulator::Now().GetMilliSeconds() 
+            g_debugLogFile << "[PHASE2_SLOT] Time: " << Simulator::Now().GetMilliSeconds() 
                   << "ms, Drone: " << (int)m_id << ", Slot: " << slotIndex 
                   << ", S1_Act: " << (int)s1.action << ", S1_Ch: " << (int)s1.channel 
                   << ", S2_Act: " << (int)s2.action << ", S2_Ch: " << (int)s2.channel << "\n";
@@ -401,7 +401,7 @@ void DataConfirm(McpsDataConfirmParams params) {}
             uint8_t claimedChannel = (payload >> 10) & 0x07;
             
             if (m_id == 0 || m_id == 25 || m_id == 49) {
-                g_log << "[PHASE1_RX] Time: " << Simulator::Now().GetMilliSeconds() 
+                g_debugLogFile << "[PHASE1_RX] Time: " << Simulator::Now().GetMilliSeconds() 
                       << "ms, Drone: " << (int)m_id << ", From: " << (int)senderId 
                       << ", ClSlot: " << (int)claimedSlot << ", ClCh: " << (int)claimedChannel 
                       << ", RSSI: " << (int)rssi << "\n";
@@ -426,7 +426,7 @@ void DataConfirm(McpsDataConfirmParams params) {}
             uint8_t srcId = addrBuffer[1];
             
             if (m_id == 0 || m_id == 25 || m_id == 49) {
-                g_log << "[PHASE2_DATA_RX] Time: " << Simulator::Now().GetMilliSeconds() 
+                g_debugLogFile << "[PHASE2_DATA_RX] Time: " << Simulator::Now().GetMilliSeconds() 
                       << "ms, Drone: " << (int)m_id << ", From: " << (int)srcId 
                       << ", RSSI: " << (int)rssi << "\n";
             }
@@ -512,7 +512,7 @@ void DataConfirm(McpsDataConfirmParams params) {}
 };
 
 int main(int argc, char *argv[]) {
-    g_log.open("debug_log.txt", std::ios::out);
+    g_debugLogFile.open("debug_debugLogFile.txt", std::ios::out);
     CommandLine cmd;
     cmd.Parse(argc, argv);
 
@@ -615,6 +615,6 @@ std::cout << "Starting Simulation for 1.0s..." << std::endl;
     std::cout << "=================================================\n" << std::endl;
 
     Simulator::Destroy();
-    g_log.close();
+    g_debugLogFile.close();
     return 0;
 }

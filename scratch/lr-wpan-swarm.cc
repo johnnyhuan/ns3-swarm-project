@@ -406,7 +406,13 @@ private:
             }
         }
     }
-void DataConfirm(McpsDataConfirmParams params) {}
+    void DataConfirm(McpsDataConfirmParams params) {
+        if (params.m_status != MacStatus::SUCCESS) {
+            g_debugLogFile << "[MAC_DROP] Time: " << Simulator::Now().GetMilliSeconds() 
+                           << "ms, Drone: " << (int)m_id 
+                           << ", Status: " << (int)params.m_status << "\n";
+        }
+    }
 
     void ReceivePacket(McpsDataIndicationParams params, Ptr<Packet> p) {
         int8_t rssi = params.m_rssi;

@@ -1,0 +1,14 @@
+=================================================
+          GLOBAL NETWORK METRICS (1.0s)          
+=================================================
+Total 50B Data Packets Delivered: 220
+Total Network Slots Elapsed     : 110 slots
+Spatial Reuse Factor (SRF)      : 2.00 packets/slot
+Discovery Message Reception Ratio: 35.5%
+Beacon Packet Reception Ratio   : 3.7%
+Monitor Member List Match Ratio : 34.1%
+Avg Discovery Msg IAT (Top-K)   : 200.9 ms
+Max Discovery Msg IAT (Top-K)   : 943.0 ms
+Mean Beacon Packet AoI (Top-K)  : 367.9 ms
+Max Beacon Packet AoI (Top-K)   : 912.0 ms
+=================================================

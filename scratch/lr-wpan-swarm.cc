@@ -327,21 +327,17 @@ private:
         ScheduleSlot s1 = m_schedule1[slotIndex];
         if (s1.action == ScheduleSlot::TX) {
             SwitchChannel1(s1.channel);
-            SwitchChannel2(26); // Radio 2 inactive
+            // Don't switch Radio 2, leave it where it is
             Ptr<Packet> p = Create<Packet>(DATA_PACKET_SIZE);
             SendPacket(DATA_PACKET_SIZE, p);
         } else {
             if (s1.action == ScheduleSlot::RX) {
                 SwitchChannel1(s1.channel);
-            } else {
-                SwitchChannel1(26);
             }
             
             ScheduleSlot s2 = m_schedule2[slotIndex];
             if (s2.action == ScheduleSlot::RX) {
                 SwitchChannel2(s2.channel);
-            } else {
-                SwitchChannel2(26);
             }
         }
     }

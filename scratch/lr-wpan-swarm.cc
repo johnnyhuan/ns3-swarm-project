@@ -512,7 +512,7 @@ void DataConfirm(McpsDataConfirmParams params) {}
 };
 
 int main(int argc, char *argv[]) {
-    g_debugLogFile.open("debug_debugLogFile.txt", std::ios::out);
+    g_debugLogFile.open("debug_log.txt", std::ios::out);
     CommandLine cmd;
     cmd.Parse(argc, argv);
 

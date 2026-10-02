@@ -73,13 +73,13 @@ public:
         
         // Setup Radio 1
         Ptr<LrWpanMac> mac1 = m_device1->GetMac();
-        Ptr<LrWpanCsmaCa> csma1 = CreateObject<LrWpanCsmaCa>();
-        csma1->SetMacMinBE(0); 
-        csma1->SetMacMaxCSMABackoffs(4); 
-        mac1->SetCsmaCa(csma1);
-        csma1->SetMac(mac1);
-        csma1->SetLrWpanMacStateCallback(MakeCallback(&LrWpanMac::SetLrWpanMacState, mac1));
-        m_device1->GetPhy()->SetPlmeCcaConfirmCallback(MakeCallback(&LrWpanCsmaCa::PlmeCcaConfirm, csma1));
+        m_csma1 = CreateObject<LrWpanCsmaCa>();
+        m_csma1->SetMacMinBE(3); 
+        m_csma1->SetMacMaxCSMABackoffs(4); 
+        mac1->SetCsmaCa(m_csma1);
+        m_csma1->SetMac(mac1);
+        m_csma1->SetLrWpanMacStateCallback(MakeCallback(&LrWpanMac::SetLrWpanMacState, mac1));
+        m_device1->GetPhy()->SetPlmeCcaConfirmCallback(MakeCallback(&LrWpanCsmaCa::PlmeCcaConfirm, m_csma1));
         mac1->SetPanId(1);
         mac1->SetRxOnWhenIdle(true);
         mac1->SetMcpsDataIndicationCallback(MakeCallback(&SwarmSchedulerApp::ReceivePacket, this));
@@ -87,13 +87,13 @@ public:
 
         // Setup Radio 2
         Ptr<LrWpanMac> mac2 = m_device2->GetMac();
-        Ptr<LrWpanCsmaCa> csma2 = CreateObject<LrWpanCsmaCa>();
-        csma2->SetMacMinBE(0); 
-        csma2->SetMacMaxCSMABackoffs(4); 
-        mac2->SetCsmaCa(csma2);
-        csma2->SetMac(mac2);
-        csma2->SetLrWpanMacStateCallback(MakeCallback(&LrWpanMac::SetLrWpanMacState, mac2));
-        m_device2->GetPhy()->SetPlmeCcaConfirmCallback(MakeCallback(&LrWpanCsmaCa::PlmeCcaConfirm, csma2));
+        m_csma2 = CreateObject<LrWpanCsmaCa>();
+        m_csma2->SetMacMinBE(3); 
+        m_csma2->SetMacMaxCSMABackoffs(4); 
+        mac2->SetCsmaCa(m_csma2);
+        m_csma2->SetMac(mac2);
+        m_csma2->SetLrWpanMacStateCallback(MakeCallback(&LrWpanMac::SetLrWpanMacState, mac2));
+        m_device2->GetPhy()->SetPlmeCcaConfirmCallback(MakeCallback(&LrWpanCsmaCa::PlmeCcaConfirm, m_csma2));
         mac2->SetPanId(1);
         mac2->SetRxOnWhenIdle(true);
         mac2->SetMcpsDataIndicationCallback(MakeCallback(&SwarmSchedulerApp::ReceivePacket, this));
@@ -112,6 +112,8 @@ public:
 private:
     Ptr<LrWpanNetDevice> m_device1;
     Ptr<LrWpanNetDevice> m_device2;
+    Ptr<LrWpanCsmaCa> m_csma1;
+    Ptr<LrWpanCsmaCa> m_csma2;
     uint8_t m_id;
     uint32_t m_epoch;
     double m_epochStartTime;
@@ -243,6 +245,15 @@ private:
         uint8_t buffer[2] = { (uint8_t)(payload & 0xFF), (uint8_t)((payload >> 8) & 0xFF) };
         Ptr<Packet> p = Create<Packet>(buffer, 2);
                   
+        // Enable CSMA for Phase 1 to prevent broadcast collisions
+        m_csma1->SetMacMinBE(3);
+        m_csma1->SetMacMaxBE(5);
+        m_csma1->SetMacMaxCSMABackoffs(4);
+
+        m_csma2->SetMacMinBE(3);
+        m_csma2->SetMacMaxBE(5);
+        m_csma2->SetMacMaxCSMABackoffs(4);
+
         Ptr<UniformRandomVariable> radioUv = CreateObject<UniformRandomVariable>();
         int chosenRadio = radioUv->GetInteger(1, 2);
         
@@ -269,6 +280,15 @@ private:
         std::sort(filteredList.begin(), filteredList.end(), [](const NeighborInfo& a, const NeighborInfo& b) {
             return a.rssi > b.rssi;
         });
+
+        // Disable CSMA for Phase 2 (TDMA mode) to prevent delayed packets being aborted by slot boundaries
+        m_csma1->SetMacMinBE(0);
+        m_csma1->SetMacMaxBE(0);
+        m_csma1->SetMacMaxCSMABackoffs(0);
+
+        m_csma2->SetMacMinBE(0);
+        m_csma2->SetMacMaxBE(0);
+        m_csma2->SetMacMaxCSMABackoffs(0);
 
         for (int i = 0; i < NUM_DATA_SLOTS; i++) {
             m_schedule1[i].action = ScheduleSlot::IDLE;

@@ -283,11 +283,11 @@ private:
 
         // Disable CSMA for Phase 2 (TDMA mode) to prevent delayed packets being aborted by slot boundaries
         m_csma1->SetMacMinBE(0);
-        m_csma1->SetMacMaxBE(0);
+        m_csma1->SetMacMaxBE(3); // Must be >= 3 to pass ns-3 assertion
         m_csma1->SetMacMaxCSMABackoffs(0);
 
         m_csma2->SetMacMinBE(0);
-        m_csma2->SetMacMaxBE(0);
+        m_csma2->SetMacMaxBE(3);
         m_csma2->SetMacMaxCSMABackoffs(0);
 
         for (int i = 0; i < NUM_DATA_SLOTS; i++) {

@@ -26,6 +26,7 @@ const int NUM_DATA_CHANNELS = 6;         // 6 channels * 10 slots = 60 blocks
 const double DATA_SLOT_US = 2500.0; 
 
 const uint8_t BROADCAST_CHANNEL = 11;
+const uint8_t BROADCAST_CHANNEL_2 = 26;
 
 // --- 目標條件設定 ---
 const double M_RADIUS_METERS = 100.0;    // 只考慮半徑 M 公尺內的無人機
@@ -148,7 +149,7 @@ private:
         m_device2->GetPhy()->PlmeSetAttributeRequest(phyCurrentChannel, attrs);
     }
 
-    void SendPacket(uint32_t size, Ptr<Packet> p) {
+    void SendPacket(uint32_t size, Ptr<Packet> p, int radioIndex = 1) {
         McpsDataRequestParams params;
         params.m_srcAddrMode = SHORT_ADDR;
         params.m_dstAddrMode = SHORT_ADDR;
@@ -156,7 +157,11 @@ private:
         params.m_dstAddr = Mac16Address("FF:FF"); 
         params.m_msduHandle = 0;
         params.m_txOptions = TX_OPTION_NONE;
-        m_device1->GetMac()->McpsDataRequest(params, p);
+        if (radioIndex == 1) {
+            m_device1->GetMac()->McpsDataRequest(params, p);
+        } else {
+            m_device2->GetMac()->McpsDataRequest(params, p);
+        }
     }
 
     void ScheduleCycle() {
@@ -184,7 +189,7 @@ private:
         m_epochStartTime = now;
 
         SwitchChannel1(BROADCAST_CHANNEL);
-        SwitchChannel2(26); // Radio 2 inactive on dummy channel
+        SwitchChannel2(BROADCAST_CHANNEL_2); 
         
         Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
         double randomDelayUs = uv->GetValue(0, PHASE1_DURATION_US - 2000.0);
@@ -236,7 +241,9 @@ private:
         uint8_t buffer[2] = { (uint8_t)(payload & 0xFF), (uint8_t)((payload >> 8) & 0xFF) };
         Ptr<Packet> p = Create<Packet>(buffer, 2);
                   
-        SendPacket(MINI_BEACON_SIZE, p);
+        Ptr<UniformRandomVariable> radioUv = CreateObject<UniformRandomVariable>();
+        int chosenRadio = radioUv->GetInteger(1, 2);
+        SendPacket(MINI_BEACON_SIZE, p, chosenRadio);
     }
 
     

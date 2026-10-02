@@ -640,6 +640,31 @@ std::cout << "Starting Simulation for 1.0s..." << std::endl;
     std::cout << "Max Beacon Packet AoI (Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxAoITopK << " ms" << std::endl;
     std::cout << "=================================================\n" << std::endl;
 
+    std::ofstream out("/home/ubuntu/ns3-swarm-project/metrics.txt");
+    if (out.is_open()) {
+        out << "=================================================\n";
+        out << "          GLOBAL NETWORK METRICS (1.0s)          \n";
+        out << "=================================================\n";
+        out << "Total 50B Data Packets Delivered: " << g_totalDataPacketsReceived << "\n";
+        out << "Total Network Slots Elapsed     : " << totalSlots << " slots\n";
+        out << "Spatial Reuse Factor (SRF)      : " << std::fixed << std::setprecision(2) << srf << " packets/slot\n";
+        out << "Discovery Message Reception Ratio: " << std::fixed << std::setprecision(1) << globalDiscRatio * 100 << "%\n";
+        out << "Beacon Packet Reception Ratio   : " << std::fixed << std::setprecision(1) << globalBcnRatio * 100 << "%\n";
+        out << "Monitor Member List Match Ratio : " << std::fixed << std::setprecision(1) << globalTopAcc * 100 << "%\n";
+        out << "Avg Discovery Msg IAT (Top-K)   : " << std::fixed << std::setprecision(1) << globalAvgDiscIat << " ms\n";
+        out << "Max Discovery Msg IAT (Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxDiscoveryIatTopK << " ms\n";
+        out << "Mean Beacon Packet AoI (Top-K)  : " << std::fixed << std::setprecision(1) << globalMeanAoI << " ms\n";
+        out << "Max Beacon Packet AoI (Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxAoITopK << " ms\n";
+        out << "=================================================\n";
+        out.close();
+        int ret = system("cd /home/ubuntu/ns3-swarm-project && git add metrics.txt && git commit -m 'Auto upload metrics' && git push origin main");
+        if (ret != 0) {
+            std::cerr << "Failed to auto-upload metrics to GitHub!" << std::endl;
+        } else {
+            std::cout << "Metrics successfully uploaded to GitHub!" << std::endl;
+        }
+    }
+
     Simulator::Destroy();
     g_debugLogFile.close();
     return 0;

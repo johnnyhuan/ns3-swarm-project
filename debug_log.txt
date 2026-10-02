@@ -338,35 +338,37 @@
   [SCHED_ASSIGN] Target: 20, TargetSlot: 0, TargetCh: 0, AssignedTo: Radio1
   [SCHED_ASSIGN] Target: 38, TargetSlot: 9, TargetCh: 3, AssignedTo: Radio2
   [SCHED_IGNORE] Target: 2, Reason: AssignedMax
-[PHASE2_SLOT] Time: 26ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 26ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 26ms, Drone: 25, Slot: 0, S1_Act: 2, S1_Ch: 12, S2_Act: 2, S2_Ch: 13
 [PHASE2_SLOT] Time: 26ms, Drone: 49, Slot: 0, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 28ms, Drone: 0, Slot: 1, S1_Act: 2, S1_Ch: 15, S2_Act: 2, S2_Ch: 15
 [PHASE2_SLOT] Time: 28ms, Drone: 25, Slot: 1, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 28ms, Drone: 49, Slot: 1, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 31ms, Drone: 0, Slot: 2, S1_Act: 0, S1_Ch: 171, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 31ms, Drone: 0, Slot: 2, S1_Act: 0, S1_Ch: 170, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 31ms, Drone: 25, Slot: 2, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 31ms, Drone: 49, Slot: 2, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 31ms, Drone: 0, From: 23, RSSI: -98
-[PHASE2_SLOT] Time: 33ms, Drone: 0, Slot: 3, S1_Act: 0, S1_Ch: 171, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 33ms, Drone: 0, Slot: 3, S1_Act: 0, S1_Ch: 170, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 33ms, Drone: 25, Slot: 3, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 33ms, Drone: 49, Slot: 3, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 36ms, Drone: 0, Slot: 4, S1_Act: 0, S1_Ch: 171, S2_Act: 0, S2_Ch: 171
+[MAC_DROP] Time: 33ms, Drone: 39, Status: 225
+[PHASE2_SLOT] Time: 36ms, Drone: 0, Slot: 4, S1_Act: 0, S1_Ch: 170, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 36ms, Drone: 25, Slot: 4, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 36ms, Drone: 49, Slot: 4, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 38ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 171, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 38ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 170, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 38ms, Drone: 25, Slot: 5, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 38ms, Drone: 49, Slot: 5, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 41ms, Drone: 0, Slot: 6, S1_Act: 1, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 41ms, Drone: 0, Slot: 6, S1_Act: 1, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 41ms, Drone: 25, Slot: 6, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 41ms, Drone: 49, Slot: 6, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 43ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 171, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 43ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 170, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 43ms, Drone: 25, Slot: 7, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 43ms, Drone: 49, Slot: 7, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 46ms, Drone: 0, Slot: 8, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 46ms, Drone: 0, Slot: 8, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 46ms, Drone: 25, Slot: 8, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 46ms, Drone: 49, Slot: 8, S1_Act: 1, S1_Ch: 14, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 48ms, Drone: 0, Slot: 9, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[MAC_DROP] Time: 46ms, Drone: 46, Status: 225
+[PHASE2_SLOT] Time: 48ms, Drone: 0, Slot: 9, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 48ms, Drone: 25, Slot: 9, S1_Act: 1, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 48ms, Drone: 49, Slot: 9, S1_Act: 2, S1_Ch: 17, S2_Act: 2, S2_Ch: 15
 [PHASE1_TX] Time: 51ms, Drone: 47, Radio: 2, ClaimedSlot: 9, ClaimedCh: 4
@@ -775,7 +777,7 @@
   [SCHED_CONFLICT] Target: 27, TargetSlot: 4, TargetCh: 3, Reason: BothRadiosBusy
   [SCHED_ASSIGN] Target: 38, TargetSlot: 1, TargetCh: 5, AssignedTo: Radio1
   [SCHED_IGNORE] Target: 0, Reason: AssignedMax
-[PHASE2_SLOT] Time: 77ms, Drone: 0, Slot: 0, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 77ms, Drone: 0, Slot: 0, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 77ms, Drone: 25, Slot: 0, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 13
 [PHASE2_SLOT] Time: 77ms, Drone: 49, Slot: 0, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE1_RX] Time: 77ms, Drone: 0, From: 32, ClSlot: 9, ClCh: 0, RSSI: -101
@@ -784,38 +786,39 @@
 [PHASE2_SLOT] Time: 79ms, Drone: 0, Slot: 1, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 79ms, Drone: 25, Slot: 1, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 79ms, Drone: 49, Slot: 1, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 82ms, Drone: 0, Slot: 2, S1_Act: 0, S1_Ch: 171, S2_Act: 0, S2_Ch: 171
+[MAC_DROP] Time: 79ms, Drone: 35, Status: 225
+[PHASE2_SLOT] Time: 82ms, Drone: 0, Slot: 2, S1_Act: 0, S1_Ch: 170, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 82ms, Drone: 25, Slot: 2, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 82ms, Drone: 49, Slot: 2, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 84ms, Drone: 0, Slot: 3, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 84ms, Drone: 0, Slot: 3, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 84ms, Drone: 25, Slot: 3, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 84ms, Drone: 49, Slot: 3, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 87ms, Drone: 0, Slot: 4, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 87ms, Drone: 0, Slot: 4, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 87ms, Drone: 25, Slot: 4, S1_Act: 1, S1_Ch: 15, S2_Act: 2, S2_Ch: 15
 [PHASE2_SLOT] Time: 87ms, Drone: 49, Slot: 4, S1_Act: 2, S1_Ch: 15, S2_Act: 2, S2_Ch: 16
-[PHASE2_SLOT] Time: 89ms, Drone: 0, Slot: 5, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 89ms, Drone: 0, Slot: 5, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 89ms, Drone: 25, Slot: 5, S1_Act: 2, S1_Ch: 16, S2_Act: 2, S2_Ch: 16
 [PHASE2_SLOT] Time: 89ms, Drone: 49, Slot: 5, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 89ms, Drone: 49, From: 1, RSSI: -100
-[PHASE2_SLOT] Time: 92ms, Drone: 0, Slot: 6, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 92ms, Drone: 0, Slot: 6, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 92ms, Drone: 25, Slot: 6, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 92ms, Drone: 49, Slot: 6, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 92ms, Drone: 49, From: 30, RSSI: -98
 [PHASE2_DATA_RX] Time: 92ms, Drone: 49, From: 30, RSSI: -98
 [PHASE2_DATA_RX] Time: 92ms, Drone: 25, From: 28, RSSI: -99
 [PHASE2_DATA_RX] Time: 92ms, Drone: 25, From: 28, RSSI: -99
-[PHASE2_SLOT] Time: 94ms, Drone: 0, Slot: 7, S1_Act: 1, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 94ms, Drone: 0, Slot: 7, S1_Act: 1, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 94ms, Drone: 25, Slot: 7, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 94ms, Drone: 49, Slot: 7, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 94ms, Drone: 25, From: 18, RSSI: -107
 [PHASE2_DATA_RX] Time: 94ms, Drone: 49, From: 18, RSSI: -107
-[PHASE2_SLOT] Time: 97ms, Drone: 0, Slot: 8, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 97ms, Drone: 0, Slot: 8, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 97ms, Drone: 25, Slot: 8, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 97ms, Drone: 49, Slot: 8, S1_Act: 1, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 97ms, Drone: 25, From: 0, RSSI: -91
 [PHASE2_DATA_RX] Time: 97ms, Drone: 49, From: 11, RSSI: -102
 [PHASE2_DATA_RX] Time: 97ms, Drone: 25, From: 11, RSSI: -104
-[PHASE2_SLOT] Time: 99ms, Drone: 0, Slot: 9, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 99ms, Drone: 0, Slot: 9, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 99ms, Drone: 25, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 99ms, Drone: 49, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
 [PHASE1_TX] Time: 102ms, Drone: 2, Radio: 2, ClaimedSlot: 1, ClaimedCh: 3
@@ -1241,40 +1244,43 @@
   [SCHED_ASSIGN] Target: 1, TargetSlot: 7, TargetCh: 5, AssignedTo: Radio1
   [SCHED_ASSIGN] Target: 43, TargetSlot: 1, TargetCh: 3, AssignedTo: Radio1
   [SCHED_IGNORE] Target: 0, Reason: AssignedMax
-[PHASE2_SLOT] Time: 128ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 128ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 128ms, Drone: 25, Slot: 0, S1_Act: 2, S1_Ch: 14, S2_Act: 2, S2_Ch: 15
 [PHASE2_SLOT] Time: 128ms, Drone: 49, Slot: 0, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 130ms, Drone: 0, Slot: 1, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 130ms, Drone: 25, Slot: 1, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 130ms, Drone: 49, Slot: 1, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 133ms, Drone: 0, Slot: 2, S1_Act: 0, S1_Ch: 171, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 133ms, Drone: 0, Slot: 2, S1_Act: 0, S1_Ch: 170, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 133ms, Drone: 25, Slot: 2, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 133ms, Drone: 49, Slot: 2, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 133ms, Drone: 49, From: 43, RSSI: -99
-[PHASE2_SLOT] Time: 135ms, Drone: 0, Slot: 3, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 135ms, Drone: 0, Slot: 3, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 135ms, Drone: 25, Slot: 3, S1_Act: 1, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 135ms, Drone: 49, Slot: 3, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 138ms, Drone: 0, Slot: 4, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 171
+[MAC_DROP] Time: 135ms, Drone: 22, Status: 225
+[PHASE2_SLOT] Time: 138ms, Drone: 0, Slot: 4, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 138ms, Drone: 25, Slot: 4, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 138ms, Drone: 49, Slot: 4, S1_Act: 1, S1_Ch: 16, S2_Act: 0, S2_Ch: 16
-[PHASE2_SLOT] Time: 140ms, Drone: 0, Slot: 5, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 140ms, Drone: 0, Slot: 5, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 140ms, Drone: 25, Slot: 5, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 140ms, Drone: 49, Slot: 5, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
+[MAC_DROP] Time: 140ms, Drone: 15, Status: 225
 [PHASE2_DATA_RX] Time: 140ms, Drone: 25, From: 49, RSSI: -95
-[PHASE2_SLOT] Time: 143ms, Drone: 0, Slot: 6, S1_Act: 1, S1_Ch: 12, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 143ms, Drone: 0, Slot: 6, S1_Act: 1, S1_Ch: 12, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 143ms, Drone: 25, Slot: 6, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 143ms, Drone: 49, Slot: 6, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 143ms, Drone: 49, From: 30, RSSI: -98
-[PHASE2_SLOT] Time: 145ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 145ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 145ms, Drone: 25, Slot: 7, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 145ms, Drone: 49, Slot: 7, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 145ms, Drone: 25, From: 0, RSSI: -92
-[PHASE2_SLOT] Time: 148ms, Drone: 0, Slot: 8, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 148ms, Drone: 0, Slot: 8, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 148ms, Drone: 25, Slot: 8, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 148ms, Drone: 49, Slot: 8, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 150ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 150ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 150ms, Drone: 25, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 150ms, Drone: 49, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
+[MAC_DROP] Time: 150ms, Drone: 14, Status: 225
 [PHASE2_DATA_RX] Time: 150ms, Drone: 49, From: 27, RSSI: -100
 [PHASE2_DATA_RX] Time: 150ms, Drone: 25, From: 27, RSSI: -102
 [PHASE2_DATA_RX] Time: 150ms, Drone: 0, From: 27, RSSI: -102
@@ -1706,39 +1712,39 @@
   [SCHED_ASSIGN] Target: 27, TargetSlot: 8, TargetCh: 4, AssignedTo: Radio1
   [SCHED_ASSIGN] Target: 1, TargetSlot: 4, TargetCh: 4, AssignedTo: Radio2
   [SCHED_IGNORE] Target: 0, Reason: AssignedMax
-[PHASE2_SLOT] Time: 179ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 179ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 179ms, Drone: 25, Slot: 0, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 179ms, Drone: 49, Slot: 0, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 181ms, Drone: 0, Slot: 1, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 181ms, Drone: 25, Slot: 1, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 181ms, Drone: 49, Slot: 1, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 184ms, Drone: 0, Slot: 2, S1_Act: 0, S1_Ch: 171, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 184ms, Drone: 0, Slot: 2, S1_Act: 0, S1_Ch: 170, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 184ms, Drone: 25, Slot: 2, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 184ms, Drone: 49, Slot: 2, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 186ms, Drone: 0, Slot: 3, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 186ms, Drone: 0, Slot: 3, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 186ms, Drone: 25, Slot: 3, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 186ms, Drone: 49, Slot: 3, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 189ms, Drone: 0, Slot: 4, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 189ms, Drone: 0, Slot: 4, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 189ms, Drone: 25, Slot: 4, S1_Act: 1, S1_Ch: 15, S2_Act: 2, S2_Ch: 15
 [PHASE2_SLOT] Time: 189ms, Drone: 49, Slot: 4, S1_Act: 2, S1_Ch: 15, S2_Act: 2, S2_Ch: 16
-[PHASE2_SLOT] Time: 191ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 191ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 191ms, Drone: 25, Slot: 5, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 191ms, Drone: 49, Slot: 5, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 191ms, Drone: 25, From: 23, RSSI: -98
 [PHASE2_DATA_RX] Time: 191ms, Drone: 49, From: 1, RSSI: -100
-[PHASE2_SLOT] Time: 194ms, Drone: 0, Slot: 6, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 194ms, Drone: 0, Slot: 6, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 194ms, Drone: 25, Slot: 6, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 194ms, Drone: 49, Slot: 6, S1_Act: 1, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 194ms, Drone: 25, From: 32, RSSI: -104
 [PHASE2_DATA_RX] Time: 194ms, Drone: 25, From: 32, RSSI: -104
-[PHASE2_SLOT] Time: 196ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 196ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 196ms, Drone: 25, Slot: 7, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 196ms, Drone: 49, Slot: 7, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 199ms, Drone: 0, Slot: 8, S1_Act: 2, S1_Ch: 16, S2_Act: 2, S2_Ch: 12
 [PHASE2_SLOT] Time: 199ms, Drone: 25, Slot: 8, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 199ms, Drone: 49, Slot: 8, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 199ms, Drone: 25, From: 38, RSSI: -106
-[PHASE2_SLOT] Time: 201ms, Drone: 0, Slot: 9, S1_Act: 1, S1_Ch: 16, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 201ms, Drone: 0, Slot: 9, S1_Act: 1, S1_Ch: 16, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 201ms, Drone: 25, Slot: 9, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 201ms, Drone: 49, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
 [PHASE2_DATA_RX] Time: 201ms, Drone: 49, From: 27, RSSI: -99
@@ -2155,39 +2161,40 @@
   [SCHED_ASSIGN] Target: 0, TargetSlot: 2, TargetCh: 0, AssignedTo: Radio1
   [SCHED_ASSIGN] Target: 2, TargetSlot: 6, TargetCh: 4, AssignedTo: Radio1
   [SCHED_IGNORE] Target: 23, Reason: AssignedMax
-[PHASE2_SLOT] Time: 230ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 230ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 230ms, Drone: 25, Slot: 0, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 230ms, Drone: 49, Slot: 0, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 232ms, Drone: 0, Slot: 1, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 232ms, Drone: 25, Slot: 1, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 232ms, Drone: 49, Slot: 1, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 235ms, Drone: 0, Slot: 2, S1_Act: 1, S1_Ch: 12, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 235ms, Drone: 0, Slot: 2, S1_Act: 1, S1_Ch: 12, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 235ms, Drone: 25, Slot: 2, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 235ms, Drone: 49, Slot: 2, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 237ms, Drone: 0, Slot: 3, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 237ms, Drone: 0, Slot: 3, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 237ms, Drone: 25, Slot: 3, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 237ms, Drone: 49, Slot: 3, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 237ms, Drone: 49, From: 0, RSSI: -101
-[PHASE2_SLOT] Time: 240ms, Drone: 0, Slot: 4, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 240ms, Drone: 0, Slot: 4, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 240ms, Drone: 25, Slot: 4, S1_Act: 1, S1_Ch: 14, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 240ms, Drone: 49, Slot: 4, S1_Act: 2, S1_Ch: 14, S2_Act: 2, S2_Ch: 13
-[PHASE2_SLOT] Time: 242ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 242ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 242ms, Drone: 25, Slot: 5, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 242ms, Drone: 49, Slot: 5, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
+[MAC_DROP] Time: 242ms, Drone: 42, Status: 225
 [PHASE2_DATA_RX] Time: 242ms, Drone: 0, From: 25, RSSI: -92
 [PHASE2_DATA_RX] Time: 242ms, Drone: 49, From: 25, RSSI: -96
 [PHASE2_DATA_RX] Time: 242ms, Drone: 49, From: 43, RSSI: -100
-[PHASE2_SLOT] Time: 245ms, Drone: 0, Slot: 6, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 245ms, Drone: 0, Slot: 6, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 245ms, Drone: 25, Slot: 6, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 245ms, Drone: 49, Slot: 6, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 247ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 247ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 247ms, Drone: 25, Slot: 7, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 247ms, Drone: 49, Slot: 7, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 247ms, Drone: 49, From: 2, RSSI: -104
 [PHASE2_SLOT] Time: 250ms, Drone: 0, Slot: 8, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 12
 [PHASE2_SLOT] Time: 250ms, Drone: 25, Slot: 8, S1_Act: 2, S1_Ch: 12, S2_Act: 2, S2_Ch: 12
 [PHASE2_SLOT] Time: 250ms, Drone: 49, Slot: 8, S1_Act: 1, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 252ms, Drone: 0, Slot: 9, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 252ms, Drone: 0, Slot: 9, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 252ms, Drone: 25, Slot: 9, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 252ms, Drone: 49, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
 [PHASE2_DATA_RX] Time: 252ms, Drone: 25, From: 10, RSSI: -88
@@ -2611,32 +2618,35 @@
   [SCHED_ASSIGN] Target: 27, TargetSlot: 7, TargetCh: 5, AssignedTo: Radio1
   [SCHED_ASSIGN] Target: 0, TargetSlot: 3, TargetCh: 3, AssignedTo: Radio1
   [SCHED_IGNORE] Target: 20, Reason: AssignedMax
-[PHASE2_SLOT] Time: 281ms, Drone: 0, Slot: 0, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 281ms, Drone: 0, Slot: 0, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 281ms, Drone: 25, Slot: 0, S1_Act: 1, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 281ms, Drone: 49, Slot: 0, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 283ms, Drone: 0, Slot: 1, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 283ms, Drone: 25, Slot: 1, S1_Act: 0, S1_Ch: 0, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 283ms, Drone: 49, Slot: 1, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 286ms, Drone: 0, Slot: 2, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 286ms, Drone: 0, Slot: 2, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 286ms, Drone: 25, Slot: 2, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 286ms, Drone: 49, Slot: 2, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 0
+[MAC_DROP] Time: 286ms, Drone: 5, Status: 225
 [PHASE2_SLOT] Time: 288ms, Drone: 0, Slot: 3, S1_Act: 1, S1_Ch: 15, S2_Act: 2, S2_Ch: 16
 [PHASE2_SLOT] Time: 288ms, Drone: 25, Slot: 3, S1_Act: 2, S1_Ch: 15, S2_Act: 2, S2_Ch: 16
 [PHASE2_SLOT] Time: 288ms, Drone: 49, Slot: 3, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 291ms, Drone: 0, Slot: 4, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 291ms, Drone: 0, Slot: 4, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 291ms, Drone: 25, Slot: 4, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 291ms, Drone: 49, Slot: 4, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 13
+[MAC_DROP] Time: 291ms, Drone: 10, Status: 225
+[MAC_DROP] Time: 291ms, Drone: 42, Status: 225
 [PHASE2_DATA_RX] Time: 291ms, Drone: 0, From: 28, RSSI: -99
 [PHASE2_DATA_RX] Time: 291ms, Drone: 25, From: 28, RSSI: -100
 [PHASE2_DATA_RX] Time: 291ms, Drone: 49, From: 0, RSSI: -101
-[PHASE2_SLOT] Time: 293ms, Drone: 0, Slot: 5, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 293ms, Drone: 0, Slot: 5, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 293ms, Drone: 25, Slot: 5, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 293ms, Drone: 49, Slot: 5, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 293ms, Drone: 25, From: 23, RSSI: -98
-[PHASE2_SLOT] Time: 296ms, Drone: 0, Slot: 6, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 296ms, Drone: 0, Slot: 6, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 296ms, Drone: 25, Slot: 6, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 296ms, Drone: 49, Slot: 6, S1_Act: 1, S1_Ch: 14, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 298ms, Drone: 0, Slot: 7, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 298ms, Drone: 0, Slot: 7, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 298ms, Drone: 25, Slot: 7, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 298ms, Drone: 49, Slot: 7, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 301ms, Drone: 0, Slot: 8, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 12
@@ -2645,7 +2655,7 @@
 [PHASE2_DATA_RX] Time: 301ms, Drone: 49, From: 27, RSSI: -99
 [PHASE2_DATA_RX] Time: 301ms, Drone: 25, From: 27, RSSI: -100
 [PHASE2_DATA_RX] Time: 301ms, Drone: 0, From: 27, RSSI: -100
-[PHASE2_SLOT] Time: 303ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 303ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 303ms, Drone: 25, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 303ms, Drone: 49, Slot: 9, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 15
 [PHASE1_TX] Time: 306ms, Drone: 31, Radio: 2, ClaimedSlot: 4, ClaimedCh: 1
@@ -3086,39 +3096,42 @@
   [SCHED_CONFLICT] Target: 27, TargetSlot: 2, TargetCh: 0, Reason: BothRadiosBusy
   [SCHED_ASSIGN] Target: 0, TargetSlot: 8, TargetCh: 1, AssignedTo: Radio2
   [SCHED_IGNORE] Target: 43, Reason: AssignedMax
-[PHASE2_SLOT] Time: 332ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 332ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 332ms, Drone: 25, Slot: 0, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 332ms, Drone: 49, Slot: 0, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
 [PHASE1_RX] Time: 332ms, Drone: 49, From: 18, ClSlot: 4, ClCh: 4, RSSI: -108
 [PHASE2_SLOT] Time: 334ms, Drone: 0, Slot: 1, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 334ms, Drone: 25, Slot: 1, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 334ms, Drone: 49, Slot: 1, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 337ms, Drone: 0, Slot: 2, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 337ms, Drone: 0, Slot: 2, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 337ms, Drone: 25, Slot: 2, S1_Act: 1, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 337ms, Drone: 49, Slot: 2, S1_Act: 2, S1_Ch: 15, S2_Act: 2, S2_Ch: 15
 [PHASE2_SLOT] Time: 339ms, Drone: 0, Slot: 3, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 339ms, Drone: 25, Slot: 3, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 339ms, Drone: 49, Slot: 3, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
+[MAC_DROP] Time: 339ms, Drone: 43, Status: 225
 [PHASE2_DATA_RX] Time: 339ms, Drone: 49, From: 25, RSSI: -94
 [PHASE2_DATA_RX] Time: 339ms, Drone: 49, From: 25, RSSI: -94
-[PHASE2_SLOT] Time: 342ms, Drone: 0, Slot: 4, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 342ms, Drone: 0, Slot: 4, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 342ms, Drone: 25, Slot: 4, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 342ms, Drone: 49, Slot: 4, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 13
+[MAC_DROP] Time: 342ms, Drone: 14, Status: 225
 [PHASE2_DATA_RX] Time: 342ms, Drone: 49, From: 9, RSSI: -102
 [PHASE2_DATA_RX] Time: 342ms, Drone: 49, From: 9, RSSI: -102
-[PHASE2_SLOT] Time: 344ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 344ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 344ms, Drone: 25, Slot: 5, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 344ms, Drone: 49, Slot: 5, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 347ms, Drone: 0, Slot: 6, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 347ms, Drone: 0, Slot: 6, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 347ms, Drone: 25, Slot: 6, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 347ms, Drone: 49, Slot: 6, S1_Act: 1, S1_Ch: 16, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 349ms, Drone: 0, Slot: 7, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[MAC_DROP] Time: 347ms, Drone: 19, Status: 225
+[PHASE2_SLOT] Time: 349ms, Drone: 0, Slot: 7, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 349ms, Drone: 25, Slot: 7, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 349ms, Drone: 49, Slot: 7, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 352ms, Drone: 0, Slot: 8, S1_Act: 1, S1_Ch: 13, S2_Act: 0, S2_Ch: 12
 [PHASE2_SLOT] Time: 352ms, Drone: 25, Slot: 8, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 12
 [PHASE2_SLOT] Time: 352ms, Drone: 49, Slot: 8, S1_Act: 2, S1_Ch: 12, S2_Act: 2, S2_Ch: 13
-[PHASE2_SLOT] Time: 354ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 354ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 354ms, Drone: 25, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 354ms, Drone: 49, Slot: 9, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 15
 [PHASE2_DATA_RX] Time: 354ms, Drone: 25, From: 0, RSSI: -92
@@ -3532,7 +3545,7 @@
   [SCHED_ASSIGN] Target: 27, TargetSlot: 9, TargetCh: 5, AssignedTo: Radio1
   [SCHED_ASSIGN] Target: 1, TargetSlot: 2, TargetCh: 2, AssignedTo: Radio1
   [SCHED_IGNORE] Target: 43, Reason: AssignedMax
-[PHASE2_SLOT] Time: 383ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 383ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 383ms, Drone: 25, Slot: 0, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 383ms, Drone: 49, Slot: 0, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
 [PHASE1_RX] Time: 383ms, Drone: 0, From: 34, ClSlot: 0, ClCh: 2, RSSI: -104
@@ -3540,24 +3553,25 @@
 [PHASE2_SLOT] Time: 385ms, Drone: 0, Slot: 1, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 385ms, Drone: 25, Slot: 1, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 385ms, Drone: 49, Slot: 1, S1_Act: 1, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 388ms, Drone: 0, Slot: 2, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[MAC_DROP] Time: 385ms, Drone: 22, Status: 225
+[PHASE2_SLOT] Time: 388ms, Drone: 0, Slot: 2, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 388ms, Drone: 25, Slot: 2, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 388ms, Drone: 49, Slot: 2, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 390ms, Drone: 0, Slot: 3, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 390ms, Drone: 25, Slot: 3, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 390ms, Drone: 49, Slot: 3, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 390ms, Drone: 49, From: 1, RSSI: -100
-[PHASE2_SLOT] Time: 393ms, Drone: 0, Slot: 4, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 393ms, Drone: 0, Slot: 4, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 393ms, Drone: 25, Slot: 4, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 393ms, Drone: 49, Slot: 4, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 13
-[PHASE2_SLOT] Time: 395ms, Drone: 0, Slot: 5, S1_Act: 1, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 395ms, Drone: 0, Slot: 5, S1_Act: 1, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 395ms, Drone: 25, Slot: 5, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 395ms, Drone: 49, Slot: 5, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 395ms, Drone: 49, From: 30, RSSI: -97
-[PHASE2_SLOT] Time: 398ms, Drone: 0, Slot: 6, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 398ms, Drone: 0, Slot: 6, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 398ms, Drone: 25, Slot: 6, S1_Act: 1, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 398ms, Drone: 49, Slot: 6, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 400ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 400ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 400ms, Drone: 25, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 400ms, Drone: 49, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 400ms, Drone: 0, From: 25, RSSI: -92
@@ -3565,7 +3579,8 @@
 [PHASE2_SLOT] Time: 403ms, Drone: 0, Slot: 8, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 12
 [PHASE2_SLOT] Time: 403ms, Drone: 25, Slot: 8, S1_Act: 2, S1_Ch: 16, S2_Act: 2, S2_Ch: 17
 [PHASE2_SLOT] Time: 403ms, Drone: 49, Slot: 8, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 13
-[PHASE2_SLOT] Time: 405ms, Drone: 0, Slot: 9, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[MAC_DROP] Time: 403ms, Drone: 3, Status: 225
+[PHASE2_SLOT] Time: 405ms, Drone: 0, Slot: 9, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 405ms, Drone: 25, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 405ms, Drone: 49, Slot: 9, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
 [PHASE2_DATA_RX] Time: 405ms, Drone: 25, From: 23, RSSI: -98
@@ -4000,33 +4015,36 @@
   [SCHED_ASSIGN] Target: 1, TargetSlot: 5, TargetCh: 1, AssignedTo: Radio1
   [SCHED_ASSIGN] Target: 27, TargetSlot: 8, TargetCh: 4, AssignedTo: Radio1
   [SCHED_IGNORE] Target: 43, Reason: AssignedMax
-[PHASE2_SLOT] Time: 434ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 434ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 434ms, Drone: 25, Slot: 0, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 434ms, Drone: 49, Slot: 0, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 436ms, Drone: 0, Slot: 1, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 436ms, Drone: 25, Slot: 1, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 436ms, Drone: 49, Slot: 1, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 439ms, Drone: 0, Slot: 2, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 439ms, Drone: 0, Slot: 2, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 439ms, Drone: 25, Slot: 2, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 439ms, Drone: 49, Slot: 2, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 441ms, Drone: 0, Slot: 3, S1_Act: 2, S1_Ch: 15, S2_Act: 2, S2_Ch: 12
 [PHASE2_SLOT] Time: 441ms, Drone: 25, Slot: 3, S1_Act: 1, S1_Ch: 15, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 441ms, Drone: 49, Slot: 3, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 444ms, Drone: 0, Slot: 4, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 444ms, Drone: 0, Slot: 4, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 444ms, Drone: 25, Slot: 4, S1_Act: 2, S1_Ch: 15, S2_Act: 2, S2_Ch: 14
 [PHASE2_SLOT] Time: 444ms, Drone: 49, Slot: 4, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 13
+[MAC_DROP] Time: 444ms, Drone: 10, Status: 225
 [PHASE2_DATA_RX] Time: 444ms, Drone: 49, From: 25, RSSI: -96
 [PHASE2_DATA_RX] Time: 444ms, Drone: 0, From: 32, RSSI: -101
-[PHASE2_SLOT] Time: 446ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 446ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 446ms, Drone: 25, Slot: 5, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 446ms, Drone: 49, Slot: 5, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
+[MAC_DROP] Time: 446ms, Drone: 39, Status: 225
+[MAC_DROP] Time: 446ms, Drone: 40, Status: 225
 [PHASE2_DATA_RX] Time: 446ms, Drone: 25, From: 34, RSSI: -105
-[PHASE2_SLOT] Time: 449ms, Drone: 0, Slot: 6, S1_Act: 1, S1_Ch: 16, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 449ms, Drone: 0, Slot: 6, S1_Act: 1, S1_Ch: 16, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 449ms, Drone: 25, Slot: 6, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 449ms, Drone: 49, Slot: 6, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 449ms, Drone: 49, From: 1, RSSI: -100
 [PHASE2_DATA_RX] Time: 451ms, Drone: 25, From: 28, RSSI: -101
-[PHASE2_SLOT] Time: 451ms, Drone: 0, Slot: 7, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 451ms, Drone: 0, Slot: 7, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 451ms, Drone: 25, Slot: 7, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 451ms, Drone: 49, Slot: 7, S1_Act: 1, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 451ms, Drone: 0, From: 9, RSSI: -105
@@ -4034,7 +4052,7 @@
 [PHASE2_SLOT] Time: 454ms, Drone: 25, Slot: 8, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 17
 [PHASE2_SLOT] Time: 454ms, Drone: 49, Slot: 8, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 13
 [PHASE2_DATA_RX] Time: 454ms, Drone: 0, From: 49, RSSI: -101
-[PHASE2_SLOT] Time: 456ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 456ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 456ms, Drone: 25, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 456ms, Drone: 49, Slot: 9, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 15
 [PHASE2_DATA_RX] Time: 456ms, Drone: 25, From: 27, RSSI: -102
@@ -4481,37 +4499,39 @@
   [SCHED_ASSIGN] Target: 1, TargetSlot: 7, TargetCh: 0, AssignedTo: Radio2
   [SCHED_ASSIGN] Target: 20, TargetSlot: 3, TargetCh: 5, AssignedTo: Radio1
   [SCHED_IGNORE] Target: 27, Reason: AssignedMax
-[PHASE2_SLOT] Time: 485ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 485ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 485ms, Drone: 25, Slot: 0, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 485ms, Drone: 49, Slot: 0, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 487ms, Drone: 0, Slot: 1, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 487ms, Drone: 25, Slot: 1, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 487ms, Drone: 49, Slot: 1, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 490ms, Drone: 0, Slot: 2, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 490ms, Drone: 0, Slot: 2, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 490ms, Drone: 25, Slot: 2, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 490ms, Drone: 49, Slot: 2, S1_Act: 1, S1_Ch: 13, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 492ms, Drone: 0, Slot: 3, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 12
 [PHASE2_SLOT] Time: 492ms, Drone: 25, Slot: 3, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 492ms, Drone: 49, Slot: 3, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 495ms, Drone: 0, Slot: 4, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 495ms, Drone: 0, Slot: 4, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 495ms, Drone: 25, Slot: 4, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 14
 [PHASE2_SLOT] Time: 495ms, Drone: 49, Slot: 4, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 13
-[PHASE2_SLOT] Time: 497ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[MAC_DROP] Time: 495ms, Drone: 23, Status: 225
+[PHASE2_SLOT] Time: 497ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 497ms, Drone: 25, Slot: 5, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 497ms, Drone: 49, Slot: 5, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 497ms, Drone: 49, From: 30, RSSI: -98
-[PHASE2_SLOT] Time: 500ms, Drone: 0, Slot: 6, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 500ms, Drone: 0, Slot: 6, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 500ms, Drone: 25, Slot: 6, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 500ms, Drone: 49, Slot: 6, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 502ms, Drone: 49, From: 28, RSSI: -106
-[PHASE2_SLOT] Time: 502ms, Drone: 0, Slot: 7, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 502ms, Drone: 0, Slot: 7, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 502ms, Drone: 25, Slot: 7, S1_Act: 1, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 502ms, Drone: 49, Slot: 7, S1_Act: 2, S1_Ch: 13, S2_Act: 2, S2_Ch: 12
 [PHASE2_SLOT] Time: 505ms, Drone: 0, Slot: 8, S1_Act: 1, S1_Ch: 13, S2_Act: 0, S2_Ch: 12
 [PHASE2_SLOT] Time: 505ms, Drone: 25, Slot: 8, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 17
 [PHASE2_SLOT] Time: 505ms, Drone: 49, Slot: 8, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 13
+[MAC_DROP] Time: 505ms, Drone: 12, Status: 225
 [PHASE2_DATA_RX] Time: 505ms, Drone: 49, From: 1, RSSI: -100
-[PHASE2_SLOT] Time: 507ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 507ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 507ms, Drone: 25, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 507ms, Drone: 49, Slot: 9, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 15
 [PHASE2_DATA_RX] Time: 507ms, Drone: 25, From: 0, RSSI: -91
@@ -4934,31 +4954,32 @@
   [SCHED_CONFLICT] Target: 27, TargetSlot: 0, TargetCh: 3, Reason: MyTxSlot
   [SCHED_ASSIGN] Target: 27, TargetSlot: 0, TargetCh: 3, AssignedTo: Radio2
   [SCHED_IGNORE] Target: 0, Reason: AssignedMax
-[PHASE2_SLOT] Time: 536ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 536ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 536ms, Drone: 25, Slot: 0, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 536ms, Drone: 49, Slot: 0, S1_Act: 1, S1_Ch: 16, S2_Act: 2, S2_Ch: 15
 [PHASE2_SLOT] Time: 538ms, Drone: 0, Slot: 1, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 538ms, Drone: 25, Slot: 1, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 538ms, Drone: 49, Slot: 1, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 541ms, Drone: 0, Slot: 2, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 541ms, Drone: 0, Slot: 2, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 541ms, Drone: 25, Slot: 2, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 541ms, Drone: 49, Slot: 2, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 15
+[MAC_DROP] Time: 541ms, Drone: 13, Status: 225
 [PHASE1_RX] Time: 541ms, Drone: 0, From: 2, ClSlot: 7, ClCh: 0, RSSI: -105
 [PHASE1_RX] Time: 541ms, Drone: 25, From: 2, ClSlot: 7, ClCh: 0, RSSI: -106
 [PHASE2_SLOT] Time: 543ms, Drone: 0, Slot: 3, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 12
 [PHASE2_SLOT] Time: 543ms, Drone: 25, Slot: 3, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 543ms, Drone: 49, Slot: 3, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 546ms, Drone: 0, Slot: 4, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 546ms, Drone: 0, Slot: 4, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 546ms, Drone: 25, Slot: 4, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 14
 [PHASE2_SLOT] Time: 546ms, Drone: 49, Slot: 4, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 13
-[PHASE2_SLOT] Time: 548ms, Drone: 0, Slot: 5, S1_Act: 1, S1_Ch: 13, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 548ms, Drone: 0, Slot: 5, S1_Act: 1, S1_Ch: 13, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 548ms, Drone: 25, Slot: 5, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 548ms, Drone: 49, Slot: 5, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 548ms, Drone: 49, From: 30, RSSI: -98
-[PHASE2_SLOT] Time: 551ms, Drone: 0, Slot: 6, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 551ms, Drone: 0, Slot: 6, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 551ms, Drone: 25, Slot: 6, S1_Act: 1, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 551ms, Drone: 49, Slot: 6, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 553ms, Drone: 0, Slot: 7, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 553ms, Drone: 0, Slot: 7, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 553ms, Drone: 25, Slot: 7, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 553ms, Drone: 49, Slot: 7, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 12
 [PHASE2_DATA_RX] Time: 553ms, Drone: 49, From: 25, RSSI: -95
@@ -4968,9 +4989,10 @@
 [PHASE2_DATA_RX] Time: 556ms, Drone: 25, From: 23, RSSI: -98
 [PHASE2_DATA_RX] Time: 556ms, Drone: 0, From: 23, RSSI: -99
 [PHASE2_DATA_RX] Time: 556ms, Drone: 49, From: 1, RSSI: -100
-[PHASE2_SLOT] Time: 558ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 558ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 558ms, Drone: 25, Slot: 9, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 558ms, Drone: 49, Slot: 9, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 15
+[MAC_DROP] Time: 558ms, Drone: 9, Status: 225
 [PHASE2_DATA_RX] Time: 558ms, Drone: 25, From: 18, RSSI: -107
 [PHASE2_DATA_RX] Time: 558ms, Drone: 0, From: 18, RSSI: -108
 [PHASE1_TX] Time: 562ms, Drone: 22, Radio: 1, ClaimedSlot: 3, ClaimedCh: 2
@@ -5364,34 +5386,38 @@
   [SCHED_ASSIGN] Target: 11, TargetSlot: 9, TargetCh: 2, AssignedTo: Radio1
   [SCHED_CONFLICT] Target: 20, TargetSlot: 3, TargetCh: 1, Reason: MyTxSlot
   [SCHED_ASSIGN] Target: 20, TargetSlot: 3, TargetCh: 1, AssignedTo: Radio2
-[PHASE2_SLOT] Time: 587ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 587ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 587ms, Drone: 25, Slot: 0, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 587ms, Drone: 49, Slot: 0, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 589ms, Drone: 0, Slot: 1, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 589ms, Drone: 25, Slot: 1, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 589ms, Drone: 49, Slot: 1, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 592ms, Drone: 0, Slot: 2, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 592ms, Drone: 0, Slot: 2, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 592ms, Drone: 25, Slot: 2, S1_Act: 1, S1_Ch: 17, S2_Act: 2, S2_Ch: 17
 [PHASE2_SLOT] Time: 592ms, Drone: 49, Slot: 2, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 594ms, Drone: 0, Slot: 3, S1_Act: 1, S1_Ch: 13, S2_Act: 2, S2_Ch: 14
 [PHASE2_SLOT] Time: 594ms, Drone: 25, Slot: 3, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 594ms, Drone: 49, Slot: 3, S1_Act: 1, S1_Ch: 14, S2_Act: 2, S2_Ch: 13
+[MAC_DROP] Time: 594ms, Drone: 36, Status: 225
 [PHASE2_DATA_RX] Time: 594ms, Drone: 25, From: 27, RSSI: -101
-[PHASE2_SLOT] Time: 597ms, Drone: 0, Slot: 4, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 171
+[MAC_DROP] Time: 596ms, Drone: 23, Status: 225
+[PHASE2_SLOT] Time: 597ms, Drone: 0, Slot: 4, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 597ms, Drone: 25, Slot: 4, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 14
 [PHASE2_SLOT] Time: 597ms, Drone: 49, Slot: 4, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 13
+[MAC_DROP] Time: 597ms, Drone: 39, Status: 225
 [PHASE2_DATA_RX] Time: 597ms, Drone: 25, From: 49, RSSI: -96
 [PHASE2_DATA_RX] Time: 597ms, Drone: 49, From: 0, RSSI: -99
 [PHASE2_DATA_RX] Time: 597ms, Drone: 0, From: 49, RSSI: -101
-[PHASE2_SLOT] Time: 599ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 599ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 599ms, Drone: 25, Slot: 5, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 599ms, Drone: 49, Slot: 5, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 599ms, Drone: 49, From: 30, RSSI: -98
-[PHASE2_SLOT] Time: 602ms, Drone: 0, Slot: 6, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 602ms, Drone: 0, Slot: 6, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 602ms, Drone: 25, Slot: 6, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 602ms, Drone: 49, Slot: 6, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
+[MAC_DROP] Time: 602ms, Drone: 8, Status: 225
 [PHASE2_DATA_RX] Time: 602ms, Drone: 49, From: 45, RSSI: -108
-[PHASE2_SLOT] Time: 604ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 604ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 604ms, Drone: 25, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 604ms, Drone: 49, Slot: 7, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 12
 [PHASE2_DATA_RX] Time: 604ms, Drone: 0, From: 32, RSSI: -101
@@ -5400,8 +5426,9 @@
 [PHASE2_SLOT] Time: 607ms, Drone: 0, Slot: 8, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 12
 [PHASE2_SLOT] Time: 607ms, Drone: 25, Slot: 8, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 17
 [PHASE2_SLOT] Time: 607ms, Drone: 49, Slot: 8, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 13
+[MAC_DROP] Time: 607ms, Drone: 6, Status: 225
 [PHASE2_DATA_RX] Time: 607ms, Drone: 49, From: 43, RSSI: -101
-[PHASE2_SLOT] Time: 609ms, Drone: 0, Slot: 9, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 609ms, Drone: 0, Slot: 9, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 609ms, Drone: 25, Slot: 9, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 609ms, Drone: 49, Slot: 9, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 15
 [PHASE2_DATA_RX] Time: 609ms, Drone: 0, From: 9, RSSI: -104
@@ -5845,13 +5872,13 @@
   [SCHED_CONFLICT] Target: 38, TargetSlot: 9, TargetCh: 5, Reason: BothRadiosBusy
   [SCHED_ASSIGN] Target: 20, TargetSlot: 5, TargetCh: 0, AssignedTo: Radio1
   [SCHED_IGNORE] Target: 11, Reason: AssignedMax
-[PHASE2_SLOT] Time: 638ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 638ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 638ms, Drone: 25, Slot: 0, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 638ms, Drone: 49, Slot: 0, S1_Act: 1, S1_Ch: 14, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 640ms, Drone: 0, Slot: 1, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 640ms, Drone: 25, Slot: 1, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 640ms, Drone: 49, Slot: 1, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 643ms, Drone: 0, Slot: 2, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 643ms, Drone: 0, Slot: 2, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 643ms, Drone: 25, Slot: 2, S1_Act: 1, S1_Ch: 15, S2_Act: 0, S2_Ch: 17
 [PHASE2_SLOT] Time: 643ms, Drone: 49, Slot: 2, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 645ms, Drone: 0, Slot: 3, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 14
@@ -5860,15 +5887,16 @@
 [PHASE2_SLOT] Time: 648ms, Drone: 0, Slot: 4, S1_Act: 2, S1_Ch: 17, S2_Act: 2, S2_Ch: 16
 [PHASE2_SLOT] Time: 648ms, Drone: 25, Slot: 4, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 14
 [PHASE2_SLOT] Time: 648ms, Drone: 49, Slot: 4, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 13
-[PHASE2_SLOT] Time: 650ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 171
+[MAC_DROP] Time: 648ms, Drone: 37, Status: 225
+[PHASE2_SLOT] Time: 650ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 650ms, Drone: 25, Slot: 5, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 650ms, Drone: 49, Slot: 5, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 650ms, Drone: 25, From: 28, RSSI: -100
 [PHASE2_DATA_RX] Time: 650ms, Drone: 0, From: 27, RSSI: -101
-[PHASE2_SLOT] Time: 653ms, Drone: 0, Slot: 6, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 653ms, Drone: 0, Slot: 6, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 653ms, Drone: 25, Slot: 6, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 653ms, Drone: 49, Slot: 6, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 655ms, Drone: 0, Slot: 7, S1_Act: 1, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 655ms, Drone: 0, Slot: 7, S1_Act: 1, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 655ms, Drone: 25, Slot: 7, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 655ms, Drone: 49, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 12
 [PHASE2_DATA_RX] Time: 655ms, Drone: 25, From: 10, RSSI: -89
@@ -5878,7 +5906,7 @@
 [PHASE2_SLOT] Time: 658ms, Drone: 49, Slot: 8, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 13
 [PHASE2_DATA_RX] Time: 658ms, Drone: 25, From: 0, RSSI: -92
 [PHASE2_DATA_RX] Time: 658ms, Drone: 49, From: 0, RSSI: -101
-[PHASE2_SLOT] Time: 660ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 660ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 660ms, Drone: 25, Slot: 9, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 660ms, Drone: 49, Slot: 9, S1_Act: 2, S1_Ch: 16, S2_Act: 2, S2_Ch: 13
 [PHASE2_DATA_RX] Time: 660ms, Drone: 25, From: 23, RSSI: -97
@@ -6298,7 +6326,7 @@
   [SCHED_ASSIGN] Target: 1, TargetSlot: 8, TargetCh: 0, AssignedTo: Radio1
   [SCHED_ASSIGN] Target: 27, TargetSlot: 2, TargetCh: 1, AssignedTo: Radio1
   [SCHED_IGNORE] Target: 0, Reason: AssignedMax
-[PHASE2_SLOT] Time: 689ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 689ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 689ms, Drone: 25, Slot: 0, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 689ms, Drone: 49, Slot: 0, S1_Act: 1, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
 [PHASE1_RX] Time: 690ms, Drone: 0, From: 28, ClSlot: 5, ClCh: 1, RSSI: -99
@@ -6307,38 +6335,44 @@
 [PHASE2_SLOT] Time: 691ms, Drone: 0, Slot: 1, S1_Act: 1, S1_Ch: 14, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 691ms, Drone: 25, Slot: 1, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 691ms, Drone: 49, Slot: 1, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 694ms, Drone: 0, Slot: 2, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 694ms, Drone: 0, Slot: 2, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 694ms, Drone: 25, Slot: 2, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 17
 [PHASE2_SLOT] Time: 694ms, Drone: 49, Slot: 2, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 696ms, Drone: 0, Slot: 3, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 14
 [PHASE2_SLOT] Time: 696ms, Drone: 25, Slot: 3, S1_Act: 1, S1_Ch: 13, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 696ms, Drone: 49, Slot: 3, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 13
+[MAC_DROP] Time: 696ms, Drone: 18, Status: 225
+[MAC_DROP] Time: 696ms, Drone: 25, Status: 225
 [PHASE2_DATA_RX] Time: 696ms, Drone: 49, From: 27, RSSI: -100
 [PHASE2_DATA_RX] Time: 696ms, Drone: 25, From: 27, RSSI: -102
 [PHASE2_SLOT] Time: 699ms, Drone: 0, Slot: 4, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 699ms, Drone: 25, Slot: 4, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 14
 [PHASE2_SLOT] Time: 699ms, Drone: 49, Slot: 4, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 13
-[PHASE2_SLOT] Time: 701ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 171
+[MAC_DROP] Time: 699ms, Drone: 46, Status: 225
+[PHASE2_SLOT] Time: 701ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 701ms, Drone: 25, Slot: 5, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 701ms, Drone: 49, Slot: 5, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
+[MAC_DROP] Time: 701ms, Drone: 20, Status: 225
 [PHASE2_DATA_RX] Time: 701ms, Drone: 49, From: 9, RSSI: -104
 [PHASE2_DATA_RX] Time: 701ms, Drone: 25, From: 9, RSSI: -104
 [PHASE2_DATA_RX] Time: 701ms, Drone: 0, From: 9, RSSI: -105
-[PHASE2_SLOT] Time: 704ms, Drone: 0, Slot: 6, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 704ms, Drone: 0, Slot: 6, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 704ms, Drone: 25, Slot: 6, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 704ms, Drone: 49, Slot: 6, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
+[MAC_DROP] Time: 704ms, Drone: 10, Status: 225
 [PHASE2_DATA_RX] Time: 704ms, Drone: 0, From: 28, RSSI: -99
 [PHASE2_DATA_RX] Time: 704ms, Drone: 25, From: 28, RSSI: -101
 [PHASE2_DATA_RX] Time: 704ms, Drone: 49, From: 28, RSSI: -106
-[PHASE2_SLOT] Time: 706ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 706ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 706ms, Drone: 25, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 706ms, Drone: 49, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 12
 [PHASE2_SLOT] Time: 709ms, Drone: 0, Slot: 8, S1_Act: 2, S1_Ch: 13, S2_Act: 0, S2_Ch: 12
 [PHASE2_SLOT] Time: 709ms, Drone: 25, Slot: 8, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 17
 [PHASE2_SLOT] Time: 709ms, Drone: 49, Slot: 8, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 13
+[MAC_DROP] Time: 709ms, Drone: 32, Status: 225
 [PHASE2_DATA_RX] Time: 709ms, Drone: 0, From: 11, RSSI: -102
 [PHASE2_DATA_RX] Time: 709ms, Drone: 25, From: 11, RSSI: -103
-[PHASE2_SLOT] Time: 711ms, Drone: 0, Slot: 9, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 711ms, Drone: 0, Slot: 9, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 711ms, Drone: 25, Slot: 9, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 711ms, Drone: 49, Slot: 9, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 13
 [PHASE1_TX] Time: 714ms, Drone: 7, Radio: 2, ClaimedSlot: 7, ClaimedCh: 3
@@ -6766,13 +6800,13 @@
   [SCHED_ASSIGN] Target: 1, TargetSlot: 0, TargetCh: 4, AssignedTo: Radio1
   [SCHED_ASSIGN] Target: 27, TargetSlot: 0, TargetCh: 2, AssignedTo: Radio2
   [SCHED_IGNORE] Target: 11, Reason: AssignedMax
-[PHASE2_SLOT] Time: 740ms, Drone: 0, Slot: 0, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 740ms, Drone: 0, Slot: 0, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 740ms, Drone: 25, Slot: 0, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 740ms, Drone: 49, Slot: 0, S1_Act: 2, S1_Ch: 16, S2_Act: 2, S2_Ch: 14
 [PHASE2_SLOT] Time: 742ms, Drone: 0, Slot: 1, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 742ms, Drone: 25, Slot: 1, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 742ms, Drone: 49, Slot: 1, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 745ms, Drone: 0, Slot: 2, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 745ms, Drone: 0, Slot: 2, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 745ms, Drone: 25, Slot: 2, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 17
 [PHASE2_SLOT] Time: 745ms, Drone: 49, Slot: 2, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 747ms, Drone: 0, Slot: 3, S1_Act: 1, S1_Ch: 12, S2_Act: 0, S2_Ch: 14
@@ -6784,13 +6818,13 @@
 [PHASE2_SLOT] Time: 752ms, Drone: 0, Slot: 5, S1_Act: 2, S1_Ch: 14, S2_Act: 2, S2_Ch: 15
 [PHASE2_SLOT] Time: 752ms, Drone: 25, Slot: 5, S1_Act: 1, S1_Ch: 14, S2_Act: 2, S2_Ch: 15
 [PHASE2_SLOT] Time: 752ms, Drone: 49, Slot: 5, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 755ms, Drone: 0, Slot: 6, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 755ms, Drone: 0, Slot: 6, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 755ms, Drone: 25, Slot: 6, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 755ms, Drone: 49, Slot: 6, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 755ms, Drone: 0, From: 25, RSSI: -92
 [PHASE2_DATA_RX] Time: 755ms, Drone: 25, From: 23, RSSI: -98
 [PHASE2_DATA_RX] Time: 755ms, Drone: 0, From: 23, RSSI: -99
-[PHASE2_SLOT] Time: 757ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 757ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 757ms, Drone: 25, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 757ms, Drone: 49, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 12
 [PHASE2_DATA_RX] Time: 757ms, Drone: 25, From: 9, RSSI: -103
@@ -6798,8 +6832,9 @@
 [PHASE2_SLOT] Time: 760ms, Drone: 0, Slot: 8, S1_Act: 0, S1_Ch: 13, S2_Act: 0, S2_Ch: 12
 [PHASE2_SLOT] Time: 760ms, Drone: 25, Slot: 8, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 17
 [PHASE2_SLOT] Time: 760ms, Drone: 49, Slot: 8, S1_Act: 1, S1_Ch: 12, S2_Act: 0, S2_Ch: 13
+[MAC_DROP] Time: 760ms, Drone: 24, Status: 225
 [PHASE2_DATA_RX] Time: 760ms, Drone: 0, From: 7, RSSI: -107
-[PHASE2_SLOT] Time: 762ms, Drone: 0, Slot: 9, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 762ms, Drone: 0, Slot: 9, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 762ms, Drone: 25, Slot: 9, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 762ms, Drone: 49, Slot: 9, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 13
 [PHASE2_DATA_RX] Time: 762ms, Drone: 25, From: 49, RSSI: -96
@@ -7232,7 +7267,7 @@
   [SCHED_ASSIGN] Target: 11, TargetSlot: 2, TargetCh: 3, AssignedTo: Radio2
   [SCHED_ASSIGN] Target: 20, TargetSlot: 3, TargetCh: 2, AssignedTo: Radio1
   [SCHED_IGNORE] Target: 9, Reason: AssignedMax
-[PHASE2_SLOT] Time: 791ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 791ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 791ms, Drone: 25, Slot: 0, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 791ms, Drone: 49, Slot: 0, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 14
 [PHASE2_SLOT] Time: 793ms, Drone: 0, Slot: 1, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 15
@@ -7254,25 +7289,28 @@
 [PHASE2_SLOT] Time: 801ms, Drone: 0, Slot: 4, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 16
 [PHASE2_SLOT] Time: 801ms, Drone: 25, Slot: 4, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 14
 [PHASE2_SLOT] Time: 801ms, Drone: 49, Slot: 4, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 13
+[MAC_DROP] Time: 801ms, Drone: 9, Status: 225
 [PHASE2_DATA_RX] Time: 801ms, Drone: 0, From: 20, RSSI: -104
 [PHASE2_DATA_RX] Time: 801ms, Drone: 25, From: 20, RSSI: -104
 [PHASE2_SLOT] Time: 803ms, Drone: 0, Slot: 5, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 803ms, Drone: 25, Slot: 5, S1_Act: 1, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 803ms, Drone: 49, Slot: 5, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 0
+[MAC_DROP] Time: 803ms, Drone: 47, Status: 225
 [PHASE2_DATA_RX] Time: 803ms, Drone: 49, From: 27, RSSI: -97
 [PHASE2_DATA_RX] Time: 803ms, Drone: 0, From: 43, RSSI: -108
-[PHASE2_SLOT] Time: 806ms, Drone: 0, Slot: 6, S1_Act: 1, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 806ms, Drone: 0, Slot: 6, S1_Act: 1, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 806ms, Drone: 25, Slot: 6, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 806ms, Drone: 49, Slot: 6, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
+[MAC_DROP] Time: 806ms, Drone: 0, Status: 225
 [PHASE2_DATA_RX] Time: 806ms, Drone: 0, From: 25, RSSI: -92
 [PHASE2_DATA_RX] Time: 806ms, Drone: 25, From: 30, RSSI: -104
-[PHASE2_SLOT] Time: 808ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 808ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 808ms, Drone: 25, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 808ms, Drone: 49, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 12
 [PHASE2_SLOT] Time: 811ms, Drone: 0, Slot: 8, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 12
 [PHASE2_SLOT] Time: 811ms, Drone: 25, Slot: 8, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 17
 [PHASE2_SLOT] Time: 811ms, Drone: 49, Slot: 8, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 13
-[PHASE2_SLOT] Time: 813ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 813ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 813ms, Drone: 25, Slot: 9, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 813ms, Drone: 49, Slot: 9, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 13
 [PHASE2_DATA_RX] Time: 813ms, Drone: 25, From: 23, RSSI: -98
@@ -7698,7 +7736,7 @@
   [SCHED_ASSIGN] Target: 43, TargetSlot: 2, TargetCh: 3, AssignedTo: Radio1
   [SCHED_ASSIGN] Target: 1, TargetSlot: 5, TargetCh: 0, AssignedTo: Radio1
   [SCHED_IGNORE] Target: 27, Reason: AssignedMax
-[PHASE2_SLOT] Time: 842ms, Drone: 0, Slot: 0, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 842ms, Drone: 0, Slot: 0, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 842ms, Drone: 25, Slot: 0, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 842ms, Drone: 49, Slot: 0, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 14
 [PHASE1_RX] Time: 843ms, Drone: 49, From: 11, ClSlot: 1, ClCh: 2, RSSI: -102
@@ -7723,14 +7761,15 @@
 [PHASE2_DATA_RX] Time: 854ms, Drone: 25, From: 0, RSSI: -92
 [PHASE2_DATA_RX] Time: 854ms, Drone: 25, From: 23, RSSI: -98
 [PHASE2_DATA_RX] Time: 854ms, Drone: 0, From: 23, RSSI: -98
-[PHASE2_SLOT] Time: 857ms, Drone: 0, Slot: 6, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 857ms, Drone: 0, Slot: 6, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 857ms, Drone: 25, Slot: 6, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 857ms, Drone: 49, Slot: 6, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_DATA_RX] Time: 857ms, Drone: 49, From: 1, RSSI: -100
 [PHASE2_DATA_RX] Time: 857ms, Drone: 0, From: 32, RSSI: -101
-[PHASE2_SLOT] Time: 859ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 859ms, Drone: 0, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 859ms, Drone: 25, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 859ms, Drone: 49, Slot: 7, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 12
+[MAC_DROP] Time: 859ms, Drone: 13, Status: 225
 [PHASE2_DATA_RX] Time: 859ms, Drone: 49, From: 30, RSSI: -98
 [PHASE2_DATA_RX] Time: 859ms, Drone: 25, From: 30, RSSI: -104
 [PHASE2_DATA_RX] Time: 859ms, Drone: 0, From: 30, RSSI: -107
@@ -7739,9 +7778,11 @@
 [PHASE2_SLOT] Time: 862ms, Drone: 49, Slot: 8, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 13
 [PHASE2_DATA_RX] Time: 862ms, Drone: 25, From: 45, RSSI: -103
 [PHASE2_DATA_RX] Time: 862ms, Drone: 0, From: 45, RSSI: -104
-[PHASE2_SLOT] Time: 864ms, Drone: 0, Slot: 9, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 864ms, Drone: 0, Slot: 9, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 864ms, Drone: 25, Slot: 9, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 864ms, Drone: 49, Slot: 9, S1_Act: 1, S1_Ch: 14, S2_Act: 0, S2_Ch: 13
+[MAC_DROP] Time: 864ms, Drone: 2, Status: 225
+[MAC_DROP] Time: 864ms, Drone: 49, Status: 225
 [PHASE2_DATA_RX] Time: 864ms, Drone: 25, From: 10, RSSI: -89
 [PHASE2_DATA_RX] Time: 864ms, Drone: 49, From: 10, RSSI: -92
 [PHASE1_TX] Time: 868ms, Drone: 40, Radio: 2, ClaimedSlot: 2, ClaimedCh: 5
@@ -8158,7 +8199,7 @@
   [SCHED_ASSIGN] Target: 27, TargetSlot: 8, TargetCh: 4, AssignedTo: Radio2
   [SCHED_ASSIGN] Target: 43, TargetSlot: 9, TargetCh: 5, AssignedTo: Radio1
   [SCHED_IGNORE] Target: 20, Reason: AssignedMax
-[PHASE2_SLOT] Time: 893ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 893ms, Drone: 0, Slot: 0, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 893ms, Drone: 25, Slot: 0, S1_Act: 1, S1_Ch: 14, S2_Act: 2, S2_Ch: 14
 [PHASE2_SLOT] Time: 893ms, Drone: 49, Slot: 0, S1_Act: 2, S1_Ch: 14, S2_Act: 0, S2_Ch: 14
 [PHASE2_SLOT] Time: 895ms, Drone: 0, Slot: 1, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
@@ -8178,18 +8219,20 @@
 [PHASE2_SLOT] Time: 905ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 905ms, Drone: 25, Slot: 5, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 905ms, Drone: 49, Slot: 5, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 908ms, Drone: 0, Slot: 6, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 908ms, Drone: 0, Slot: 6, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 908ms, Drone: 25, Slot: 6, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 908ms, Drone: 49, Slot: 6, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 910ms, Drone: 0, Slot: 7, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 910ms, Drone: 0, Slot: 7, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 910ms, Drone: 25, Slot: 7, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 910ms, Drone: 49, Slot: 7, S1_Act: 1, S1_Ch: 17, S2_Act: 0, S2_Ch: 12
+[MAC_DROP] Time: 910ms, Drone: 9, Status: 225
 [PHASE2_SLOT] Time: 913ms, Drone: 0, Slot: 8, S1_Act: 2, S1_Ch: 14, S2_Act: 2, S2_Ch: 16
 [PHASE2_SLOT] Time: 913ms, Drone: 25, Slot: 8, S1_Act: 2, S1_Ch: 14, S2_Act: 2, S2_Ch: 14
 [PHASE2_SLOT] Time: 913ms, Drone: 49, Slot: 8, S1_Act: 2, S1_Ch: 14, S2_Act: 2, S2_Ch: 16
-[PHASE2_SLOT] Time: 915ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 915ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 915ms, Drone: 25, Slot: 9, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 915ms, Drone: 49, Slot: 9, S1_Act: 2, S1_Ch: 17, S2_Act: 0, S2_Ch: 13
+[MAC_DROP] Time: 915ms, Drone: 14, Status: 225
 [PHASE2_DATA_RX] Time: 915ms, Drone: 25, From: 10, RSSI: -89
 [PHASE2_DATA_RX] Time: 915ms, Drone: 49, From: 27, RSSI: -100
 [PHASE2_DATA_RX] Time: 915ms, Drone: 0, From: 27, RSSI: -103
@@ -8604,12 +8647,14 @@
   [SCHED_ASSIGN] Target: 20, TargetSlot: 9, TargetCh: 3, AssignedTo: Radio1
   [SCHED_ASSIGN] Target: 38, TargetSlot: 9, TargetCh: 5, AssignedTo: Radio2
   [SCHED_IGNORE] Target: 11, Reason: AssignedMax
-[PHASE2_SLOT] Time: 944ms, Drone: 0, Slot: 0, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 944ms, Drone: 0, Slot: 0, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 944ms, Drone: 25, Slot: 0, S1_Act: 2, S1_Ch: 12, S2_Act: 2, S2_Ch: 16
 [PHASE2_SLOT] Time: 944ms, Drone: 49, Slot: 0, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 14
 [PHASE2_SLOT] Time: 946ms, Drone: 0, Slot: 1, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 946ms, Drone: 25, Slot: 1, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 946ms, Drone: 49, Slot: 1, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
+[MAC_DROP] Time: 947ms, Drone: 29, Status: 225
+[MAC_DROP] Time: 947ms, Drone: 8, Status: 225
 [PHASE2_SLOT] Time: 949ms, Drone: 0, Slot: 2, S1_Act: 2, S1_Ch: 12, S2_Act: 0, S2_Ch: 14
 [PHASE2_SLOT] Time: 949ms, Drone: 25, Slot: 2, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 13
 [PHASE2_SLOT] Time: 949ms, Drone: 49, Slot: 2, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 15
@@ -8624,7 +8669,7 @@
 [PHASE2_SLOT] Time: 956ms, Drone: 0, Slot: 5, S1_Act: 0, S1_Ch: 16, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 956ms, Drone: 25, Slot: 5, S1_Act: 0, S1_Ch: 17, S2_Act: 0, S2_Ch: 15
 [PHASE2_SLOT] Time: 956ms, Drone: 49, Slot: 5, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
-[PHASE2_SLOT] Time: 959ms, Drone: 0, Slot: 6, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 959ms, Drone: 0, Slot: 6, S1_Act: 2, S1_Ch: 16, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 959ms, Drone: 25, Slot: 6, S1_Act: 0, S1_Ch: 15, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 959ms, Drone: 49, Slot: 6, S1_Act: 0, S1_Ch: 12, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 961ms, Drone: 0, Slot: 7, S1_Act: 1, S1_Ch: 17, S2_Act: 2, S2_Ch: 15
@@ -8634,7 +8679,7 @@
 [PHASE2_SLOT] Time: 964ms, Drone: 25, Slot: 8, S1_Act: 1, S1_Ch: 15, S2_Act: 0, S2_Ch: 14
 [PHASE2_SLOT] Time: 964ms, Drone: 49, Slot: 8, S1_Act: 2, S1_Ch: 15, S2_Act: 0, S2_Ch: 16
 [PHASE2_DATA_RX] Time: 964ms, Drone: 0, From: 27, RSSI: -103
-[PHASE2_SLOT] Time: 966ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 171
+[PHASE2_SLOT] Time: 966ms, Drone: 0, Slot: 9, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 170
 [PHASE2_SLOT] Time: 966ms, Drone: 25, Slot: 9, S1_Act: 0, S1_Ch: 14, S2_Act: 0, S2_Ch: 0
 [PHASE2_SLOT] Time: 966ms, Drone: 49, Slot: 9, S1_Act: 2, S1_Ch: 15, S2_Act: 2, S2_Ch: 17
 [PHASE2_DATA_RX] Time: 966ms, Drone: 0, From: 25, RSSI: -92

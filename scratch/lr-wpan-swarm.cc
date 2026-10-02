@@ -20,12 +20,12 @@ std::ofstream g_debugLogFile;
 const uint32_t MINI_BEACON_SIZE = 2; 
 const uint32_t DATA_PACKET_SIZE = 50;
 
-const double CYCLE_MS = 51.0;            // 25 + 1 + 25
+const double CYCLE_MS = 86.0;            // 25 + 1 + 60
 const double PHASE1_DURATION_US = 25000.0; // 恢復至最佳甜蜜點 25ms
 const double GAP_US = 1000.0;
 const int NUM_DATA_SLOTS = 10;
 const int NUM_DATA_CHANNELS = 6;         // 6 channels * 10 slots = 60 blocks
-const double DATA_SLOT_US = 2500.0; 
+const double DATA_SLOT_US = 6000.0; 
 
 const uint8_t BROADCAST_CHANNEL = 11;
 const uint8_t BROADCAST_CHANNEL_2 = 26;
@@ -281,14 +281,14 @@ private:
             return a.rssi > b.rssi;
         });
 
-        // Disable CSMA for Phase 2 (TDMA mode) to prevent delayed packets being aborted by slot boundaries
-        m_csma1->SetMacMinBE(0);
-        m_csma1->SetMacMaxBE(3); // Must be >= 3 to pass ns-3 assertion
-        m_csma1->SetMacMaxCSMABackoffs(0);
+        // Re-enable CSMA for Phase 2 to allow staggering of collided transmissions
+        m_csma1->SetMacMinBE(3);
+        m_csma1->SetMacMaxBE(5);
+        m_csma1->SetMacMaxCSMABackoffs(4);
 
-        m_csma2->SetMacMinBE(0);
-        m_csma2->SetMacMaxBE(3);
-        m_csma2->SetMacMaxCSMABackoffs(0);
+        m_csma2->SetMacMinBE(3);
+        m_csma2->SetMacMaxBE(5);
+        m_csma2->SetMacMaxCSMABackoffs(4);
 
         for (int i = 0; i < NUM_DATA_SLOTS; i++) {
             m_schedule1[i].action = ScheduleSlot::IDLE;

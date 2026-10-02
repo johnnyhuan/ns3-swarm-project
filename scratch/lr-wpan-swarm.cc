@@ -274,7 +274,6 @@ private:
         m_lastScheduledRx.clear();
         for (auto& n : filteredList) {
             if (assigned >= K_CLOSEST) break; 
-            if (n.claimedSlot == m_myClaimedSlot) continue; 
             
             // Assign to Radio 1 if idle
             if (m_schedule1[n.claimedSlot].action == ScheduleSlot::IDLE) {
@@ -325,17 +324,19 @@ private:
 
     void ExecuteDataSlot(int slotIndex) {
         ScheduleSlot s1 = m_schedule1[slotIndex];
+        ScheduleSlot s2 = m_schedule2[slotIndex];
+
         if (s1.action == ScheduleSlot::TX) {
             SwitchChannel1(s1.channel);
-            // Don't switch Radio 2, leave it where it is
+            if (s2.action == ScheduleSlot::RX) {
+                SwitchChannel2(s2.channel);
+            }
             Ptr<Packet> p = Create<Packet>(DATA_PACKET_SIZE);
             SendPacket(DATA_PACKET_SIZE, p);
         } else {
             if (s1.action == ScheduleSlot::RX) {
                 SwitchChannel1(s1.channel);
             }
-            
-            ScheduleSlot s2 = m_schedule2[slotIndex];
             if (s2.action == ScheduleSlot::RX) {
                 SwitchChannel2(s2.channel);
             }

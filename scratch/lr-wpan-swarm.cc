@@ -73,7 +73,7 @@ public:
         Ptr<LrWpanMac> mac1 = m_device1->GetMac();
         Ptr<LrWpanCsmaCa> csma1 = CreateObject<LrWpanCsmaCa>();
         csma1->SetMacMinBE(0); 
-        csma1->SetMacMaxCSMABackoffs(0); 
+        csma1->SetMacMaxCSMABackoffs(4); 
         mac1->SetCsmaCa(csma1);
         csma1->SetMac(mac1);
         csma1->SetLrWpanMacStateCallback(MakeCallback(&LrWpanMac::SetLrWpanMacState, mac1));
@@ -87,7 +87,7 @@ public:
         Ptr<LrWpanMac> mac2 = m_device2->GetMac();
         Ptr<LrWpanCsmaCa> csma2 = CreateObject<LrWpanCsmaCa>();
         csma2->SetMacMinBE(0); 
-        csma2->SetMacMaxCSMABackoffs(0); 
+        csma2->SetMacMaxCSMABackoffs(4); 
         mac2->SetCsmaCa(csma2);
         csma2->SetMac(mac2);
         csma2->SetLrWpanMacStateCallback(MakeCallback(&LrWpanMac::SetLrWpanMacState, mac2));

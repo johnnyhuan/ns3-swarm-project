@@ -20,12 +20,12 @@ std::ofstream g_debugLogFile;
 const uint32_t MINI_BEACON_SIZE = 2; 
 const uint32_t DATA_PACKET_SIZE = 50;
 
-const double CYCLE_MS = 51.0;            // 25 + 1 + 25
-const double PHASE1_DURATION_US = 25000.0; // 恢復至最佳甜蜜點 25ms
+const double CYCLE_MS = 96.0;            // 25 + 1 + 70
+const double PHASE1_DURATION_US = 25000.0;
 const double GAP_US = 1000.0;
 const int NUM_DATA_SLOTS = 10;
 const int NUM_DATA_CHANNELS = 6;         // 6 channels * 10 slots = 60 blocks
-const double DATA_SLOT_US = 2500.0; 
+const double DATA_SLOT_US = 7000.0; 
 
 const uint8_t BROADCAST_CHANNEL = 11;
 const uint8_t BROADCAST_CHANNEL_2 = 26;
@@ -118,6 +118,7 @@ private:
     uint8_t m_myClaimedSlot;
     uint8_t m_myClaimedChannel;
     std::vector<NeighborInfo> m_monitorList;
+    std::vector<NeighborInfo> m_lastMonitorList;
     ScheduleSlot m_schedule1[NUM_DATA_SLOTS];
     ScheduleSlot m_schedule2[NUM_DATA_SLOTS];
 
@@ -168,6 +169,7 @@ private:
 
     void ScheduleCycle() {
         m_epoch++;
+        m_lastMonitorList = m_monitorList;
         m_monitorList.clear();
 
         double now = Simulator::Now().GetMilliSeconds();
@@ -205,7 +207,7 @@ private:
         int cost[NUM_DATA_SLOTS][NUM_DATA_CHANNELS] = {0};
         
         Ptr<MobilityModel> myMobility = m_device1->GetNode()->GetObject<MobilityModel>();
-        for (const auto& n : m_monitorList) {
+        for (const auto& n : m_lastMonitorList) {
             cost[n.claimedSlot][n.claimedChannel] += 10000;
             
             // 加入空間防禦：如果對方在半徑 M 內，增加該 Slot 全頻道的成本

@@ -1,0 +1,14 @@
+=================================================
+          GLOBAL NETWORK METRICS (1.0s)          
+=================================================
+Total 50B Data Packets Delivered: 366
+Total Network Slots Elapsed     : 180 slots
+Spatial Reuse Factor (SRF)      : 2.03 packets/slot
+Global BDR (Target Top-K)       : 32.9%
+Global DDR (Target Top-K)       : 3.2%
+Global Avg IAT (Target Top-K)   : 294.3 ms
+Global Max IAT (Target Top-K)   : 715.0 ms
+Global Mean AoI (Target Top-K)  : 397.5 ms
+Global Max AoI (Target Top-K)   : 990.0 ms
+Global Topology Accuracy        : 29.0%
+=================================================

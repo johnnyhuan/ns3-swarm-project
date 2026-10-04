@@ -20,18 +20,18 @@ std::ofstream g_debugLogFile;
 const uint32_t MINI_BEACON_SIZE = 2; 
 const uint32_t DATA_PACKET_SIZE = 50;
 
-const double CYCLE_MS = 51.0;            // 25 + 1 + 25
+const double CYCLE_MS = 55.0;            // 25 + 1 + 29
 const double PHASE1_DURATION_US = 25000.0;
 const double GAP_US = 1000.0;
 const int NUM_DATA_SLOTS = 10;
 const int NUM_DATA_CHANNELS = 6;         // 6 channels * 10 slots = 60 blocks
-const double DATA_SLOT_US = 2500.0; 
+const double DATA_SLOT_US = 2900.0; 
 
 const uint8_t BROADCAST_CHANNEL = 11;
 const uint8_t BROADCAST_CHANNEL_2 = 26;
 
 // --- 目標條件設定 ---
-const double M_RADIUS_METERS = 100.0;    // 只考慮半徑 M 公尺內的無人機
+const double M_RADIUS_METERS = 50.0;     // 只考慮半徑 M 公尺內的無人機 (聚焦近距離)
 const int K_CLOSEST = 5;                 // 從 M 公尺內挑選最近的 K 個
 
 // 全域統計

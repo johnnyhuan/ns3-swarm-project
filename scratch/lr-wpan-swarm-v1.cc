@@ -31,14 +31,14 @@ const uint8_t BROADCAST_CHANNEL = 11;
 const double M_RADIUS_METERS = 100.0;    // 只考慮半徑 M 公尺內的無人機
 const int K_CLOSEST = 5;                 // 從 M 公尺內挑選最近的 K 個
 
-// 全域 SRF 與 BDR/DDR 統計
+// 全域統計
 static int g_totalDataPacketsReceived = 0;
 static int g_totalExpectedTopKxEpochs = 0;
-static int g_totalReceivedBeaconsTopK = 0;
-static int g_totalReceivedDataTopK = 0;
-static double g_totalSumIatTopK = 0;
-static int g_totalCountIatTopK = 0;
-static double g_globalMaxIatTopK = 0;
+static int g_totalReceivedDiscoveryTopK = 0;
+static int g_totalReceivedBeaconTopK = 0;
+static double g_totalSumDiscoveryIatTopK = 0;
+static int g_totalCountDiscoveryIatTopK = 0;
+static double g_globalMaxDiscoveryIatTopK = 0;
 static double g_totalSumAoITopK = 0;
 static int g_totalCountAoITopK = 0;
 static double g_globalMaxAoITopK = 0;
@@ -104,14 +104,15 @@ private:
     ScheduleSlot m_schedule[NUM_DATA_SLOTS];
 
     // 數據統計變數
+    std::map<uint8_t, int> m_discoveryReceivedCount;
     std::map<uint8_t, int> m_beaconReceivedCount;
-    std::map<uint8_t, int> m_dataReceivedCount;
-    std::map<uint8_t, double> m_lastDataTime;
-    std::map<uint8_t, double> m_sumIat;
-    std::map<uint8_t, int> m_countIat;
-    std::map<uint8_t, double> m_maxIat;
     
-    // AoI 統計變數
+    std::map<uint8_t, double> m_lastDiscoveryTime;
+    std::map<uint8_t, double> m_sumDiscoveryIat;
+    std::map<uint8_t, int> m_countDiscoveryIat;
+    std::map<uint8_t, double> m_maxDiscoveryIat;
+    
+    // AoI 統計變數 (For 50B Beacon Packet)
     std::map<uint8_t, double> m_lastGenerationTime;
     std::map<uint8_t, double> m_sumAoI;
     std::map<uint8_t, int> m_countAoI;
@@ -144,7 +145,7 @@ private:
 
         double now = Simulator::Now().GetMilliSeconds();
         
-        // 結算上一回合的 AoI
+        // 結算上一回合的 AoI (For 50B Beacon Packet)
         if (m_epoch > 1) {
             for (uint8_t i = 0; i < NodeList::GetNNodes(); i++) {
                 if (i == m_id) continue;
@@ -310,30 +311,31 @@ private:
             uint8_t claimedChannel = (payload >> 10) & 0x07;
             
             m_monitorList.push_back({senderId, rssi, m_epoch, claimedSlot, claimedChannel});
-            m_beaconReceivedCount[senderId]++;
+            m_discoveryReceivedCount[senderId]++;
+            
+            double now = Simulator::Now().GetMilliSeconds();
+            if (m_lastDiscoveryTime.find(senderId) != m_lastDiscoveryTime.end()) {
+                double iat = now - m_lastDiscoveryTime[senderId];
+                m_sumDiscoveryIat[senderId] += iat;
+                m_countDiscoveryIat[senderId]++;
+                if (m_maxDiscoveryIat.find(senderId) == m_maxDiscoveryIat.end() || iat > m_maxDiscoveryIat[senderId]) {
+                    m_maxDiscoveryIat[senderId] = iat;
+                }
+            }
+            m_lastDiscoveryTime[senderId] = now;
         } else if (p->GetSize() == DATA_PACKET_SIZE) {
             uint8_t addrBuffer[2];
             params.m_srcAddr.CopyTo(addrBuffer);
             uint8_t srcId = addrBuffer[1];
             
-            m_dataReceivedCount[srcId]++;
+            m_beaconReceivedCount[srcId]++;
             g_totalDataPacketsReceived++;
             
             double now = Simulator::Now().GetMilliSeconds();
             
-            // 計算 IAT
-            if (m_lastDataTime.find(srcId) != m_lastDataTime.end()) {
-                double iat = now - m_lastDataTime[srcId];
-                m_sumIat[srcId] += iat;
-                m_countIat[srcId]++;
-                if (m_maxIat.find(srcId) == m_maxIat.end() || iat > m_maxIat[srcId]) {
-                    m_maxIat[srcId] = iat;
-                }
-            }
-            m_lastDataTime[srcId] = now;
-            
-            // 更新 AoI Generation Time
-            m_lastGenerationTime[srcId] = m_epochStartTime;
+            // 更新 AoI Generation Time (Just-in-Time 採樣模型：在專屬時槽起點才採樣)
+            // 每個時槽 2.5ms，所以封包產生的時間大約是抵達時間 (now) 往前推 2.5ms
+            m_lastGenerationTime[srcId] = now - 2.5;
         }
     }
 
@@ -357,13 +359,13 @@ private:
         
         for (int i = 0; i < expectedTop; i++) {
             uint8_t target = godDistances[i].first;
-            g_totalReceivedBeaconsTopK += m_beaconReceivedCount[target];
-            g_totalReceivedDataTopK += m_dataReceivedCount[target];
+            g_totalReceivedDiscoveryTopK += m_discoveryReceivedCount[target];
+            g_totalReceivedBeaconTopK += m_beaconReceivedCount[target];
             
-            g_totalSumIatTopK += m_sumIat[target];
-            g_totalCountIatTopK += m_countIat[target];
-            if (m_maxIat.find(target) != m_maxIat.end() && m_maxIat[target] > g_globalMaxIatTopK) {
-                g_globalMaxIatTopK = m_maxIat[target];
+            g_totalSumDiscoveryIatTopK += m_sumDiscoveryIat[target];
+            g_totalCountDiscoveryIatTopK += m_countDiscoveryIat[target];
+            if (m_maxDiscoveryIat.find(target) != m_maxDiscoveryIat.end() && m_maxDiscoveryIat[target] > g_globalMaxDiscoveryIatTopK) {
+                g_globalMaxDiscoveryIatTopK = m_maxDiscoveryIat[target];
             }
             
             g_totalSumAoITopK += m_sumAoI[target];
@@ -379,31 +381,31 @@ private:
         if (m_id != 0 && m_id != 25 && m_id != 49) return; // 只印出幾台代表性的無人機避免洗版
 
         std::cout << "\n=== Drone " << std::setw(2) << (int)m_id << " Metrics Report (Top " << K_CLOSEST << " within " << M_RADIUS_METERS << "m) ===" << std::endl;
-        std::cout << "Target (Dist)  | BDR (%) | DDR (%) | Avg IAT | Max IAT | Mean AoI | Max AoI" << std::endl;
-        std::cout << "-----------------------------------------------------------------------------" << std::endl;
+        std::cout << "Target (Dist)  | Disc. Ratio | Bcn Ratio | Avg Disc. IAT | Max Disc. IAT | Mean Bcn AoI | Max Bcn AoI" << std::endl;
+        std::cout << "-----------------------------------------------------------------------------------------------------" << std::endl;
         
         for (int i = 0; i < std::min(K_CLOSEST, (int)godDistances.size()); i++) {
             uint8_t target = godDistances[i].first;
             double dist = godDistances[i].second;
             
-            double bdr = (double)m_beaconReceivedCount[target] / m_epoch;
-            double ddr = (double)m_dataReceivedCount[target] / m_epoch;
-            double avgIat = (m_countIat[target] > 0) ? (m_sumIat[target] / m_countIat[target]) : 0;
-            double maxIat = (m_maxIat.find(target) != m_maxIat.end()) ? m_maxIat[target] : 0;
+            double discRatio = (double)m_discoveryReceivedCount[target] / m_epoch;
+            double bcnRatio = (double)m_beaconReceivedCount[target] / m_epoch;
+            double avgDiscIat = (m_countDiscoveryIat[target] > 0) ? (m_sumDiscoveryIat[target] / m_countDiscoveryIat[target]) : 0;
+            double maxDiscIat = (m_maxDiscoveryIat.find(target) != m_maxDiscoveryIat.end()) ? m_maxDiscoveryIat[target] : 0;
             double meanAoI = (m_countAoI[target] > 0) ? (m_sumAoI[target] / m_countAoI[target]) : 0;
             double maxAoI = (m_maxAoI.find(target) != m_maxAoI.end()) ? m_maxAoI[target] : 0;
             
             std::cout << "Drone " << std::setw(2) << (int)target << " (" << std::setw(3) << (int)dist << "m) | "
-                      << std::fixed << std::setprecision(1) << std::setw(6) << bdr * 100 << " | "
-                      << std::fixed << std::setprecision(1) << std::setw(6) << ddr * 100 << " | "
-                      << std::fixed << std::setprecision(1) << std::setw(7) << avgIat << " | "
-                      << std::fixed << std::setprecision(1) << std::setw(7) << maxIat << " | "
-                      << std::fixed << std::setprecision(1) << std::setw(8) << meanAoI << " | "
-                      << std::fixed << std::setprecision(1) << std::setw(7) << maxAoI << std::endl;
+                      << std::fixed << std::setprecision(1) << std::setw(11) << discRatio * 100 << " | "
+                      << std::fixed << std::setprecision(1) << std::setw(9) << bcnRatio * 100 << " | "
+                      << std::fixed << std::setprecision(1) << std::setw(13) << avgDiscIat << " | "
+                      << std::fixed << std::setprecision(1) << std::setw(13) << maxDiscIat << " | "
+                      << std::fixed << std::setprecision(1) << std::setw(12) << meanAoI << " | "
+                      << std::fixed << std::setprecision(1) << std::setw(11) << maxAoI << std::endl;
         }
         
         double topAcc = (m_topologyCheckCount > 0) ? ((double)m_topologyMatchCount / m_topologyCheckCount) : 0;
-        std::cout << "--> Topology Accuracy (Top-" << K_CLOSEST << " Match Rate): " << std::fixed << std::setprecision(1) << topAcc * 100 << "%" << std::endl;
+        std::cout << "--> Monitor Member List Match Ratio: " << std::fixed << std::setprecision(1) << topAcc * 100 << "%" << std::endl;
     }
 };
 
@@ -473,9 +475,9 @@ int main(int argc, char *argv[]) {
     int totalEpochs = 1000 / CYCLE_MS; 
     int totalSlots = totalEpochs * NUM_DATA_SLOTS;
     double srf = (double)g_totalDataPacketsReceived / totalSlots;
-    double globalBdr = (g_totalExpectedTopKxEpochs > 0) ? (double)g_totalReceivedBeaconsTopK / g_totalExpectedTopKxEpochs : 0;
-    double globalDdr = (g_totalExpectedTopKxEpochs > 0) ? (double)g_totalReceivedDataTopK / g_totalExpectedTopKxEpochs : 0;
-    double globalAvgIat = (g_totalCountIatTopK > 0) ? (g_totalSumIatTopK / g_totalCountIatTopK) : 0;
+    double globalDiscRatio = (g_totalExpectedTopKxEpochs > 0) ? (double)g_totalReceivedDiscoveryTopK / g_totalExpectedTopKxEpochs : 0;
+    double globalBcnRatio = (g_totalExpectedTopKxEpochs > 0) ? (double)g_totalReceivedBeaconTopK / g_totalExpectedTopKxEpochs : 0;
+    double globalAvgDiscIat = (g_totalCountDiscoveryIatTopK > 0) ? (g_totalSumDiscoveryIatTopK / g_totalCountDiscoveryIatTopK) : 0;
     double globalMeanAoI = (g_totalCountAoITopK > 0) ? (g_totalSumAoITopK / g_totalCountAoITopK) : 0;
     double globalTopAcc = (g_totalTopologyCheckCount > 0) ? ((double)g_totalTopologyMatchCount / g_totalTopologyCheckCount) : 0;
     
@@ -485,13 +487,13 @@ int main(int argc, char *argv[]) {
     std::cout << "Total 50B Data Packets Delivered: " << g_totalDataPacketsReceived << std::endl;
     std::cout << "Total Network Slots Elapsed     : " << totalSlots << " slots" << std::endl;
     std::cout << "Spatial Reuse Factor (SRF)      : " << std::fixed << std::setprecision(2) << srf << " packets/slot" << std::endl;
-    std::cout << "Global BDR (Target Top-K)       : " << std::fixed << std::setprecision(1) << globalBdr * 100 << "%" << std::endl;
-    std::cout << "Global DDR (Target Top-K)       : " << std::fixed << std::setprecision(1) << globalDdr * 100 << "%" << std::endl;
-    std::cout << "Global Avg IAT (Target Top-K)   : " << std::fixed << std::setprecision(1) << globalAvgIat << " ms" << std::endl;
-    std::cout << "Global Max IAT (Target Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxIatTopK << " ms" << std::endl;
-    std::cout << "Global Mean AoI (Target Top-K)  : " << std::fixed << std::setprecision(1) << globalMeanAoI << " ms" << std::endl;
-    std::cout << "Global Max AoI (Target Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxAoITopK << " ms" << std::endl;
-    std::cout << "Global Topology Accuracy        : " << std::fixed << std::setprecision(1) << globalTopAcc * 100 << "%" << std::endl;
+    std::cout << "Discovery Message Reception Ratio: " << std::fixed << std::setprecision(1) << globalDiscRatio * 100 << "%" << std::endl;
+    std::cout << "Beacon Packet Reception Ratio   : " << std::fixed << std::setprecision(1) << globalBcnRatio * 100 << "%" << std::endl;
+    std::cout << "Monitor Member List Match Ratio : " << std::fixed << std::setprecision(1) << globalTopAcc * 100 << "%" << std::endl;
+    std::cout << "Avg Discovery Msg IAT (Top-K)   : " << std::fixed << std::setprecision(1) << globalAvgDiscIat << " ms" << std::endl;
+    std::cout << "Max Discovery Msg IAT (Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxDiscoveryIatTopK << " ms" << std::endl;
+    std::cout << "Mean Beacon Packet AoI (Top-K)  : " << std::fixed << std::setprecision(1) << globalMeanAoI << " ms" << std::endl;
+    std::cout << "Max Beacon Packet AoI (Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxAoITopK << " ms" << std::endl;
     std::cout << "=================================================\n" << std::endl;
 
     std::ofstream out("/home/ubuntu/ns3-swarm-project/metrics-v1.txt");
@@ -502,13 +504,13 @@ int main(int argc, char *argv[]) {
         out << "Total 50B Data Packets Delivered: " << g_totalDataPacketsReceived << "\n";
         out << "Total Network Slots Elapsed     : " << totalSlots << " slots\n";
         out << "Spatial Reuse Factor (SRF)      : " << std::fixed << std::setprecision(2) << srf << " packets/slot\n";
-        out << "Global BDR (Target Top-K)       : " << std::fixed << std::setprecision(1) << globalBdr * 100 << "%\n";
-        out << "Global DDR (Target Top-K)       : " << std::fixed << std::setprecision(1) << globalDdr * 100 << "%\n";
-        out << "Global Avg IAT (Target Top-K)   : " << std::fixed << std::setprecision(1) << globalAvgIat << " ms\n";
-        out << "Global Max IAT (Target Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxIatTopK << " ms\n";
-        out << "Global Mean AoI (Target Top-K)  : " << std::fixed << std::setprecision(1) << globalMeanAoI << " ms\n";
-        out << "Global Max AoI (Target Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxAoITopK << " ms\n";
-        out << "Global Topology Accuracy        : " << std::fixed << std::setprecision(1) << globalTopAcc * 100 << "%\n";
+        out << "Discovery Message Reception Ratio: " << std::fixed << std::setprecision(1) << globalDiscRatio * 100 << "%\n";
+        out << "Beacon Packet Reception Ratio   : " << std::fixed << std::setprecision(1) << globalBcnRatio * 100 << "%\n";
+        out << "Monitor Member List Match Ratio : " << std::fixed << std::setprecision(1) << globalTopAcc * 100 << "%\n";
+        out << "Avg Discovery Msg IAT (Top-K)   : " << std::fixed << std::setprecision(1) << globalAvgDiscIat << " ms\n";
+        out << "Max Discovery Msg IAT (Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxDiscoveryIatTopK << " ms\n";
+        out << "Mean Beacon Packet AoI (Top-K)  : " << std::fixed << std::setprecision(1) << globalMeanAoI << " ms\n";
+        out << "Max Beacon Packet AoI (Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxAoITopK << " ms\n";
         out << "=================================================\n";
         out.close();
         int ret = system("cd /home/ubuntu/ns3-swarm-project && git add metrics-v1.txt && git commit -m 'Auto upload V1 metrics' && git push origin main");

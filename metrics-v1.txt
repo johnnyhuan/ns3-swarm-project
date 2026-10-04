@@ -4,11 +4,11 @@
 Total 50B Data Packets Delivered: 366
 Total Network Slots Elapsed     : 180 slots
 Spatial Reuse Factor (SRF)      : 2.03 packets/slot
-Global BDR (Target Top-K)       : 32.9%
-Global DDR (Target Top-K)       : 3.2%
-Global Avg IAT (Target Top-K)   : 294.3 ms
-Global Max IAT (Target Top-K)   : 715.0 ms
-Global Mean AoI (Target Top-K)  : 397.5 ms
-Global Max AoI (Target Top-K)   : 990.0 ms
-Global Topology Accuracy        : 29.0%
+Discovery Message Reception Ratio: 32.9%
+Beacon Packet Reception Ratio   : 3.2%
+Monitor Member List Match Ratio : 29.0%
+Avg Discovery Msg IAT (Top-K)   : 144.9 ms
+Max Discovery Msg IAT (Top-K)   : 713.0 ms
+Mean Beacon Packet AoI (Top-K)  : 386.3 ms
+Max Beacon Packet AoI (Top-K)   : 955.5 ms
 =================================================

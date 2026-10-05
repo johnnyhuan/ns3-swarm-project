@@ -18,8 +18,8 @@ NS_LOG_COMPONENT_DEFINE("LrWpanSwarm");
 const uint32_t MINI_BEACON_SIZE = 2; 
 const uint32_t DATA_PACKET_SIZE = 50;
 
-const double CYCLE_MS = 76.0;            // 50 + 1 + 25 (延長測試)
-const double PHASE1_DURATION_US = 50000.0; // 延長為 50ms 測試極限
+const double CYCLE_MS = 51.0;            // 25 + 1 + 25 (最佳甜蜜點)
+const double PHASE1_DURATION_US = 25000.0; // 恢復為 25ms 最佳狀態
 const double GAP_US = 1000.0; 
 const int NUM_DATA_SLOTS = 10;
 const int NUM_DATA_CHANNELS = 6;         // 6 channels * 10 slots = 60 blocks
@@ -182,6 +182,10 @@ private:
 
     void PickResourceAndSendBeacon() {
         g_p1TxAttempts++;
+        uint32_t myId = m_device->GetNode()->GetId();
+        double now = Simulator::Now().GetMilliSeconds();
+        std::cout << "[P1_ATTEMPT] Time: " << now << "ms, Drone: " << myId << std::endl;
+        
         int cost[NUM_DATA_SLOTS][NUM_DATA_CHANNELS] = {0};
         
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
@@ -301,11 +305,13 @@ private:
     }
 
     void DataConfirm(McpsDataConfirmParams params) {
+        uint32_t myId = m_device->GetNode()->GetId();
+        double now = Simulator::Now().GetMilliSeconds();
         // 如果是 Mini-beacon (msduHandle == 1)
         if (params.m_msduHandle == 1) {
             if (params.m_status == MacStatus::CHANNEL_ACCESS_FAILURE) {
                 g_p1TxAbort++;
-                double now = Simulator::Now().GetMilliSeconds();
+                std::cout << "[P1_ABORT] Time: " << now << "ms, Drone: " << myId << std::endl;
                 // 如果還在 Phase 1 的有效時間內 (保留最後 2ms 緩衝)，則安排重新決策
                 if (now < m_epochStartTime + (PHASE1_DURATION_US / 1000.0) - 2.0) {
                     // 隨機等待 0.1 ~ 0.5 毫秒，讓對方的情報傳達過來，也錯開重試時間
@@ -315,12 +321,15 @@ private:
                 }
             } else if (params.m_status == MacStatus::SUCCESS) {
                 g_p1TxSuccess++;
+                std::cout << "[P1_SUCCESS] Time: " << now << "ms, Drone: " << myId << std::endl;
             }
         }
     }
 
     void ReceivePacket(McpsDataIndicationParams params, Ptr<Packet> p) {
         int8_t rssi = params.m_rssi;
+        uint32_t myId = m_device->GetNode()->GetId();
+        double now = Simulator::Now().GetMilliSeconds();
 
         if (p->GetSize() == MINI_BEACON_SIZE) {
             g_p1RxSuccess++;
@@ -329,6 +338,7 @@ private:
             uint16_t payload = buffer[0] | (buffer[1] << 8);
             
             uint8_t senderId = payload & 0x3F;
+            std::cout << "[P1_RX] Time: " << now << "ms, Receiver: " << myId << ", Sender: " << (int)senderId << ", RSSI: " << (int)rssi << std::endl;
             uint8_t claimedSlot = (payload >> 6) & 0x0F;
             uint8_t claimedChannel = (payload >> 10) & 0x07;
             

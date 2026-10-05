@@ -2,11 +2,11 @@
 import subprocess
 import re
 
-# We test Phase 1 TX Power from 0 dBm (100m) to 4 dBm (~158m).
-power_levels = [0, 1, 2, 3, 4]
+# We test Phase 1 TX Power from 0 dBm (100m) down to -5 dBm (~50m).
+power_levels = [0, -1, -2, -3, -4, -5]
 fixed_p2_power = -2
 
-print("🚀 Starting Phase 1 TX Power Parameter Sweep (100m - ~150m)...")
+print("🚀 Starting Phase 1 TX Power Parameter Sweep (100m - ~50m)...")
 print("=> Using fixed Phase 2 TX Power = -2 dBm (50m range)\n")
 
 # Copy the file

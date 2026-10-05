@@ -28,8 +28,9 @@ const double DATA_SLOT_US = 2500.0;
 const uint8_t BROADCAST_CHANNEL = 11;
 
 // --- 目標條件設定 ---
-const double M_RADIUS_METERS = 100.0;    // 只考慮半徑 M 公尺內的無人機
-const int K_CLOSEST = 5;                 // 從 M 公尺內挑選最近的 K 個
+const double M_RADIUS_METERS = 100.0;    // 評估指標用的實際距離 (Ground Truth)
+const int K_CLOSEST = 5;                 // 從鄰居中挑選最近的 K 個
+const int8_t RSSI_THRESHOLD = -95;       // 近似 100 公尺的 RSSI 閾值 (dBm)，用於決策
 
 // 全域統計
 static int g_totalDataPacketsReceived = 0;
@@ -70,7 +71,7 @@ public:
         Ptr<LrWpanMac> mac = m_device->GetMac();
         Ptr<LrWpanCsmaCa> csma = CreateObject<LrWpanCsmaCa>();
         csma->SetMacMinBE(0); 
-        csma->SetMacMaxCSMABackoffs(4); 
+        csma->SetMacMaxCSMABackoffs(0); // 設為 0，只要有人講話就立刻放棄並回報失敗
         mac->SetCsmaCa(csma);
         csma->SetMac(mac);
         
@@ -128,13 +129,13 @@ private:
         m_device->GetPhy()->PlmeSetAttributeRequest(phyCurrentChannel, attrs);
     }
 
-    void SendPacket(uint32_t size, Ptr<Packet> p) {
+    void SendPacket(uint32_t size, Ptr<Packet> p, uint8_t msduHandle) {
         McpsDataRequestParams params;
         params.m_srcAddrMode = SHORT_ADDR;
         params.m_dstAddrMode = SHORT_ADDR;
         params.m_dstPanId = 1;
         params.m_dstAddr = Mac16Address("FF:FF"); 
-        params.m_msduHandle = 0;
+        params.m_msduHandle = msduHandle;
         params.m_txOptions = TX_OPTION_NONE;
         m_device->GetMac()->McpsDataRequest(params, p);
     }
@@ -180,10 +181,8 @@ private:
         for (const auto& n : m_monitorList) {
             cost[n.claimedSlot][n.claimedChannel] += 10000;
             
-            // 加入空間防禦：如果對方在半徑 M 內，增加該 Slot 全頻道的成本
-            Ptr<MobilityModel> otherMobility = NodeList::GetNode(n.id)->GetObject<MobilityModel>();
-            double dist = myMobility->GetDistanceFrom(otherMobility);
-            if (dist <= M_RADIUS_METERS) {
+            // 加入空間防禦：利用 RSSI 判斷是否為鄰近無人機 (取代上帝視角的距離計算)
+            if (n.rssi >= RSSI_THRESHOLD) {
                 for (int c = 0; c < NUM_DATA_CHANNELS; c++) {
                     cost[n.claimedSlot][c] += 1000;
                 }
@@ -215,17 +214,15 @@ private:
         uint8_t buffer[2] = { (uint8_t)(payload & 0xFF), (uint8_t)((payload >> 8) & 0xFF) };
         Ptr<Packet> p = Create<Packet>(buffer, 2);
                   
-        SendPacket(MINI_BEACON_SIZE, p);
+        SendPacket(MINI_BEACON_SIZE, p, 1); // msduHandle = 1 (Mini-beacon)
     }
 
     void ComputeSchedule() {
-        // 第一步：根據半徑 M 過濾真正靠近的鄰機，模擬真實系統中根據 GPS 交換算出的距離
+        // 第一步：利用 RSSI 過濾出真正靠近的鄰機 (取代上帝視角的距離計算)
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
         std::vector<NeighborInfo> filteredList;
         for (auto& n : m_monitorList) {
-            Ptr<MobilityModel> otherMobility = NodeList::GetNode(n.id)->GetObject<MobilityModel>();
-            double dist = myMobility->GetDistanceFrom(otherMobility);
-            if (dist <= M_RADIUS_METERS) {
+            if (n.rssi >= RSSI_THRESHOLD) {
                 filteredList.push_back(n);
             }
         }
@@ -290,13 +287,25 @@ private:
         if (s.action == ScheduleSlot::TX) {
             SwitchChannel(s.channel);
             Ptr<Packet> p = Create<Packet>(DATA_PACKET_SIZE);
-            SendPacket(DATA_PACKET_SIZE, p);
+            SendPacket(DATA_PACKET_SIZE, p, 2); // msduHandle = 2 (Data packet)
         } else if (s.action == ScheduleSlot::RX) {
             SwitchChannel(s.channel);
         }
     }
 
-    void DataConfirm(McpsDataConfirmParams params) {}
+    void DataConfirm(McpsDataConfirmParams params) {
+        // 如果是 Mini-beacon (msduHandle == 1) 且因為頻道忙碌而存取失敗
+        if (params.m_msduHandle == 1 && params.m_status == MacStatus::CHANNEL_ACCESS_FAILURE) {
+            double now = Simulator::Now().GetMilliSeconds();
+            // 如果還在 Phase 1 的有效時間內 (例如 23ms 之前)，則安排重新決策
+            if (now < m_epochStartTime + 23.0) {
+                // 隨機等待 0.5 ~ 1.5 毫秒，讓對方的情報傳達過來，也錯開重試時間
+                Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
+                double retryDelay = uv->GetValue(0.5, 1.5);
+                Simulator::Schedule(MilliSeconds(retryDelay), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
+            }
+        }
+    }
 
     void ReceivePacket(McpsDataIndicationParams params, Ptr<Packet> p) {
         int8_t rssi = params.m_rssi;

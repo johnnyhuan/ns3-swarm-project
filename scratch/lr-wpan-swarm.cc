@@ -28,7 +28,7 @@ const double CYCLE_MS = 51.0;            // 25 + 1 + 25
 const double PHASE1_DURATION_US = 25000.0; // 恢復為 25ms 最佳狀態
 const double GAP_US = 1000.0; 
 const int NUM_DATA_SLOTS = 10;
-const int NUM_DATA_CHANNELS = 10;         // 10 channels * 10 slots = 100 blocks
+const int NUM_DATA_CHANNELS = 6;         // 6 channels * 10 slots = 60 blocks
 const double DATA_SLOT_US = 2500.0; 
 
 const uint8_t BROADCAST_CHANNEL = 11;
@@ -244,13 +244,11 @@ private:
     }
 
     void ComputeSchedule() {
-        // 第一步：利用 RSSI 過濾出真正靠近的鄰機 (取代上帝視角的距離計算)
+        // 第一步：收集所有在第一階段聽到的鄰居 (不再過濾 50m)
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
         std::vector<NeighborInfo> filteredList;
         for (auto& n : m_monitorList) {
-            if (n.rssi >= RSSI_50M_THRESHOLD) {
-                filteredList.push_back(n);
-            }
+            filteredList.push_back(n); // 全部納入避開名單！
         }
 
         std::sort(filteredList.begin(), filteredList.end(), [](const NeighborInfo& a, const NeighborInfo& b) {

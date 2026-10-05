@@ -326,15 +326,15 @@ private:
     void ExecuteDataSlot(int slotIndex) {
         ScheduleSlot s = m_schedule[slotIndex];
         if (s.action == ScheduleSlot::TX) {
-            // Phase 2 (Data): 50m range -> -9 dBm
-            SwitchChannelAndPower(s.channel, -9);
+            // Phase 2 (Data): -4 dBm to improve SNR within 50m (Interference range expands to ~70m)
+            SwitchChannelAndPower(s.channel, -4);
             uint32_t myId = m_device->GetNode()->GetId();
             double now = Simulator::Now().GetMilliSeconds();
             std::cout << "[P2_ATTEMPT] Time: " << now << "ms, Drone: " << myId << ", Slot: " << slotIndex << ", Channel: " << (int)s.channel << std::endl;
             Ptr<Packet> p = Create<Packet>(DATA_PACKET_SIZE);
             SendPacket(DATA_PACKET_SIZE, p, 2); // msduHandle = 2 (Data packet)
         } else if (s.action == ScheduleSlot::RX) {
-            SwitchChannelAndPower(s.channel, -9);
+            SwitchChannelAndPower(s.channel, -4);
         }
     }
 

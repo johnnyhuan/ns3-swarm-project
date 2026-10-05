@@ -172,10 +172,14 @@ private:
 
         SwitchChannel(BROADCAST_CHANNEL);
         
-        Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
-        double randomDelayUs = uv->GetValue(0, PHASE1_DURATION_US - 2000.0);
+        // 為了打破 CSMA 隨機退避造成的物理碰撞機率 (Birthday Paradox)，
+        // 我們改用無人機 ID 進行「初始時間的完美均勻打散」。
+        // 保證任何兩台無人機的發射時間至少錯開 460us。
+        // 這能完美觸發接收端的 Capture Effect (先抵達的訊號會被鎖定)，硬吃隱藏終端碰撞！
+        uint32_t myId = m_device->GetNode()->GetId();
+        double initialDelayUs = (myId % 50) * ((PHASE1_DURATION_US - 2000.0) / 50.0);
         
-        Simulator::Schedule(MicroSeconds(randomDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
+        Simulator::Schedule(MicroSeconds(initialDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
         Simulator::Schedule(MicroSeconds(PHASE1_DURATION_US + GAP_US), &SwarmSchedulerApp::ComputeSchedule, this);
         Simulator::Schedule(MilliSeconds(CYCLE_MS), &SwarmSchedulerApp::ScheduleCycle, this);
     }

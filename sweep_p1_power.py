@@ -10,7 +10,7 @@ print("🚀 Starting Phase 1 TX Power Parameter Sweep (100m - ~150m)...")
 print("=> Using fixed Phase 2 TX Power = -2 dBm (50m range)\n")
 
 # Copy the file
-subprocess.run("cp scratch/lr-wpan-swarm.cc ~/ns-3-dev/scratch/", shell=True, check=True)
+subprocess.run("cp ~/ns3-swarm-project/scratch/lr-wpan-swarm.cc ~/ns-3-dev/scratch/", shell=True, check=True)
 
 for p in power_levels:
     print(f"⚡ Running simulation with Phase 1 TX Power = {p} dBm...")

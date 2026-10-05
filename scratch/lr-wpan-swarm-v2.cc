@@ -61,7 +61,7 @@ struct ScheduleSlot {
 
 class SwarmSchedulerApp : public Application {
 public:
-    SwarmSchedulerApp() : m_epoch(0), m_myClaimedSlot(0), m_myClaimedChannel(0), m_topologyMatchCount(0), m_topologyCheckCount(0), m_epochStartTime(0) {}
+    SwarmSchedulerApp() : m_epoch(0), m_myClaimedSlot(0), m_myClaimedChannel(0), m_topologyMatchCount(0), m_topologyCheckCount(0), m_epochStartTime(0), m_macBusy(false) {}
 
     void Setup(Ptr<LrWpanNetDevice> dev, uint8_t id) {
         m_device = dev;
@@ -113,6 +113,8 @@ private:
     std::map<uint8_t, int> m_countDiscoveryIat;
     std::map<uint8_t, double> m_maxDiscoveryIat;
     
+    bool m_macBusy;
+    
     // AoI 統計變數 (For 50B Beacon Packet)
     std::map<uint8_t, double> m_lastGenerationTime;
     std::map<uint8_t, double> m_sumAoI;
@@ -124,6 +126,7 @@ private:
     int m_topologyCheckCount;
 
     void SwitchChannel(uint8_t ch) {
+        if (m_macBusy) return; // 防當機保護：如果 MAC 正在傳送或退避，不強制切換頻道，避免引發 Fatal Error
         Ptr<PhyPibAttributes> attrs = Create<PhyPibAttributes>();
         attrs->phyCurrentChannel = ch;
         m_device->GetPhy()->PlmeSetAttributeRequest(phyCurrentChannel, attrs);
@@ -137,6 +140,7 @@ private:
         params.m_dstAddr = Mac16Address("FF:FF"); 
         params.m_msduHandle = 0;
         params.m_txOptions = TX_OPTION_NONE;
+        m_macBusy = true;
         m_device->GetMac()->McpsDataRequest(params, p);
     }
 
@@ -329,7 +333,9 @@ private:
         }
     }
 
-    void DataConfirm(McpsDataConfirmParams params) {}
+    void DataConfirm(McpsDataConfirmParams params) {
+        m_macBusy = false;
+    }
 
     void ReceivePacket(McpsDataIndicationParams params, Ptr<Packet> p) {
         int8_t rssi = params.m_rssi;

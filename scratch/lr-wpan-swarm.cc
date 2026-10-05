@@ -34,6 +34,10 @@ const int K_CLOSEST = 5;                 // 從鄰居中挑選最近的 K 個
 
 // 全域統計
 static int g_totalDataPacketsReceived = 0;
+static int g_totalExpectedRx = 0; 
+static int g_txDeafnessCount = 0; 
+static int g_rxDeafnessCount = 0; 
+static int g_resourceCollisionCount = 0;
 static int g_totalExpectedTopKxEpochs = 0;
 static int g_totalReceivedDiscoveryTopK = 0;
 static int g_totalReceivedBeaconTopK = 0;
@@ -254,12 +258,33 @@ private:
         m_schedule[m_myClaimedSlot].action = ScheduleSlot::TX;
         m_schedule[m_myClaimedSlot].channel = m_myClaimedChannel + 12;
 
+        int expected = std::min(K_CLOSEST, (int)filteredList.size());
+        g_totalExpectedRx += expected;
+
         int assigned = 0;
         m_lastScheduledRx.clear();
         for (auto& n : filteredList) {
             if (assigned >= K_CLOSEST) break; 
-            if (n.claimedSlot == m_myClaimedSlot) continue; 
-            if (m_schedule[n.claimedSlot].action != ScheduleSlot::IDLE) continue; 
+            
+            if (n.claimedSlot == m_myClaimedSlot) {
+                g_txDeafnessCount++;
+                continue; 
+            }
+            if (m_schedule[n.claimedSlot].action != ScheduleSlot::IDLE) {
+                g_rxDeafnessCount++;
+                continue; 
+            }
+
+            bool collided = false;
+            for (auto& other : m_monitorList) {
+                if (other.id != n.id && other.claimedSlot == n.claimedSlot && other.claimedChannel == n.claimedChannel) {
+                    collided = true;
+                    break;
+                }
+            }
+            if (collided) {
+                g_resourceCollisionCount++;
+            }
 
             m_schedule[n.claimedSlot].action = ScheduleSlot::RX;
             m_schedule[n.claimedSlot].channel = n.claimedChannel + 12;
@@ -537,6 +562,12 @@ int main(int argc, char *argv[]) {
     std::cout << "Phase 1 TX Aborts (CSMA Busy)   : " << g_p1TxAbort << " times" << std::endl;
     std::cout << "Phase 1 TX Success (Sent)       : " << g_p1TxSuccess << " times" << std::endl;
     std::cout << "Phase 1 RX Success (Total Rcvd) : " << g_p1RxSuccess << " packets" << std::endl;
+    std::cout << "-------------------------------------------------" << std::endl;
+    std::cout << "=== DEAFNESS & COLLISION STATS ===" << std::endl;
+    std::cout << "Total Top-K Neighbors Wanted : " << g_totalExpectedRx << " packets" << std::endl;
+    std::cout << "TX Deafness (Same slot as TX): " << g_txDeafnessCount << " (" << std::fixed << std::setprecision(1) << (g_totalExpectedRx > 0 ? (double)g_txDeafnessCount/g_totalExpectedRx*100 : 0) << "%)" << std::endl;
+    std::cout << "RX Deafness (Slot conflict)  : " << g_rxDeafnessCount << " (" << std::fixed << std::setprecision(1) << (g_totalExpectedRx > 0 ? (double)g_rxDeafnessCount/g_totalExpectedRx*100 : 0) << "%)" << std::endl;
+    std::cout << "Resource Collision (Same S+C): " << g_resourceCollisionCount << " (" << std::fixed << std::setprecision(1) << (g_totalExpectedRx > 0 ? (double)g_resourceCollisionCount/g_totalExpectedRx*100 : 0) << "%)" << std::endl;
     std::cout << "-------------------------------------------------" << std::endl;
     std::cout << "Total 50B Data Packets Delivered: " << g_totalDataPacketsReceived << std::endl;
     std::cout << "Total Network Slots Elapsed     : " << totalSlots << " slots" << std::endl;

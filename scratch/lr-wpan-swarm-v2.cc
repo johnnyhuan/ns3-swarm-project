@@ -19,8 +19,8 @@ const uint32_t MINI_BEACON_SIZE = 2;
 const uint32_t DATA_PACKET_SIZE = 50;
 
 const double CYCLE_MS = 51.0;            // 25 + 1 + 25
-const double PHASE1_DURATION_US = 25000.0; 
-const double GAP_US = 1000.0; 
+const double PHASE1_DURATION_US = 25000.0; // 恢復至最佳甜蜜點 25ms
+const double GAP_US = 1000.0;
 const int NUM_DATA_SLOTS = 10;
 const int NUM_DATA_CHANNELS = 6;         // 6 channels * 10 slots = 60 blocks
 const double DATA_SLOT_US = 2500.0; 
@@ -61,7 +61,7 @@ struct ScheduleSlot {
 
 class SwarmSchedulerApp : public Application {
 public:
-    SwarmSchedulerApp() : m_epoch(0), m_myClaimedSlot(0), m_myClaimedChannel(0), m_topologyMatchCount(0), m_topologyCheckCount(0), m_epochStartTime(0), m_macBusy(false) {}
+    SwarmSchedulerApp() : m_epoch(0), m_myClaimedSlot(0), m_myClaimedChannel(0), m_topologyMatchCount(0), m_topologyCheckCount(0), m_epochStartTime(0) {}
 
     void Setup(Ptr<LrWpanNetDevice> dev, uint8_t id) {
         m_device = dev;
@@ -102,6 +102,7 @@ private:
     uint8_t m_myClaimedChannel;
     std::vector<NeighborInfo> m_monitorList;
     std::map<uint8_t, NeighborInfo> m_persistentNeighbors;
+    std::map<uint8_t, NeighborInfo> m_persistentNeighbors;
     ScheduleSlot m_schedule[NUM_DATA_SLOTS];
 
     // 數據統計變數
@@ -112,8 +113,6 @@ private:
     std::map<uint8_t, double> m_sumDiscoveryIat;
     std::map<uint8_t, int> m_countDiscoveryIat;
     std::map<uint8_t, double> m_maxDiscoveryIat;
-    
-    bool m_macBusy;
     
     // AoI 統計變數 (For 50B Beacon Packet)
     std::map<uint8_t, double> m_lastGenerationTime;
@@ -126,7 +125,6 @@ private:
     int m_topologyCheckCount;
 
     void SwitchChannel(uint8_t ch) {
-        if (m_macBusy) return; // 防當機保護：如果 MAC 正在傳送或退避，不強制切換頻道，避免引發 Fatal Error
         Ptr<PhyPibAttributes> attrs = Create<PhyPibAttributes>();
         attrs->phyCurrentChannel = ch;
         m_device->GetPhy()->PlmeSetAttributeRequest(phyCurrentChannel, attrs);
@@ -140,7 +138,6 @@ private:
         params.m_dstAddr = Mac16Address("FF:FF"); 
         params.m_msduHandle = 0;
         params.m_txOptions = TX_OPTION_NONE;
-        m_macBusy = true;
         m_device->GetMac()->McpsDataRequest(params, p);
     }
 
@@ -182,8 +179,7 @@ private:
         int cost[NUM_DATA_SLOTS][NUM_DATA_CHANNELS] = {0};
         
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
-        for (const auto& pair : m_persistentNeighbors) {
-            const auto& n = pair.second;
+        for (const auto& n : m_monitorList) {
             cost[n.claimedSlot][n.claimedChannel] += 10000;
             
             // 加入空間防禦：如果對方在半徑 M 內，增加該 Slot 全頻道的成本
@@ -212,35 +208,9 @@ private:
         }
         
         Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
-        
-        int myCurrentCost = cost[m_myClaimedSlot][m_myClaimedChannel];
-        bool shouldMove = false;
-        if (m_epoch == 1) {
-            shouldMove = true;
-        } else if (myCurrentCost > minCost) {
-            if (myCurrentCost >= 10000) {
-                bool lowerIdInSameBlock = false;
-                for (const auto& pair : m_persistentNeighbors) {
-                    const auto& n = pair.second;
-                    if (n.claimedSlot == m_myClaimedSlot && n.claimedChannel == m_myClaimedChannel && n.id < m_id) {
-                        lowerIdInSameBlock = true;
-                    }
-                }
-                if (lowerIdInSameBlock) {
-                    shouldMove = true; // ID 較大，認命搬家
-                }
-            } else if (myCurrentCost >= 1000) {
-                if (uv->GetValue() < 0.5) { // 50% 機率搬家 (防震盪)
-                    shouldMove = true;
-                }
-            }
-        }
-        
-        if (shouldMove) {
-            int pickIdx = uv->GetInteger(0, bestOptions.size() - 1);
-            m_myClaimedSlot = bestOptions[pickIdx].first;
-            m_myClaimedChannel = bestOptions[pickIdx].second;
-        }
+        int pickIdx = uv->GetInteger(0, bestOptions.size() - 1);
+        m_myClaimedSlot = bestOptions[pickIdx].first;
+        m_myClaimedChannel = bestOptions[pickIdx].second;
 
         // 位元封裝 (Bit-packing): ID(6 bits), Slot(4 bits), Channel(3 bits) -> Total 13 bits
         uint16_t payload = (m_id & 0x3F) | ((m_myClaimedSlot & 0x0F) << 6) | ((m_myClaimedChannel & 0x07) << 10);
@@ -254,8 +224,7 @@ private:
         // 第一步：根據半徑 M 過濾真正靠近的鄰機，模擬真實系統中根據 GPS 交換算出的距離
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
         std::vector<NeighborInfo> filteredList;
-        for (const auto& pair : m_persistentNeighbors) {
-            const auto& n = pair.second;
+        for (auto& n : m_monitorList) {
             Ptr<MobilityModel> otherMobility = NodeList::GetNode(n.id)->GetObject<MobilityModel>();
             double dist = myMobility->GetDistanceFrom(otherMobility);
             if (dist <= M_RADIUS_METERS) {
@@ -329,9 +298,7 @@ private:
         }
     }
 
-    void DataConfirm(McpsDataConfirmParams params) {
-        m_macBusy = false;
-    }
+    void DataConfirm(McpsDataConfirmParams params) {}
 
     void ReceivePacket(McpsDataIndicationParams params, Ptr<Packet> p) {
         int8_t rssi = params.m_rssi;
@@ -345,9 +312,10 @@ private:
             uint8_t claimedSlot = (payload >> 6) & 0x0F;
             uint8_t claimedChannel = (payload >> 10) & 0x07;
             
-            NeighborInfo info = {senderId, rssi, m_epoch, claimedSlot, claimedChannel};
-            m_persistentNeighbors[senderId] = info;
-            m_monitorList.push_back(info);
+            if (m_id == 0) std::cout << "[Drone 0] Epoch " << m_epoch << ": Heard Phase 1 broadcast from Drone " << (int)senderId << " claiming Slot " << (int)claimedSlot << " Ch " << (int)claimedChannel << " (RSSI: " << (int)rssi << ")" << std::endl;
+            
+            m_monitorList.push_back({senderId, rssi, m_epoch, claimedSlot, claimedChannel});
+            m_persistentNeighbors[senderId] = {senderId, rssi, m_epoch, claimedSlot, claimedChannel};
             m_discoveryReceivedCount[senderId]++;
             
             double now = Simulator::Now().GetMilliSeconds();
@@ -365,14 +333,15 @@ private:
             params.m_srcAddr.CopyTo(addrBuffer);
             uint8_t srcId = addrBuffer[1];
             
+            if (m_id == 0) std::cout << "[Drone 0] Epoch " << m_epoch << ": Received Phase 2 Data Beacon from Drone " << (int)srcId << std::endl;
+            
             m_beaconReceivedCount[srcId]++;
             g_totalDataPacketsReceived++;
             
             double now = Simulator::Now().GetMilliSeconds();
             
-            // 更新 AoI Generation Time (Just-in-Time 採樣模型：在專屬時槽起點才採樣)
-            // 每個時槽 2.5ms，所以封包產生的時間大約是抵達時間 (now) 往前推 2.5ms
-            m_lastGenerationTime[srcId] = now - 2.5;
+            // 更新 AoI Generation Time (將產生時間直接設為收到的瞬間，不計算空中傳輸延遲)
+            m_lastGenerationTime[srcId] = now;
         }
     }
 

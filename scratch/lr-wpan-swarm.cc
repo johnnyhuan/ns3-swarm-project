@@ -308,9 +308,9 @@ private:
                 double now = Simulator::Now().GetMilliSeconds();
                 // 如果還在 Phase 1 的有效時間內 (保留最後 2ms 緩衝)，則安排重新決策
                 if (now < m_epochStartTime + (PHASE1_DURATION_US / 1000.0) - 2.0) {
-                    // 隨機等待 0.5 ~ 1.5 毫秒，讓對方的情報傳達過來，也錯開重試時間
+                    // 隨機等待 0.1 ~ 0.5 毫秒，讓對方的情報傳達過來，也錯開重試時間
                     Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
-                    double retryDelay = uv->GetValue(0.5, 1.5);
+                    double retryDelay = uv->GetValue(0.1, 0.5);
                     Simulator::Schedule(MilliSeconds(retryDelay), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
                 }
             } else if (params.m_status == MacStatus::SUCCESS) {

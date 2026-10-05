@@ -297,6 +297,9 @@ private:
         ScheduleSlot s = m_schedule[slotIndex];
         if (s.action == ScheduleSlot::TX) {
             SwitchChannel(s.channel);
+            uint32_t myId = m_device->GetNode()->GetId();
+            double now = Simulator::Now().GetMilliSeconds();
+            std::cout << "[P2_ATTEMPT] Time: " << now << "ms, Drone: " << myId << ", Slot: " << slotIndex << ", Channel: " << (int)s.channel << std::endl;
             Ptr<Packet> p = Create<Packet>(DATA_PACKET_SIZE);
             SendPacket(DATA_PACKET_SIZE, p, 2); // msduHandle = 2 (Data packet)
         } else if (s.action == ScheduleSlot::RX) {
@@ -322,6 +325,12 @@ private:
             } else if (params.m_status == MacStatus::SUCCESS) {
                 g_p1TxSuccess++;
                 std::cout << "[P1_SUCCESS] Time: " << now << "ms, Drone: " << myId << std::endl;
+            }
+        } else if (params.m_msduHandle == 2) {
+            if (params.m_status == MacStatus::CHANNEL_ACCESS_FAILURE) {
+                std::cout << "[P2_ABORT] Time: " << now << "ms, Drone: " << myId << std::endl;
+            } else if (params.m_status == MacStatus::SUCCESS) {
+                std::cout << "[P2_SUCCESS] Time: " << now << "ms, Drone: " << myId << std::endl;
             }
         }
     }
@@ -360,6 +369,8 @@ private:
             params.m_srcAddr.CopyTo(addrBuffer);
             uint8_t srcId = addrBuffer[1];
             
+            std::cout << "[P2_RX] Time: " << now << "ms, Receiver: " << myId << ", Sender: " << (int)srcId << ", RSSI: " << (int)rssi << std::endl;
+
             m_beaconReceivedCount[srcId]++;
             g_totalDataPacketsReceived++;
             

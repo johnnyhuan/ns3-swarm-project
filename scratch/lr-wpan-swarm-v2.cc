@@ -101,7 +101,7 @@ private:
     uint8_t m_myClaimedSlot;
     uint8_t m_myClaimedChannel;
     std::vector<NeighborInfo> m_monitorList;
-    std::vector<NeighborInfo> m_lastMonitorList;
+    std::map<uint8_t, NeighborInfo> m_persistentNeighbors;
     ScheduleSlot m_schedule[NUM_DATA_SLOTS];
 
     // 數據統計變數
@@ -146,7 +146,6 @@ private:
 
     void ScheduleCycle() {
         m_epoch++;
-        m_lastMonitorList = m_monitorList;
         m_monitorList.clear();
 
         double now = Simulator::Now().GetMilliSeconds();
@@ -181,17 +180,11 @@ private:
 
     void PickResourceAndSendBeacon() {
         int cost[NUM_DATA_SLOTS][NUM_DATA_CHANNELS] = {0};
-        uint8_t minCompetitorId = 255;
         
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
-        for (const auto& n : m_lastMonitorList) {
+        for (const auto& pair : m_persistentNeighbors) {
+            const auto& n = pair.second;
             cost[n.claimedSlot][n.claimedChannel] += 10000;
-            
-            if (n.claimedSlot == m_myClaimedSlot && n.claimedChannel == m_myClaimedChannel) {
-                if (n.id < minCompetitorId) {
-                    minCompetitorId = n.id;
-                }
-            }
             
             // 加入空間防禦：如果對方在半徑 M 內，增加該 Slot 全頻道的成本
             Ptr<MobilityModel> otherMobility = NodeList::GetNode(n.id)->GetObject<MobilityModel>();
@@ -220,28 +213,30 @@ private:
         
         Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
         
-        int myCost = cost[m_myClaimedSlot][m_myClaimedChannel];
-        bool shouldMove = true;
-        
-        // 智慧退讓與穩定機制 (Smart Tie-Breaker & Stickiness)
-        if (myCost >= 10000) {
-            // 同頻死亡車禍：比較 ID。ID 小的死守原地
-            if (minCompetitorId != 255 && m_id < minCompetitorId) {
-                shouldMove = false;
+        int myCurrentCost = cost[m_myClaimedSlot][m_myClaimedChannel];
+        bool shouldMove = false;
+        if (m_epoch == 1) {
+            shouldMove = true;
+        } else if (myCurrentCost > minCost) {
+            if (myCurrentCost >= 10000) {
+                bool lowerIdInSameBlock = false;
+                for (const auto& pair : m_persistentNeighbors) {
+                    const auto& n = pair.second;
+                    if (n.claimedSlot == m_myClaimedSlot && n.claimedChannel == m_myClaimedChannel && n.id < m_id) {
+                        lowerIdInSameBlock = true;
+                    }
+                }
+                if (lowerIdInSameBlock) {
+                    shouldMove = true; // ID 較大，認命搬家
+                }
+            } else if (myCurrentCost >= 1000) {
+                if (uv->GetValue() < 0.5) { // 50% 機率搬家 (防震盪)
+                    shouldMove = true;
+                }
             }
-        } else if (myCost >= 1000) {
-            // 空間擠車：50% 機率搬家 (Simulated Annealing)
-            if (uv->GetValue(0, 1) < 0.5) {
-                shouldMove = false;
-            }
-        } else if (myCost == minCost) {
-            // 已經是最佳位置：死守原地 (Stickiness)
-            shouldMove = false;
         }
-
-        if (!shouldMove) {
-            // Keep the same m_myClaimedSlot and m_myClaimedChannel
-        } else {
+        
+        if (shouldMove) {
             int pickIdx = uv->GetInteger(0, bestOptions.size() - 1);
             m_myClaimedSlot = bestOptions[pickIdx].first;
             m_myClaimedChannel = bestOptions[pickIdx].second;
@@ -259,7 +254,8 @@ private:
         // 第一步：根據半徑 M 過濾真正靠近的鄰機，模擬真實系統中根據 GPS 交換算出的距離
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
         std::vector<NeighborInfo> filteredList;
-        for (auto& n : m_lastMonitorList) {
+        for (const auto& pair : m_persistentNeighbors) {
+            const auto& n = pair.second;
             Ptr<MobilityModel> otherMobility = NodeList::GetNode(n.id)->GetObject<MobilityModel>();
             double dist = myMobility->GetDistanceFrom(otherMobility);
             if (dist <= M_RADIUS_METERS) {
@@ -349,7 +345,9 @@ private:
             uint8_t claimedSlot = (payload >> 6) & 0x0F;
             uint8_t claimedChannel = (payload >> 10) & 0x07;
             
-            m_monitorList.push_back({senderId, rssi, m_epoch, claimedSlot, claimedChannel});
+            NeighborInfo info = {senderId, rssi, m_epoch, claimedSlot, claimedChannel};
+            m_persistentNeighbors[senderId] = info;
+            m_monitorList.push_back(info);
             m_discoveryReceivedCount[senderId]++;
             
             double now = Simulator::Now().GetMilliSeconds();

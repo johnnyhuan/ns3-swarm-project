@@ -208,9 +208,15 @@ private:
         }
         
         Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
-        int pickIdx = uv->GetInteger(0, bestOptions.size() - 1);
-        m_myClaimedSlot = bestOptions[pickIdx].first;
-        m_myClaimedChannel = bestOptions[pickIdx].second;
+        
+        // 防震盪 (Sticky Slot)：如果原本的資源仍然是最優解之一，就保持不變
+        if (cost[m_myClaimedSlot][m_myClaimedChannel] == minCost) {
+            // Keep the same m_myClaimedSlot and m_myClaimedChannel
+        } else {
+            int pickIdx = uv->GetInteger(0, bestOptions.size() - 1);
+            m_myClaimedSlot = bestOptions[pickIdx].first;
+            m_myClaimedChannel = bestOptions[pickIdx].second;
+        }
 
         // 位元封裝 (Bit-packing): ID(6 bits), Slot(4 bits), Channel(3 bits) -> Total 13 bits
         uint16_t payload = (m_id & 0x3F) | ((m_myClaimedSlot & 0x0F) << 6) | ((m_myClaimedChannel & 0x07) << 10);

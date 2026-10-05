@@ -28,7 +28,7 @@ const double CYCLE_MS = 51.0;            // 25 + 1 + 25
 const double PHASE1_DURATION_US = 25000.0; // 恢復為 25ms 最佳狀態
 const double GAP_US = 1000.0; 
 const int NUM_DATA_SLOTS = 10;
-const int NUM_DATA_CHANNELS = 6;         // 6 channels * 10 slots = 60 blocks
+const int NUM_DATA_CHANNELS = 10;         // 10 channels * 10 slots = 100 blocks
 const double DATA_SLOT_US = 2500.0; 
 
 const uint8_t BROADCAST_CHANNEL = 11;

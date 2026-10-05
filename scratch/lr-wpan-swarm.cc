@@ -18,8 +18,8 @@ NS_LOG_COMPONENT_DEFINE("LrWpanSwarm");
 const uint32_t MINI_BEACON_SIZE = 2; 
 const uint32_t DATA_PACKET_SIZE = 50;
 
-const double CYCLE_MS = 61.0;            // 35 + 1 + 25 (原本是 51)
-const double PHASE1_DURATION_US = 35000.0; // 延長為 35ms 以提高接收率
+const double CYCLE_MS = 51.0;            // 25 + 1 + 25 (恢復為 51.0)
+const double PHASE1_DURATION_US = 25000.0; // 恢復為 25ms
 const double GAP_US = 1000.0; 
 const int NUM_DATA_SLOTS = 10;
 const int NUM_DATA_CHANNELS = 6;         // 6 channels * 10 slots = 60 blocks
@@ -45,6 +45,12 @@ static int g_totalCountAoITopK = 0;
 static double g_globalMaxAoITopK = 0;
 static int g_totalTopologyMatchCount = 0;
 static int g_totalTopologyCheckCount = 0;
+
+// Phase 1 專用統計
+static int g_p1TxAttempts = 0;
+static int g_p1TxAbort = 0;
+static int g_p1TxSuccess = 0;
+static int g_p1RxSuccess = 0;
 
 struct NeighborInfo {
     uint8_t id;
@@ -175,6 +181,7 @@ private:
     }
 
     void PickResourceAndSendBeacon() {
+        g_p1TxAttempts++;
         int cost[NUM_DATA_SLOTS][NUM_DATA_CHANNELS] = {0};
         
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
@@ -294,15 +301,20 @@ private:
     }
 
     void DataConfirm(McpsDataConfirmParams params) {
-        // 如果是 Mini-beacon (msduHandle == 1) 且因為頻道忙碌而存取失敗
-        if (params.m_msduHandle == 1 && params.m_status == MacStatus::CHANNEL_ACCESS_FAILURE) {
-            double now = Simulator::Now().GetMilliSeconds();
-            // 如果還在 Phase 1 的有效時間內 (保留最後 2ms 緩衝)，則安排重新決策
-            if (now < m_epochStartTime + (PHASE1_DURATION_US / 1000.0) - 2.0) {
-                // 隨機等待 0.5 ~ 1.5 毫秒，讓對方的情報傳達過來，也錯開重試時間
-                Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
-                double retryDelay = uv->GetValue(0.5, 1.5);
-                Simulator::Schedule(MilliSeconds(retryDelay), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
+        // 如果是 Mini-beacon (msduHandle == 1)
+        if (params.m_msduHandle == 1) {
+            if (params.m_status == MacStatus::CHANNEL_ACCESS_FAILURE) {
+                g_p1TxAbort++;
+                double now = Simulator::Now().GetMilliSeconds();
+                // 如果還在 Phase 1 的有效時間內 (保留最後 2ms 緩衝)，則安排重新決策
+                if (now < m_epochStartTime + (PHASE1_DURATION_US / 1000.0) - 2.0) {
+                    // 隨機等待 0.5 ~ 1.5 毫秒，讓對方的情報傳達過來，也錯開重試時間
+                    Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
+                    double retryDelay = uv->GetValue(0.5, 1.5);
+                    Simulator::Schedule(MilliSeconds(retryDelay), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
+                }
+            } else if (params.m_status == MacStatus::SUCCESS) {
+                g_p1TxSuccess++;
             }
         }
     }
@@ -311,6 +323,7 @@ private:
         int8_t rssi = params.m_rssi;
 
         if (p->GetSize() == MINI_BEACON_SIZE) {
+            g_p1RxSuccess++;
             uint8_t buffer[2];
             p->CopyData(buffer, 2);
             uint16_t payload = buffer[0] | (buffer[1] << 8);
@@ -493,6 +506,11 @@ int main(int argc, char *argv[]) {
     std::cout << "\n=================================================" << std::endl;
     std::cout << "          GLOBAL NETWORK METRICS (1.0s)          " << std::endl;
     std::cout << "=================================================" << std::endl;
+    std::cout << "Phase 1 TX Attempts             : " << g_p1TxAttempts << " times" << std::endl;
+    std::cout << "Phase 1 TX Aborts (CSMA Busy)   : " << g_p1TxAbort << " times" << std::endl;
+    std::cout << "Phase 1 TX Success (Sent)       : " << g_p1TxSuccess << " times" << std::endl;
+    std::cout << "Phase 1 RX Success (Total Rcvd) : " << g_p1RxSuccess << " packets" << std::endl;
+    std::cout << "-------------------------------------------------" << std::endl;
     std::cout << "Total 50B Data Packets Delivered: " << g_totalDataPacketsReceived << std::endl;
     std::cout << "Total Network Slots Elapsed     : " << totalSlots << " slots" << std::endl;
     std::cout << "Spatial Reuse Factor (SRF)      : " << std::fixed << std::setprecision(2) << srf << " packets/slot" << std::endl;

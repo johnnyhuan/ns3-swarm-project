@@ -39,7 +39,7 @@ for target_epoch in [2, 3]:
     print(f"{'Slot':<5} | " + " | ".join([f"Ch {c:<18}" for c in range(6)]))
     print("-" * 140)
     
-    for s in range(10):
+    for s in range(30):
         row_str = f"{s:<5} | "
         for c in range(6):
             drones = epochs[target_epoch][s][c]
@@ -52,6 +52,6 @@ for target_epoch in [2, 3]:
             row_str += f"{drones_str:<21} | "
         print(row_str)
     
-    total_drones = sum(len(epochs[target_epoch][s][c]) for s in range(10) for c in range(6))
+    total_drones = sum(len(epochs[target_epoch][s][c]) for s in range(30) for c in range(6))
     print(f"Total Drones scheduled: {total_drones}/50")
     print("Note: [x,y,z] indicates multiple drones selected the exact same slot and channel globally.")

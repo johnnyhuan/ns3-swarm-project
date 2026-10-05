@@ -27,7 +27,7 @@ double g_p2TxPower = -4.0; // Phase 2 TX Power (configurable via cmd line)
 const double CYCLE_MS = 51.0;            // 25 + 1 + 25 (最佳甜蜜點)
 const double PHASE1_DURATION_US = 25000.0; // 恢復為 25ms 最佳狀態
 const double GAP_US = 1000.0; 
-const int NUM_DATA_SLOTS = 10;
+const int NUM_DATA_SLOTS = 30;
 const int NUM_DATA_CHANNELS = 6;         // 6 channels * 10 slots = 60 blocks
 const double DATA_SLOT_US = 2500.0; 
 
@@ -490,7 +490,7 @@ private:
 };
 
 int main(int argc, char *argv[]) {
-    g_runLogFile.open("/home/ubuntu/ns3-swarm-project/run.log");
+    g_runLogFile.open("run.log");
     if (g_runLogFile.is_open()) {
         g_originalCoutBuffer = std::cout.rdbuf();
         std::cout.rdbuf(g_runLogFile.rdbuf());
@@ -604,7 +604,7 @@ int main(int argc, char *argv[]) {
     if (g_runLogFile.is_open()) {
         g_runLogFile << ss.str();
         g_runLogFile.close();
-        int ret = system("cd /home/ubuntu/ns3-swarm-project && git pull --rebase origin main && git add run.log && git commit -m 'Auto upload run.log' && git push origin main");
+        int ret = system("git add run.log && git commit -m 'Auto upload run.log' && git push origin main");
         if (ret != 0) {
             std::cerr << "Failed to auto-upload run.log to GitHub!" << std::endl;
         } else {

@@ -25,8 +25,8 @@ with open(log_file, 'r') as f:
             ch_str = parts[3].split('Channel:')[1].strip()
             ch = int(ch_str)
             
-            # 51ms per epoch. Epoch 1 starts Phase 2 at ~25ms.
-            epoch_id = int(time_val / 51.0) + 1
+            # 101ms per epoch. Epoch 1 starts Phase 2 at ~25ms.
+            epoch_id = int(time_val / 101.0) + 1
             
             epochs[epoch_id][slot][ch].append(drone_id)
 

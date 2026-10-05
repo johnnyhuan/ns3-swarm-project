@@ -24,7 +24,7 @@ const uint32_t MINI_BEACON_SIZE = 2;
 const uint32_t DATA_PACKET_SIZE = 50;
 double g_p2TxPower = -4.0; // Phase 2 TX Power (configurable via cmd line)
 
-const double CYCLE_MS = 51.0;            // 25 + 1 + 25 (最佳甜蜜點)
+const double CYCLE_MS = 101.0;            // 25(P1) + 1(GAP) + 75(P2)
 const double PHASE1_DURATION_US = 25000.0; // 恢復為 25ms 最佳狀態
 const double GAP_US = 1000.0; 
 const int NUM_DATA_SLOTS = 30;

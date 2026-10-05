@@ -118,7 +118,7 @@ private:
     uint8_t m_myClaimedSlot;
     uint8_t m_myClaimedChannel;
     std::vector<NeighborInfo> m_monitorList;
-    std::vector<NeighborInfo> m_lastMonitorList;
+    std::map<uint8_t, NeighborInfo> m_persistentNeighbors;
     ScheduleSlot m_schedule1[NUM_DATA_SLOTS];
     ScheduleSlot m_schedule2[NUM_DATA_SLOTS];
 
@@ -169,7 +169,7 @@ private:
 
     void ScheduleCycle() {
         m_epoch++;
-        m_lastMonitorList = m_monitorList;
+        // m_persistentNeighbors 跨 epoch 保存記憶，不需要 clear
         m_monitorList.clear();
 
         double now = Simulator::Now().GetMilliSeconds();
@@ -207,7 +207,8 @@ private:
         int cost[NUM_DATA_SLOTS][NUM_DATA_CHANNELS] = {0};
         
         Ptr<MobilityModel> myMobility = m_device1->GetNode()->GetObject<MobilityModel>();
-        for (const auto& n : m_lastMonitorList) {
+        for (const auto& pair : m_persistentNeighbors) {
+            const auto& n = pair.second;
             cost[n.claimedSlot][n.claimedChannel] += 10000;
             
             // 加入空間防禦：如果對方在半徑 M 內，增加該 Slot 全頻道的成本
@@ -235,10 +236,39 @@ private:
             }
         }
         
-        Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
-        int pickIdx = uv->GetInteger(0, bestOptions.size() - 1);
-        m_myClaimedSlot = bestOptions[pickIdx].first;
-        m_myClaimedChannel = bestOptions[pickIdx].second;
+        int myCurrentCost = cost[m_myClaimedSlot][m_myClaimedChannel];
+        bool shouldMove = false;
+        
+        if (m_epoch == 1) {
+            shouldMove = true;
+        } else if (myCurrentCost > minCost) {
+            if (myCurrentCost >= 10000) {
+                // 同頻道死亡車禍
+                bool lowerIdInSameBlock = false;
+                for (const auto& pair : m_persistentNeighbors) {
+                    const auto& n = pair.second;
+                    if (n.claimedSlot == m_myClaimedSlot && n.claimedChannel == m_myClaimedChannel && n.id < m_id) {
+                        lowerIdInSameBlock = true;
+                    }
+                }
+                if (lowerIdInSameBlock) {
+                    shouldMove = true; // ID 較大，認命搬家
+                }
+            } else if (myCurrentCost >= 1000) {
+                // 空間擁擠
+                Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
+                if (uv->GetValue() < 0.5) { // 50% 機率搬家 (防震盪)
+                    shouldMove = true;
+                }
+            }
+        }
+        
+        if (shouldMove) {
+            Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
+            int pickIdx = uv->GetInteger(0, bestOptions.size() - 1);
+            m_myClaimedSlot = bestOptions[pickIdx].first;
+            m_myClaimedChannel = bestOptions[pickIdx].second;
+        }
 
         // 位元封裝 (Bit-packing): ID(6 bits), Slot(4 bits), Channel(3 bits) -> Total 13 bits
         uint16_t payload = (m_id & 0x3F) | ((m_myClaimedSlot & 0x0F) << 6) | ((m_myClaimedChannel & 0x07) << 10);
@@ -260,7 +290,8 @@ private:
     void ComputeSchedule() {
         Ptr<MobilityModel> myMobility = m_device1->GetNode()->GetObject<MobilityModel>();
         std::vector<NeighborInfo> filteredList;
-        for (auto& n : m_monitorList) {
+        for (auto& pair : m_persistentNeighbors) {
+            auto& n = pair.second;
             Ptr<MobilityModel> otherMobility = NodeList::GetNode(n.id)->GetObject<MobilityModel>();
             double dist = myMobility->GetDistanceFrom(otherMobility);
             if (dist <= M_RADIUS_METERS) {

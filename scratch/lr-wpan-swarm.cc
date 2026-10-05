@@ -4,6 +4,8 @@
 #include <ns3/spectrum-module.h>
 #include <ns3/lr-wpan-module.h>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include <vector>
 #include <algorithm>
 #include <iomanip>
@@ -11,6 +13,9 @@
 
 using namespace ns3;
 using namespace ns3::lrwpan;
+
+std::ofstream g_runLogFile;
+std::streambuf* g_originalCoutBuffer = nullptr;
 
 NS_LOG_COMPONENT_DEFINE("LrWpanSwarm");
 
@@ -484,6 +489,12 @@ private:
 };
 
 int main(int argc, char *argv[]) {
+    g_runLogFile.open("/home/ubuntu/ns3-swarm-project/run.log");
+    if (g_runLogFile.is_open()) {
+        g_originalCoutBuffer = std::cout.rdbuf();
+        std::cout.rdbuf(g_runLogFile.rdbuf());
+    }
+
     CommandLine cmd;
     cmd.Parse(argc, argv);
 
@@ -555,54 +566,47 @@ int main(int argc, char *argv[]) {
     double globalMeanAoI = (g_totalCountAoITopK > 0) ? (g_totalSumAoITopK / g_totalCountAoITopK) : 0;
     double globalTopAcc = (g_totalTopologyCheckCount > 0) ? ((double)g_totalTopologyMatchCount / g_totalTopologyCheckCount) : 0;
     
-    std::cout << "\n=================================================" << std::endl;
-    std::cout << "          GLOBAL NETWORK METRICS (1.0s)          " << std::endl;
-    std::cout << "=================================================" << std::endl;
-    std::cout << "Phase 1 TX Attempts             : " << g_p1TxAttempts << " times" << std::endl;
-    std::cout << "Phase 1 TX Aborts (CSMA Busy)   : " << g_p1TxAbort << " times" << std::endl;
-    std::cout << "Phase 1 TX Success (Sent)       : " << g_p1TxSuccess << " times" << std::endl;
-    std::cout << "Phase 1 RX Success (Total Rcvd) : " << g_p1RxSuccess << " packets" << std::endl;
-    std::cout << "-------------------------------------------------" << std::endl;
-    std::cout << "=== DEAFNESS & COLLISION STATS ===" << std::endl;
-    std::cout << "Total Top-K Neighbors Wanted : " << g_totalExpectedRx << " packets" << std::endl;
-    std::cout << "TX Deafness (Same slot as TX): " << g_txDeafnessCount << " (" << std::fixed << std::setprecision(1) << (g_totalExpectedRx > 0 ? (double)g_txDeafnessCount/g_totalExpectedRx*100 : 0) << "%)" << std::endl;
-    std::cout << "RX Deafness (Slot conflict)  : " << g_rxDeafnessCount << " (" << std::fixed << std::setprecision(1) << (g_totalExpectedRx > 0 ? (double)g_rxDeafnessCount/g_totalExpectedRx*100 : 0) << "%)" << std::endl;
-    std::cout << "Resource Collision (Same S+C): " << g_resourceCollisionCount << " (" << std::fixed << std::setprecision(1) << (g_totalExpectedRx > 0 ? (double)g_resourceCollisionCount/g_totalExpectedRx*100 : 0) << "%)" << std::endl;
-    std::cout << "-------------------------------------------------" << std::endl;
-    std::cout << "Total 50B Data Packets Delivered: " << g_totalDataPacketsReceived << std::endl;
-    std::cout << "Total Network Slots Elapsed     : " << totalSlots << " slots" << std::endl;
-    std::cout << "Spatial Reuse Factor (SRF)      : " << std::fixed << std::setprecision(2) << srf << " packets/slot" << std::endl;
-    std::cout << "Discovery Message Reception Ratio: " << std::fixed << std::setprecision(1) << globalDiscRatio * 100 << "%" << std::endl;
-    std::cout << "Beacon Packet Reception Ratio   : " << std::fixed << std::setprecision(1) << globalBcnRatio * 100 << "%" << std::endl;
-    std::cout << "Monitor Member List Match Ratio : " << std::fixed << std::setprecision(1) << globalTopAcc * 100 << "%" << std::endl;
-    std::cout << "Avg Discovery Msg IAT (Top-K)   : " << std::fixed << std::setprecision(1) << globalAvgDiscIat << " ms" << std::endl;
-    std::cout << "Max Discovery Msg IAT (Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxDiscoveryIatTopK << " ms" << std::endl;
-    std::cout << "Mean Beacon Packet AoI (Top-K)  : " << std::fixed << std::setprecision(1) << globalMeanAoI << " ms" << std::endl;
-    std::cout << "Max Beacon Packet AoI (Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxAoITopK << " ms" << std::endl;
-    std::cout << "=================================================\n" << std::endl;
+    std::stringstream ss;
+    ss << "\n=================================================\n";
+    ss << "          GLOBAL NETWORK METRICS (1.0s)          \n";
+    ss << "=================================================\n";
+    ss << "Phase 1 TX Attempts             : " << g_p1TxAttempts << " times\n";
+    ss << "Phase 1 TX Aborts (CSMA Busy)   : " << g_p1TxAbort << " times\n";
+    ss << "Phase 1 TX Success (Sent)       : " << g_p1TxSuccess << " times\n";
+    ss << "Phase 1 RX Success (Total Rcvd) : " << g_p1RxSuccess << " packets\n";
+    ss << "-------------------------------------------------\n";
+    ss << "=== DEAFNESS & COLLISION STATS ===\n";
+    ss << "Total Top-K Neighbors Wanted : " << g_totalExpectedRx << " packets\n";
+    ss << "TX Deafness (Same slot as TX): " << g_txDeafnessCount << " (" << std::fixed << std::setprecision(1) << (g_totalExpectedRx > 0 ? (double)g_txDeafnessCount/g_totalExpectedRx*100 : 0) << "%)\n";
+    ss << "RX Deafness (Slot conflict)  : " << g_rxDeafnessCount << " (" << std::fixed << std::setprecision(1) << (g_totalExpectedRx > 0 ? (double)g_rxDeafnessCount/g_totalExpectedRx*100 : 0) << "%)\n";
+    ss << "Resource Collision (Same S+C): " << g_resourceCollisionCount << " (" << std::fixed << std::setprecision(1) << (g_totalExpectedRx > 0 ? (double)g_resourceCollisionCount/g_totalExpectedRx*100 : 0) << "%)\n";
+    ss << "-------------------------------------------------\n";
+    ss << "Total 50B Data Packets Delivered: " << g_totalDataPacketsReceived << "\n";
+    ss << "Total Network Slots Elapsed     : " << totalSlots << " slots\n";
+    ss << "Spatial Reuse Factor (SRF)      : " << std::fixed << std::setprecision(2) << srf << " packets/slot\n";
+    ss << "Discovery Message Reception Ratio: " << std::fixed << std::setprecision(1) << globalDiscRatio * 100 << "%\n";
+    ss << "Beacon Packet Reception Ratio   : " << std::fixed << std::setprecision(1) << globalBcnRatio * 100 << "%\n";
+    ss << "Monitor Member List Match Ratio : " << std::fixed << std::setprecision(1) << globalTopAcc * 100 << "%\n";
+    ss << "Avg Discovery Msg IAT (Top-K)   : " << std::fixed << std::setprecision(1) << globalAvgDiscIat << " ms\n";
+    ss << "Max Discovery Msg IAT (Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxDiscoveryIatTopK << " ms\n";
+    ss << "Mean Beacon Packet AoI (Top-K)  : " << std::fixed << std::setprecision(1) << globalMeanAoI << " ms\n";
+    ss << "Max Beacon Packet AoI (Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxAoITopK << " ms\n";
+    ss << "=================================================\n\n";
 
-    std::ofstream out("/home/ubuntu/ns3-swarm-project/metrics.txt");
-    if (out.is_open()) {
-        out << "=================================================\n";
-        out << "          GLOBAL NETWORK METRICS (1.0s)          \n";
-        out << "=================================================\n";
-        out << "Total 50B Data Packets Delivered: " << g_totalDataPacketsReceived << "\n";
-        out << "Total Network Slots Elapsed     : " << totalSlots << " slots\n";
-        out << "Spatial Reuse Factor (SRF)      : " << std::fixed << std::setprecision(2) << srf << " packets/slot\n";
-        out << "Discovery Message Reception Ratio: " << std::fixed << std::setprecision(1) << globalDiscRatio * 100 << "%\n";
-        out << "Beacon Packet Reception Ratio   : " << std::fixed << std::setprecision(1) << globalBcnRatio * 100 << "%\n";
-        out << "Monitor Member List Match Ratio : " << std::fixed << std::setprecision(1) << globalTopAcc * 100 << "%\n";
-        out << "Avg Discovery Msg IAT (Top-K)   : " << std::fixed << std::setprecision(1) << globalAvgDiscIat << " ms\n";
-        out << "Max Discovery Msg IAT (Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxDiscoveryIatTopK << " ms\n";
-        out << "Mean Beacon Packet AoI (Top-K)  : " << std::fixed << std::setprecision(1) << globalMeanAoI << " ms\n";
-        out << "Max Beacon Packet AoI (Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxAoITopK << " ms\n";
-        out << "=================================================\n";
-        out.close();
-        int ret = system("cd /home/ubuntu/ns3-swarm-project && git pull --rebase origin main && git add metrics.txt && git commit -m 'Auto upload metrics' && git push origin main");
+    if (g_originalCoutBuffer) {
+        std::cout.rdbuf(g_originalCoutBuffer);
+    }
+    
+    std::cout << ss.str();
+    
+    if (g_runLogFile.is_open()) {
+        g_runLogFile << ss.str();
+        g_runLogFile.close();
+        int ret = system("cd /home/ubuntu/ns3-swarm-project && git pull --rebase origin main && git add run.log && git commit -m 'Auto upload run.log' && git push origin main");
         if (ret != 0) {
-            std::cerr << "Failed to auto-upload metrics to GitHub!" << std::endl;
+            std::cerr << "Failed to auto-upload run.log to GitHub!" << std::endl;
         } else {
-            std::cout << "Metrics successfully uploaded to GitHub!" << std::endl;
+            std::cout << "Log successfully uploaded to GitHub!" << std::endl;
         }
     }
 

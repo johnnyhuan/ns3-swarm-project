@@ -113,7 +113,6 @@ private:
     std::map<uint8_t, int> m_countDiscoveryIat;
     std::map<uint8_t, double> m_maxDiscoveryIat;
     
-    std::vector<NeighborInfo> m_lastMonitorList;
     // AoI 統計變數 (For 50B Beacon Packet)
     std::map<uint8_t, double> m_lastGenerationTime;
     std::map<uint8_t, double> m_sumAoI;

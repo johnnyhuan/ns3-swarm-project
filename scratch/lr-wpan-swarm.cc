@@ -22,6 +22,7 @@ NS_LOG_COMPONENT_DEFINE("LrWpanSwarm");
 // --- 系統常數設定 ---
 const uint32_t MINI_BEACON_SIZE = 2; 
 const uint32_t DATA_PACKET_SIZE = 50;
+double g_p2TxPower = -4.0; // Phase 2 TX Power (configurable via cmd line)
 
 const double CYCLE_MS = 51.0;            // 25 + 1 + 25 (最佳甜蜜點)
 const double PHASE1_DURATION_US = 25000.0; // 恢復為 25ms 最佳狀態
@@ -331,15 +332,15 @@ private:
     void ExecuteDataSlot(int slotIndex) {
         ScheduleSlot s = m_schedule[slotIndex];
         if (s.action == ScheduleSlot::TX) {
-            // Phase 2 (Data): -4 dBm to improve SNR within 50m (Interference range expands to ~70m)
-            SwitchChannelAndPower(s.channel, -4);
+            // Phase 2 (Data): Use globally configured TX power
+            SwitchChannelAndPower(s.channel, g_p2TxPower);
             uint32_t myId = m_device->GetNode()->GetId();
             double now = Simulator::Now().GetMilliSeconds();
             std::cout << "[P2_ATTEMPT] Time: " << now << "ms, Drone: " << myId << ", Slot: " << slotIndex << ", Channel: " << (int)s.channel << std::endl;
             Ptr<Packet> p = Create<Packet>(DATA_PACKET_SIZE);
             SendPacket(DATA_PACKET_SIZE, p, 2); // msduHandle = 2 (Data packet)
         } else if (s.action == ScheduleSlot::RX) {
-            SwitchChannelAndPower(s.channel, -4);
+            SwitchChannelAndPower(s.channel, g_p2TxPower);
         }
     }
 
@@ -496,6 +497,7 @@ int main(int argc, char *argv[]) {
     }
 
     CommandLine cmd;
+    cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
     cmd.Parse(argc, argv);
 
     int numNodes = 50; 

@@ -177,10 +177,17 @@ private:
 
     void PickResourceAndSendBeacon() {
         int cost[NUM_DATA_SLOTS][NUM_DATA_CHANNELS] = {0};
+        uint8_t minCompetitorId = 255;
         
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
         for (const auto& n : m_lastMonitorList) {
             cost[n.claimedSlot][n.claimedChannel] += 10000;
+            
+            if (n.claimedSlot == m_myClaimedSlot && n.claimedChannel == m_myClaimedChannel) {
+                if (n.id < minCompetitorId) {
+                    minCompetitorId = n.id;
+                }
+            }
             
             // 加入空間防禦：如果對方在半徑 M 內，增加該 Slot 全頻道的成本
             Ptr<MobilityModel> otherMobility = NodeList::GetNode(n.id)->GetObject<MobilityModel>();
@@ -209,8 +216,26 @@ private:
         
         Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
         
-        // 防震盪 (Sticky Slot)：如果原本的資源仍然是最優解之一，就保持不變
-        if (cost[m_myClaimedSlot][m_myClaimedChannel] == minCost) {
+        int myCost = cost[m_myClaimedSlot][m_myClaimedChannel];
+        bool shouldMove = true;
+        
+        // 智慧退讓與穩定機制 (Smart Tie-Breaker & Stickiness)
+        if (myCost >= 10000) {
+            // 同頻死亡車禍：比較 ID。ID 小的死守原地
+            if (minCompetitorId != 255 && m_id < minCompetitorId) {
+                shouldMove = false;
+            }
+        } else if (myCost >= 1000) {
+            // 空間擠車：50% 機率搬家 (Simulated Annealing)
+            if (uv->GetValue(0, 1) < 0.5) {
+                shouldMove = false;
+            }
+        } else if (myCost == minCost) {
+            // 已經是最佳位置：死守原地 (Stickiness)
+            shouldMove = false;
+        }
+
+        if (!shouldMove) {
             // Keep the same m_myClaimedSlot and m_myClaimedChannel
         } else {
             int pickIdx = uv->GetInteger(0, bestOptions.size() - 1);

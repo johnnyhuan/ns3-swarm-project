@@ -24,6 +24,8 @@ with open(log_file, 'r') as f:
             slot = int(slot_str)
             ch_str = parts[3].split('Channel:')[1].strip()
             ch = int(ch_str)
+            if ch >= 12:
+                ch -= 12 # Map IEEE 802.15.4 channel 12-17 to column 0-5
             
             # 51ms per epoch. Epoch 1 starts Phase 2 at ~25ms.
             epoch_id = int(time_val / 51.0) + 1

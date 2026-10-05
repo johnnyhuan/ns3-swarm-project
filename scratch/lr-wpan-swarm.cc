@@ -23,6 +23,7 @@ NS_LOG_COMPONENT_DEFINE("LrWpanSwarm");
 const uint32_t MINI_BEACON_SIZE = 2; 
 const uint32_t DATA_PACKET_SIZE = 50;
 double g_p2TxPower = -4.0; // Phase 2 TX Power (configurable via cmd line)
+double g_p1TxPower = 0.0;  // Phase 1 TX Power (configurable via cmd line)
 
 const double CYCLE_MS = 51.0;            // 25 + 1 + 25
 const double PHASE1_DURATION_US = 25000.0; // 恢復為 25ms 最佳狀態
@@ -184,8 +185,8 @@ private:
         }
         m_epochStartTime = now;
 
-        // Phase 1 (Broadcast): 100m range -> 0 dBm
-        SwitchChannelAndPower(BROADCAST_CHANNEL, 0);
+        // Phase 1 (Broadcast): Configurable range
+        SwitchChannelAndPower(BROADCAST_CHANNEL, (int8_t)g_p1TxPower);
         
         Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
         double randomDelayUs = uv->GetValue(0, PHASE1_DURATION_US - 2000.0);
@@ -498,6 +499,7 @@ int main(int argc, char *argv[]) {
 
     CommandLine cmd;
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
+    cmd.AddValue("p1TxPower", "Phase 1 TX Power in dBm (e.g., 0, 1, 3)", g_p1TxPower);
     cmd.Parse(argc, argv);
 
     int numNodes = 50; 

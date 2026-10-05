@@ -22,7 +22,9 @@ for p in power_levels:
     collision_ratio = "N/A"
     rx_deafness_ratio = "N/A"
     
+    raw_output = []
     for line in process.stdout:
+        raw_output.append(line)
         if "Resource Collision (Same S+C):" in line:
             match = re.search(r'\(([\d.]+)%\)', line)
             if match:
@@ -37,6 +39,10 @@ for p in power_levels:
                 beacon_ratio = match.group(1) + "%"
                 
     process.wait()
+    if beacon_ratio == "N/A":
+        print("====== RAW OUTPUT ======")
+        print("".join(raw_output))
+        print("========================")
     print(f"   => Reception Ratio: {beacon_ratio} (Collisions: {collision_ratio}, RX Deafness: {rx_deafness_ratio})\n")
 
 print("✅ Phase 1 Parameter sweep completed!")

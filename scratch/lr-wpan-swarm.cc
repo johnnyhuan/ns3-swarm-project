@@ -212,7 +212,7 @@ private:
             // 加入空間防禦：利用距離判斷是否為鄰近無人機 (利用 Friis 公式反推 RSSI 門檻)
             double avoidRssi = 999.0;
             if (g_p1AvoidDist > 0.0) {
-                avoidRssi = g_p1TxPower - 46.6777 - 20.0 * std::log10(std::max(1.0, g_p1AvoidDist));
+                avoidRssi = g_p1TxPower - 46.6777 - 30.0 * std::log10(std::max(1.0, g_p1AvoidDist));
             }
             if (n.rssi >= avoidRssi) {
                 for (int c = 0; c < NUM_DATA_CHANNELS; c++) {
@@ -253,7 +253,7 @@ private:
         // 第一步：利用距離過濾出真正靠近的鄰機 (計算對應的 RSSI 門檻)
         double avoidRssi = 999.0;
         if (g_p1AvoidDist > 0.0) {
-            avoidRssi = g_p1TxPower - 46.6777 - 20.0 * std::log10(std::max(1.0, g_p1AvoidDist));
+            avoidRssi = g_p1TxPower - 46.6777 - 30.0 * std::log10(std::max(1.0, g_p1AvoidDist));
         }
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
         std::vector<NeighborInfo> filteredList;

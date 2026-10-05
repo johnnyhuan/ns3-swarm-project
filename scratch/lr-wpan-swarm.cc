@@ -22,7 +22,7 @@ NS_LOG_COMPONENT_DEFINE("LrWpanSwarm");
 // --- 系統常數設定 ---
 const uint32_t MINI_BEACON_SIZE = 2; 
 const uint32_t DATA_PACKET_SIZE = 50;
-double g_p2TxPower = -4.0; // Phase 2 TX Power (configurable via cmd line)
+double g_p2TxPower = -2.0; // Phase 2 TX Power (configurable via cmd line, optimal at -2 dBm)
 double g_p1TxPower = 0.0;  // Phase 1 TX Power (configurable via cmd line)
 
 const double CYCLE_MS = 51.0;            // 25 + 1 + 25

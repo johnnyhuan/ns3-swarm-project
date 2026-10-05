@@ -18,8 +18,8 @@ NS_LOG_COMPONENT_DEFINE("LrWpanSwarm");
 const uint32_t MINI_BEACON_SIZE = 2; 
 const uint32_t DATA_PACKET_SIZE = 50;
 
-const double CYCLE_MS = 51.0;            // 25 + 1 + 25
-const double PHASE1_DURATION_US = 25000.0; 
+const double CYCLE_MS = 61.0;            // 35 + 1 + 25 (原本是 51)
+const double PHASE1_DURATION_US = 35000.0; // 延長為 35ms 以提高接收率
 const double GAP_US = 1000.0; 
 const int NUM_DATA_SLOTS = 10;
 const int NUM_DATA_CHANNELS = 6;         // 6 channels * 10 slots = 60 blocks
@@ -297,8 +297,8 @@ private:
         // 如果是 Mini-beacon (msduHandle == 1) 且因為頻道忙碌而存取失敗
         if (params.m_msduHandle == 1 && params.m_status == MacStatus::CHANNEL_ACCESS_FAILURE) {
             double now = Simulator::Now().GetMilliSeconds();
-            // 如果還在 Phase 1 的有效時間內 (例如 23ms 之前)，則安排重新決策
-            if (now < m_epochStartTime + 23.0) {
+            // 如果還在 Phase 1 的有效時間內 (保留最後 2ms 緩衝)，則安排重新決策
+            if (now < m_epochStartTime + (PHASE1_DURATION_US / 1000.0) - 2.0) {
                 // 隨機等待 0.5 ~ 1.5 毫秒，讓對方的情報傳達過來，也錯開重試時間
                 Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
                 double retryDelay = uv->GetValue(0.5, 1.5);

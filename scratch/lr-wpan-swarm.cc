@@ -244,11 +244,13 @@ private:
     }
 
     void ComputeSchedule() {
-        // 第一步：收集所有在第一階段聽到的鄰居 (不再過濾 50m)
+        // 第一步：利用 RSSI 過濾出真正靠近的鄰機 (取代上帝視角的距離計算)
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
         std::vector<NeighborInfo> filteredList;
         for (auto& n : m_monitorList) {
-            filteredList.push_back(n); // 全部納入避開名單！
+            if (n.rssi >= RSSI_50M_THRESHOLD) {
+                filteredList.push_back(n);
+            }
         }
 
         std::sort(filteredList.begin(), filteredList.end(), [](const NeighborInfo& a, const NeighborInfo& b) {

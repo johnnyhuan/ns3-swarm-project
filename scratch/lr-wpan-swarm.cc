@@ -28,9 +28,9 @@ const double DATA_SLOT_US = 2500.0;
 const uint8_t BROADCAST_CHANNEL = 11;
 
 // --- 目標條件設定 ---
-const double M_RADIUS_METERS = 100.0;    // 評估指標用的實際距離 (Ground Truth)
+const double M_RADIUS_METERS = 50.0;    // 評估指標用的實際距離 (Ground Truth)
+const double RSSI_50M_THRESHOLD = -97.65; // 相對應的 50m RSSI 門檻
 const int K_CLOSEST = 5;                 // 從鄰居中挑選最近的 K 個
-const int8_t RSSI_THRESHOLD = -95;       // 近似 100 公尺的 RSSI 閾值 (dBm)，用於決策
 
 // 全域統計
 static int g_totalDataPacketsReceived = 0;
@@ -129,10 +129,14 @@ private:
     int m_topologyMatchCount;
     int m_topologyCheckCount;
 
-    void SwitchChannel(uint8_t ch) {
+    void SwitchChannelAndPower(uint8_t ch, int8_t txPowerDbm) {
         Ptr<PhyPibAttributes> attrs = Create<PhyPibAttributes>();
         attrs->phyCurrentChannel = ch;
-        m_device->GetPhy()->PlmeSetAttributeRequest(phyCurrentChannel, attrs);
+        // Pack txPowerDbm into 6-bit two's complement for phyTransmitPower
+        attrs->phyTransmitPower = txPowerDbm & 0x3F;
+        
+        m_device->GetMac()->GetPhy()->PlmeSetAttributeRequest(phyCurrentChannel, attrs);
+        m_device->GetMac()->GetPhy()->PlmeSetAttributeRequest(phyTransmitPower, attrs);
     }
 
     void SendPacket(uint32_t size, Ptr<Packet> p, uint8_t msduHandle) {
@@ -170,7 +174,8 @@ private:
         }
         m_epochStartTime = now;
 
-        SwitchChannel(BROADCAST_CHANNEL);
+        // Phase 1 (Broadcast): 100m range -> 0 dBm
+        SwitchChannelAndPower(BROADCAST_CHANNEL, 0);
         
         Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
         double randomDelayUs = uv->GetValue(0, PHASE1_DURATION_US - 2000.0);
@@ -193,7 +198,7 @@ private:
             cost[n.claimedSlot][n.claimedChannel] += 10000;
             
             // 加入空間防禦：利用 RSSI 判斷是否為鄰近無人機 (取代上帝視角的距離計算)
-            if (n.rssi >= RSSI_THRESHOLD) {
+            if (n.rssi >= RSSI_50M_THRESHOLD) {
                 for (int c = 0; c < NUM_DATA_CHANNELS; c++) {
                     cost[n.claimedSlot][c] += 1000;
                 }
@@ -233,7 +238,7 @@ private:
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
         std::vector<NeighborInfo> filteredList;
         for (auto& n : m_monitorList) {
-            if (n.rssi >= RSSI_THRESHOLD) {
+            if (n.rssi >= RSSI_50M_THRESHOLD) {
                 filteredList.push_back(n);
             }
         }
@@ -296,14 +301,15 @@ private:
     void ExecuteDataSlot(int slotIndex) {
         ScheduleSlot s = m_schedule[slotIndex];
         if (s.action == ScheduleSlot::TX) {
-            SwitchChannel(s.channel);
+            // Phase 2 (Data): 50m range -> -9 dBm
+            SwitchChannelAndPower(s.channel, -9);
             uint32_t myId = m_device->GetNode()->GetId();
             double now = Simulator::Now().GetMilliSeconds();
             std::cout << "[P2_ATTEMPT] Time: " << now << "ms, Drone: " << myId << ", Slot: " << slotIndex << ", Channel: " << (int)s.channel << std::endl;
             Ptr<Packet> p = Create<Packet>(DATA_PACKET_SIZE);
             SendPacket(DATA_PACKET_SIZE, p, 2); // msduHandle = 2 (Data packet)
         } else if (s.action == ScheduleSlot::RX) {
-            SwitchChannel(s.channel);
+            SwitchChannelAndPower(s.channel, -9);
         }
     }
 

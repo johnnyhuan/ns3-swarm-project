@@ -24,6 +24,7 @@ const uint32_t MINI_BEACON_SIZE = 2;
 const uint32_t DATA_PACKET_SIZE = 50;
 double g_p2TxPower = -2.0; // Phase 2 TX Power (configurable via cmd line, optimal at -2 dBm)
 double g_p1TxPower = 0.0;  // Phase 1 TX Power (configurable via cmd line)
+double g_p1AvoidDist = 50.0; // RX Deafness defense distance in meters
 
 const double CYCLE_MS = 51.0;            // 25 + 1 + 25
 const double PHASE1_DURATION_US = 25000.0; // 恢復為 25ms 最佳狀態
@@ -36,7 +37,7 @@ const uint8_t BROADCAST_CHANNEL = 11;
 
 // --- 目標條件設定 ---
 const double M_RADIUS_METERS = 50.0;    // 評估指標用的實際距離 (Ground Truth)
-const double RSSI_50M_THRESHOLD = -97.65; // 相對應的 50m RSSI 門檻
+// (Old threshold removed)
 const int K_CLOSEST = 5;                 // 從鄰居中挑選最近的 K 個
 
 // 全域統計
@@ -208,8 +209,12 @@ private:
         for (const auto& n : m_monitorList) {
             cost[n.claimedSlot][n.claimedChannel] += 10000;
             
-            // 加入空間防禦：利用 RSSI 判斷是否為鄰近無人機 (取代上帝視角的距離計算)
-            if (n.rssi >= RSSI_50M_THRESHOLD) {
+            // 加入空間防禦：利用距離判斷是否為鄰近無人機 (利用 Friis 公式反推 RSSI 門檻)
+            double avoidRssi = 999.0;
+            if (g_p1AvoidDist > 0.0) {
+                avoidRssi = g_p1TxPower - 46.6777 - 20.0 * std::log10(std::max(1.0, g_p1AvoidDist));
+            }
+            if (n.rssi >= avoidRssi) {
                 for (int c = 0; c < NUM_DATA_CHANNELS; c++) {
                     cost[n.claimedSlot][c] += 1000;
                 }
@@ -245,11 +250,15 @@ private:
     }
 
     void ComputeSchedule() {
-        // 第一步：利用 RSSI 過濾出真正靠近的鄰機 (取代上帝視角的距離計算)
+        // 第一步：利用距離過濾出真正靠近的鄰機 (計算對應的 RSSI 門檻)
+        double avoidRssi = 999.0;
+        if (g_p1AvoidDist > 0.0) {
+            avoidRssi = g_p1TxPower - 46.6777 - 20.0 * std::log10(std::max(1.0, g_p1AvoidDist));
+        }
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
         std::vector<NeighborInfo> filteredList;
         for (auto& n : m_monitorList) {
-            if (n.rssi >= RSSI_50M_THRESHOLD) {
+            if (n.rssi >= avoidRssi) {
                 filteredList.push_back(n);
             }
         }
@@ -500,6 +509,7 @@ int main(int argc, char *argv[]) {
     CommandLine cmd;
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
     cmd.AddValue("p1TxPower", "Phase 1 TX Power in dBm (e.g., 0, 1, 3)", g_p1TxPower);
+    cmd.AddValue("p1AvoidDist", "RX Deafness defense distance in meters", g_p1AvoidDist);
     cmd.Parse(argc, argv);
 
     int numNodes = 50; 

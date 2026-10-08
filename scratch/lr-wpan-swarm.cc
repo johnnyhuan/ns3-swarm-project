@@ -468,7 +468,6 @@ private:
         g_totalTopologyMatchCount += m_topologyMatchCount;
         g_totalTopologyCheckCount += m_topologyCheckCount;
 
-        if (m_id != 0 && m_id != 25 && m_id != 49) return; // 只印出幾台代表性的無人機避免洗版
 
         std::cout << "\n=== Drone " << std::setw(2) << (int)m_id << " Metrics Report (Top " << K_CLOSEST << " within " << M_RADIUS_METERS << "m) ===" << std::endl;
         std::cout << "Target (Dist)  | Disc. Ratio | Bcn Ratio | Avg Disc. IAT | Max Disc. IAT | Mean Bcn AoI | Max Bcn AoI" << std::endl;

@@ -25,12 +25,13 @@ const uint32_t DATA_PACKET_SIZE = 50;
 double g_p2TxPower = -2.0; // Phase 2 TX Power (configurable via cmd line, optimal at -2 dBm)
 double g_p1TxPower = 0.0;  // Phase 1 TX Power (configurable via cmd line)
 double g_p1AvoidDist = 50.0; // RX Deafness defense distance in meters
+int g_numDataChannels = 6;   // Phase 2 Data Channels (configurable via cmd line, 5 to 10)
 
 const double CYCLE_MS = 51.0;            // 25 + 1 + 25
 const double PHASE1_DURATION_US = 25000.0; // 恢復為 25ms 最佳狀態
 const double GAP_US = 1000.0; 
 const int NUM_DATA_SLOTS = 10;
-const int NUM_DATA_CHANNELS = 6;         // 6 channels * 10 slots = 60 blocks
+const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels
 const double DATA_SLOT_US = 2500.0; 
 
 const uint8_t BROADCAST_CHANNEL = 11;
@@ -203,7 +204,7 @@ private:
         double now = Simulator::Now().GetMilliSeconds();
         std::cout << "[P1_ATTEMPT] Time: " << now << "ms, Drone: " << myId << std::endl;
         
-        int cost[NUM_DATA_SLOTS][NUM_DATA_CHANNELS] = {0};
+        int cost[NUM_DATA_SLOTS][MAX_DATA_CHANNELS] = {0};
         
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
         for (const auto& n : m_monitorList) {
@@ -215,7 +216,7 @@ private:
                 avoidRssi = g_p1TxPower - 46.6777 - 30.0 * std::log10(std::max(1.0, g_p1AvoidDist));
             }
             if (n.rssi >= avoidRssi) {
-                for (int c = 0; c < NUM_DATA_CHANNELS; c++) {
+                for (int c = 0; c < g_numDataChannels; c++) {
                     cost[n.claimedSlot][c] += 1000;
                 }
             }
@@ -225,7 +226,7 @@ private:
         std::vector<std::pair<int, int>> bestOptions;
         
         for (int s = 0; s < NUM_DATA_SLOTS; s++) {
-            for (int c = 0; c < NUM_DATA_CHANNELS; c++) {
+            for (int c = 0; c < g_numDataChannels; c++) {
                 if (cost[s][c] < minCost) {
                     minCost = cost[s][c];
                     bestOptions.clear();
@@ -241,8 +242,8 @@ private:
         m_myClaimedSlot = bestOptions[pickIdx].first;
         m_myClaimedChannel = bestOptions[pickIdx].second;
 
-        // 位元封裝 (Bit-packing): ID(6 bits), Slot(4 bits), Channel(3 bits) -> Total 13 bits
-        uint16_t payload = (m_id & 0x3F) | ((m_myClaimedSlot & 0x0F) << 6) | ((m_myClaimedChannel & 0x07) << 10);
+        // 位元封裝 (Bit-packing): ID(6 bits), Slot(4 bits), Channel(4 bits) -> Total 14 bits
+        uint16_t payload = (m_id & 0x3F) | ((m_myClaimedSlot & 0x0F) << 6) | ((m_myClaimedChannel & 0x0F) << 10);
         uint8_t buffer[2] = { (uint8_t)(payload & 0xFF), (uint8_t)((payload >> 8) & 0xFF) };
         Ptr<Packet> p = Create<Packet>(buffer, 2);
                   
@@ -396,7 +397,7 @@ private:
             uint8_t senderId = payload & 0x3F;
             std::cout << "[P1_RX] Time: " << now << "ms, Receiver: " << myId << ", Sender: " << (int)senderId << ", RSSI: " << (int)rssi << std::endl;
             uint8_t claimedSlot = (payload >> 6) & 0x0F;
-            uint8_t claimedChannel = (payload >> 10) & 0x07;
+            uint8_t claimedChannel = (payload >> 10) & 0x0F;
             
             m_monitorList.push_back({senderId, rssi, m_epoch, claimedSlot, claimedChannel});
             m_discoveryReceivedCount[senderId]++;
@@ -509,6 +510,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
     cmd.AddValue("p1TxPower", "Phase 1 TX Power in dBm (e.g., 0, 1, 3)", g_p1TxPower);
     cmd.AddValue("p1AvoidDist", "RX Deafness defense distance in meters", g_p1AvoidDist);
+    cmd.AddValue("numChannels", "Number of Phase 2 data channels (e.g., 5 to 10)", g_numDataChannels);
     cmd.Parse(argc, argv);
 
     int numNodes = 50; 

@@ -122,52 +122,46 @@ def plot_exp2():
 # 3. Experiment 3: Channel Count Sweep
 # ==========================================
 def plot_exp3():
-    ch_list = [5, 6, 7, 8, 9, 10]
+    ch_labels = ['5 頻道', '6 頻道\n(最佳)', '7 頻道', '8 頻道', '9 頻道', '10 頻道']
+    ch_x = np.arange(6)
     ratios = [39.5, 41.0, 39.9, 40.8, 39.4, 38.9]
     srfs = [6.43, 6.58, 6.19, 6.24, 5.88, 5.57]
     deafness = [4.7, 4.7, 4.8, 4.8, 5.2, 5.3]
 
-    fig, ax1 = plt.subplots(figsize=(8, 5.2), dpi=300)
+    fig, ax1 = plt.subplots(figsize=(8.5, 5.5), dpi=300)
     
-    # Primary axis: Beacon PRR (%)
-    color_prr = PRIMARY_BLUE
-    ax1.plot(ch_list, ratios, marker='o', markersize=8, color=color_prr, linewidth=2.5, label='Beacon 接收率 (%)')
-    ax1.scatter([6], [41.0], color=ACCENT_RED, s=160, zorder=5, label='最佳參數 (6 頻道, 41.0%)')
+    # Primary axis: Bars for Beacon PRR (%)
+    bar_colors = [PRIMARY_BLUE, ACCENT_RED, PRIMARY_BLUE, PRIMARY_BLUE, PRIMARY_BLUE, ACCENT_PURPLE]
+    bars = ax1.bar(ch_x, ratios, width=0.52, color=bar_colors, edgecolor=DARK_GRAY, linewidth=1.2, label='Beacon 接收率 (%)')
     
-    # Secondary axis: SRF (packets/slot)
+    for bar in bars:
+        h = bar.get_height()
+        ax1.text(bar.get_x() + bar.get_width()/2., h + 0.8, f'{h:.1f}%', ha='center', va='bottom', fontsize=10.5, fontweight='bold')
+
+    # Secondary axis: Line for SRF (packets/slot)
     ax2 = ax1.twinx()
-    color_srf = ACCENT_GREEN
-    ax2.plot(ch_list, srfs, marker='s', markersize=7, color=color_srf, linewidth=2.0, linestyle='--', label='空間重用因子 SRF (pkts/slot)')
-    ax2.scatter([6], [6.58], color=ACCENT_GREEN, s=120, zorder=5)
+    ax2.plot(ch_x, srfs, marker='s', markersize=8, color=ACCENT_GREEN, linewidth=2.5, linestyle='--', label='空間重用因子 SRF (pkts/slot)')
+    ax2.scatter([1], [6.58], color=ACCENT_GREEN, s=140, zorder=5)
+    for x, s in zip(ch_x, srfs):
+        ax2.text(x, s + 0.08, f'{s:.2f}', ha='center', va='bottom', fontsize=9.5, color=ACCENT_GREEN, fontweight='bold')
 
     # Highlight peak at Channel 6
     ax1.annotate('黃金平衡點: 6 頻道\n接收率最高: 41.0%\nSRF 峰值: 6.58 pkts/slot',
-                xy=(6, 41.0), xytext=(6.5, 41.6),
+                xy=(1, 41.0), xytext=(2.2, 45.0),
                 arrowprops=dict(facecolor=ACCENT_RED, edgecolor=ACCENT_RED, shrink=0.08, width=1.8, headwidth=7),
-                fontsize=9.5, fontweight='bold', color=ACCENT_RED,
+                fontsize=10, fontweight='bold', color=ACCENT_RED,
                 bbox=dict(boxstyle="round,pad=0.4", fc="#ffebee", ec=ACCENT_RED, lw=1))
 
-    # Annotation for Channel 5
-    ax1.annotate('5 頻道 (50格)\n資源偏緊 (39.5%)', xy=(5, 39.5), xytext=(5.1, 38.4),
-                 arrowprops=dict(facecolor=DARK_GRAY, arrowstyle="->", lw=1.2),
-                 fontsize=8.5, color=DARK_GRAY)
-
-    # Annotation for Channel 10
-    ax1.annotate('頻道增加至 10\nSRF 降至 5.57 (頻譜被稀釋)\n耳聾率上升至 5.3%', xy=(10, 38.9), xytext=(8.4, 37.8),
-                 arrowprops=dict(facecolor=ACCENT_PURPLE, arrowstyle="->", lw=1.2),
-                 fontsize=8.5, fontweight='bold', color=ACCENT_PURPLE,
-                 bbox=dict(boxstyle="round,pad=0.3", fc="#f3e5f5", ec=ACCENT_PURPLE, lw=1))
-
-    ax1.set_title('實驗三：Phase 2 資料頻道數量掃描 (5 - 10 頻道)\n(Channel Count Sweep: PRR & Spectral Efficiency)', fontsize=13, fontweight='bold', pad=12)
+    ax1.set_title('實驗三：Phase 2 資料頻道數量掃描 (5 - 10 頻道實測)\n(Channel Count Sweep: PRR & Spectral Efficiency)', fontsize=13, fontweight='bold', pad=12)
     ax1.set_xlabel('Phase 2 資料頻道數 (Data Channel Count)', fontsize=11, fontweight='bold')
-    ax1.set_ylabel('Beacon Packet Reception Ratio (%)', fontsize=11, fontweight='bold', color=color_prr)
-    ax2.set_ylabel('Spatial Reuse Factor (packets/slot)', fontsize=11, fontweight='bold', color=color_srf)
+    ax1.set_ylabel('Beacon Packet Reception Ratio (%)', fontsize=11, fontweight='bold', color=PRIMARY_BLUE)
+    ax2.set_ylabel('Spatial Reuse Factor (packets/slot)', fontsize=11, fontweight='bold', color=ACCENT_GREEN)
     
-    ax1.set_xticks(ch_list)
-    ax1.set_xticklabels([f'{c} 頻道' for c in ch_list])
-    ax1.set_ylim(37, 43)
-    ax2.set_ylim(5.0, 7.2)
-    ax1.grid(True, linestyle='--', alpha=0.5)
+    ax1.set_xticks(ch_x)
+    ax1.set_xticklabels(ch_labels, fontsize=10.5, fontweight='bold')
+    ax1.set_ylim(0, 52)
+    ax2.set_ylim(4.5, 7.5)
+    ax1.grid(axis='y', linestyle='--', alpha=0.5)
 
     # Combine legends
     lines1, labels1 = ax1.get_legend_handles_labels()
@@ -265,20 +259,23 @@ def plot_combined():
 
     # Subplot 3
     ax3 = axes[1, 0]
-    ch3 = [5, 6, 7, 8, 9, 10]
+    ch_labels3 = ['5 Ch', '6 Ch\n(最佳)', '7 Ch', '8 Ch', '9 Ch', '10 Ch']
     r3 = [39.5, 41.0, 39.9, 40.8, 39.4, 38.9]
-    ax3.plot(ch3, r3, marker='o', color=PRIMARY_BLUE, lw=2.2)
-    ax3.scatter([6], [41.0], color=ACCENT_RED, s=120, zorder=5)
-    ax3.set_title('(C) 實驗三：Phase 2 資料頻道數掃描 (5-10 頻道)', fontsize=12, fontweight='bold')
-    ax3.set_xlabel('資料頻道數 (Channels)', fontsize=10)
+    bar_colors3 = [PRIMARY_BLUE, ACCENT_RED, PRIMARY_BLUE, PRIMARY_BLUE, PRIMARY_BLUE, ACCENT_PURPLE]
+    bars3 = ax3.bar(range(6), r3, width=0.55, color=bar_colors3, edgecolor=DARK_GRAY, linewidth=1.2)
+    for bar in bars3:
+        h = bar.get_height()
+        ax3.text(bar.get_x() + bar.get_width()/2., h + 0.8, f'{h:.1f}%', ha='center', va='bottom', fontsize=9.5, fontweight='bold')
+    ax3.set_title('(C) 實驗三：Phase 2 資料頻道數掃描 (5 至 10 頻道實測)', fontsize=12, fontweight='bold')
     ax3.set_ylabel('Reception Ratio (%)', fontsize=10)
-    ax3.annotate('最佳點: 6 頻道 (41.0%)\n超過後頻譜稀釋、耳聾增加', xy=(6, 41.0), xytext=(6.5, 39.6),
+    ax3.set_xticks(range(6))
+    ax3.set_xticklabels(ch_labels3, fontsize=9.5)
+    ax3.set_ylim(0, 52)
+    ax3.grid(axis='y', linestyle='--', alpha=0.5)
+    ax3.annotate('6 頻道為黃金平衡點 (41.0%)\n超過後頻譜稀釋、耳聾率上升', xy=(1, 41.0), xytext=(1.8, 45.0),
                  arrowprops=dict(facecolor=ACCENT_RED, arrowstyle="->", lw=1.5),
-                 fontsize=9, fontweight='bold', color=ACCENT_RED)
-    ax3.set_xticks(ch3)
-    ax3.set_xticklabels(['5', '6', '7', '8', '9', '10'])
-    ax3.grid(True, linestyle='--', alpha=0.5)
-    ax3.set_ylim(37, 43)
+                 fontsize=9, fontweight='bold', color=ACCENT_RED,
+                 bbox=dict(boxstyle="round,pad=0.3", fc="#ffebee", ec=ACCENT_RED, lw=1))
 
     # Subplot 4
     ax4 = axes[1, 1]

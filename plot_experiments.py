@@ -122,33 +122,57 @@ def plot_exp2():
 # 3. Experiment 3: Channel Count Sweep
 # ==========================================
 def plot_exp3():
-    channels = ['6 頻道 (Ch 12-17)\n[標準 IEEE 802.15.4]', '10 頻道 (Ch 12-21)\n[頻率擴充嘗試]']
-    ratios = [41.0, 31.8]
+    ch_list = [5, 6, 7, 8, 9, 10]
+    ratios = [39.5, 41.0, 39.9, 40.8, 39.4, 38.9]
+    srfs = [6.43, 6.58, 6.19, 6.24, 5.88, 5.57]
+    deafness = [4.7, 4.7, 4.8, 4.8, 5.2, 5.3]
 
-    fig, ax = plt.subplots(figsize=(7, 5), dpi=300)
+    fig, ax1 = plt.subplots(figsize=(8, 5.2), dpi=300)
     
-    bars = ax.bar([0, 1], ratios, width=0.45, color=[PRIMARY_BLUE, ACCENT_PURPLE], edgecolor=DARK_GRAY, linewidth=1.5)
+    # Primary axis: Beacon PRR (%)
+    color_prr = PRIMARY_BLUE
+    ax1.plot(ch_list, ratios, marker='o', markersize=8, color=color_prr, linewidth=2.5, label='Beacon 接收率 (%)')
+    ax1.scatter([6], [41.0], color=ACCENT_RED, s=160, zorder=5, label='最佳參數 (6 頻道, 41.0%)')
     
-    # Bar value labels
-    for bar in bars:
-        h = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width()/2., h + 1.2, f'{h:.1f}%', ha='center', va='bottom', fontsize=12, fontweight='bold')
+    # Secondary axis: SRF (packets/slot)
+    ax2 = ax1.twinx()
+    color_srf = ACCENT_GREEN
+    ax2.plot(ch_list, srfs, marker='s', markersize=7, color=color_srf, linewidth=2.0, linestyle='--', label='空間重用因子 SRF (pkts/slot)')
+    ax2.scatter([6], [6.58], color=ACCENT_GREEN, s=120, zorder=5)
 
-    # Annotation
-    ax.text(0, 18, '[最佳配比] 41.0%\n10 Slots × 6 Channels (60格)\n發射/接收在同 Slot 機率均勻',
-            ha='center', va='center', fontsize=9.5, color='white', fontweight='bold',
-            bbox=dict(boxstyle="round,pad=0.5", fc=PRIMARY_BLUE, ec="none", alpha=0.9))
+    # Highlight peak at Channel 6
+    ax1.annotate('黃金平衡點: 6 頻道\n接收率最高: 41.0%\nSRF 峰值: 6.58 pkts/slot',
+                xy=(6, 41.0), xytext=(6.5, 41.6),
+                arrowprops=dict(facecolor=ACCENT_RED, edgecolor=ACCENT_RED, shrink=0.08, width=1.8, headwidth=7),
+                fontsize=9.5, fontweight='bold', color=ACCENT_RED,
+                bbox=dict(boxstyle="round,pad=0.4", fc="#ffebee", ec=ACCENT_RED, lw=1))
 
-    ax.text(1, 14, '[嚴重警訊] 接收率暴跌 9.2%！\n原因：單網卡半雙工限制\n同 Slot 跨頻道無人監聽\n(Multi-Channel Deafness)',
-            ha='center', va='center', fontsize=9.5, color='white', fontweight='bold',
-            bbox=dict(boxstyle="round,pad=0.5", fc=ACCENT_PURPLE, ec="none", alpha=0.9))
+    # Annotation for Channel 5
+    ax1.annotate('5 頻道 (50格)\n資源偏緊 (39.5%)', xy=(5, 39.5), xytext=(5.1, 38.4),
+                 arrowprops=dict(facecolor=DARK_GRAY, arrowstyle="->", lw=1.2),
+                 fontsize=8.5, color=DARK_GRAY)
 
-    ax.set_title('實驗三：資料傳輸頻道數量對接收率的影響\n(Channel Expansion vs. Single-Radio Constraint)', fontsize=13, fontweight='bold', pad=12)
-    ax.set_ylabel('Beacon Packet Reception Ratio (%)', fontsize=11, fontweight='bold')
-    ax.set_xticks([0, 1])
-    ax.set_xticklabels(channels, fontsize=10.5, fontweight='bold')
-    ax.set_ylim(0, 52)
-    ax.grid(axis='y', linestyle='--', alpha=0.6)
+    # Annotation for Channel 10
+    ax1.annotate('頻道增加至 10\nSRF 降至 5.57 (頻譜被稀釋)\n耳聾率上升至 5.3%', xy=(10, 38.9), xytext=(8.4, 37.8),
+                 arrowprops=dict(facecolor=ACCENT_PURPLE, arrowstyle="->", lw=1.2),
+                 fontsize=8.5, fontweight='bold', color=ACCENT_PURPLE,
+                 bbox=dict(boxstyle="round,pad=0.3", fc="#f3e5f5", ec=ACCENT_PURPLE, lw=1))
+
+    ax1.set_title('實驗三：Phase 2 資料頻道數量掃描 (5 - 10 頻道)\n(Channel Count Sweep: PRR & Spectral Efficiency)', fontsize=13, fontweight='bold', pad=12)
+    ax1.set_xlabel('Phase 2 資料頻道數 (Data Channel Count)', fontsize=11, fontweight='bold')
+    ax1.set_ylabel('Beacon Packet Reception Ratio (%)', fontsize=11, fontweight='bold', color=color_prr)
+    ax2.set_ylabel('Spatial Reuse Factor (packets/slot)', fontsize=11, fontweight='bold', color=color_srf)
+    
+    ax1.set_xticks(ch_list)
+    ax1.set_xticklabels([f'{c} 頻道' for c in ch_list])
+    ax1.set_ylim(37, 43)
+    ax2.set_ylim(5.0, 7.2)
+    ax1.grid(True, linestyle='--', alpha=0.5)
+
+    # Combine legends
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc='lower left', frameon=True, framealpha=0.9)
 
     out_name = "exp3_channel_count.png"
     p_ws = os.path.join(WORKSPACE_DIR, out_name)
@@ -241,17 +265,20 @@ def plot_combined():
 
     # Subplot 3
     ax3 = axes[1, 0]
-    bars = ax3.bar([0, 1], [41.0, 31.8], width=0.4, color=[PRIMARY_BLUE, ACCENT_PURPLE], edgecolor=DARK_GRAY)
-    ax3.set_title('(C) 實驗三：Phase 2 資料頻道數對比', fontsize=12, fontweight='bold')
+    ch3 = [5, 6, 7, 8, 9, 10]
+    r3 = [39.5, 41.0, 39.9, 40.8, 39.4, 38.9]
+    ax3.plot(ch3, r3, marker='o', color=PRIMARY_BLUE, lw=2.2)
+    ax3.scatter([6], [41.0], color=ACCENT_RED, s=120, zorder=5)
+    ax3.set_title('(C) 實驗三：Phase 2 資料頻道數掃描 (5-10 頻道)', fontsize=12, fontweight='bold')
+    ax3.set_xlabel('資料頻道數 (Channels)', fontsize=10)
     ax3.set_ylabel('Reception Ratio (%)', fontsize=10)
-    ax3.set_xticks([0, 1])
-    ax3.set_xticklabels(['6 頻道 (最佳: 41.0%)', '10 頻道 (暴跌: 31.8%)'], fontsize=10, fontweight='bold')
-    ax3.text(0, 42, '41.0%', ha='center', fontweight='bold', fontsize=11)
-    ax3.text(1, 33, '31.8%', ha='center', fontweight='bold', fontsize=11)
-    ax3.text(1, 15, '單天線多頻道\n耳聾衝突加劇', ha='center', fontsize=9, color='white',
-             bbox=dict(boxstyle="round,pad=0.3", fc=ACCENT_PURPLE, ec="none"))
-    ax3.grid(axis='y', linestyle='--', alpha=0.5)
-    ax3.set_ylim(0, 50)
+    ax3.annotate('最佳點: 6 頻道 (41.0%)\n超過後頻譜稀釋、耳聾增加', xy=(6, 41.0), xytext=(6.5, 39.6),
+                 arrowprops=dict(facecolor=ACCENT_RED, arrowstyle="->", lw=1.5),
+                 fontsize=9, fontweight='bold', color=ACCENT_RED)
+    ax3.set_xticks(ch3)
+    ax3.set_xticklabels(['5', '6', '7', '8', '9', '10'])
+    ax3.grid(True, linestyle='--', alpha=0.5)
+    ax3.set_ylim(37, 43)
 
     # Subplot 4
     ax4 = axes[1, 1]

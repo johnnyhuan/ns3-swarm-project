@@ -506,11 +506,16 @@ int main(int argc, char *argv[]) {
         std::cout.rdbuf(g_runLogFile.rdbuf());
     }
 
+    double spaceSize = 300.0;
+    double spaceZ = 100.0;
+
     CommandLine cmd;
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
     cmd.AddValue("p1TxPower", "Phase 1 TX Power in dBm (e.g., 0, 1, 3)", g_p1TxPower);
     cmd.AddValue("p1AvoidDist", "RX Deafness defense distance in meters", g_p1AvoidDist);
     cmd.AddValue("numChannels", "Number of Phase 2 data channels (e.g., 5 to 10)", g_numDataChannels);
+    cmd.AddValue("spaceSize", "Side length of 3D box (X and Y) in meters", spaceSize);
+    cmd.AddValue("spaceZ", "Height of 3D box in meters", spaceZ);
     cmd.Parse(argc, argv);
 
     int numNodes = 50; 
@@ -529,21 +534,21 @@ int main(int argc, char *argv[]) {
 
     MobilityHelper mobility;
     
-    // 3D Random Box Topology (300m x 300m x 100m)
+    // 3D Random Box Topology (spaceSize x spaceSize x spaceZ)
     Ptr<RandomBoxPositionAllocator> alloc = CreateObject<RandomBoxPositionAllocator>();
     Ptr<UniformRandomVariable> xVar = CreateObject<UniformRandomVariable>();
     xVar->SetAttribute("Min", DoubleValue(0.0));
-    xVar->SetAttribute("Max", DoubleValue(300.0));
+    xVar->SetAttribute("Max", DoubleValue(spaceSize));
     alloc->SetX(xVar);
     
     Ptr<UniformRandomVariable> yVar = CreateObject<UniformRandomVariable>();
     yVar->SetAttribute("Min", DoubleValue(0.0));
-    yVar->SetAttribute("Max", DoubleValue(300.0));
+    yVar->SetAttribute("Max", DoubleValue(spaceSize));
     alloc->SetY(yVar);
     
     Ptr<UniformRandomVariable> zVar = CreateObject<UniformRandomVariable>();
     zVar->SetAttribute("Min", DoubleValue(10.0));
-    zVar->SetAttribute("Max", DoubleValue(110.0)); // 100m height difference
+    zVar->SetAttribute("Max", DoubleValue(10.0 + spaceZ));
     alloc->SetZ(zVar);
     
     mobility.SetPositionAllocator(alloc);

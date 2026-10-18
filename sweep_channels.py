@@ -5,10 +5,10 @@ import re
 import sys
 
 print("=========================================================")
-print("🚀 Starting Experiment 3: Channel Count Sweep (5 - 10 Ch)")
+print("🚀 Starting Experiment: Channel Count Sweep (0 - 10 Ch)")
 print("=========================================================")
 
-channels = [5, 6, 7, 8, 9, 10]
+channels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 results = []
 
 # Path to the real ns-3-dev directory
@@ -88,7 +88,7 @@ for c in channels:
     })
 
 print("\n" + "="*85)
-print("             🏆 EXPERIMENT 3: CHANNEL COUNT SWEEP RESULTS (5 - 10) 🏆")
+print("             🏆 EXPERIMENT: CHANNEL COUNT SWEEP RESULTS (0 - 10) 🏆")
 print("="*85)
 print(f"{'Channels':<10} | {'Beacon PRR (%)':<16} | {'SRF (pkts/slot)':<18} | {'Collisions (%)':<16} | {'RX Deafness (%)':<16}")
 print("-" * 85)

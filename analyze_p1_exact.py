@@ -33,13 +33,13 @@ with open(log_file, "r") as f:
             m = re.search(r'Drone\s+(\d+)\s+Metrics', line)
             if m:
                 current_drone_report = int(m.group(1))
-        elif line.startswith("Drone ") and current_drone_report is not None:
-            m = re.search(r'Drone\s+(\d+)\s*\((\d+)m\)', line)
+        elif current_drone_report is not None and "Drone" in line and "(" in line:
+            m = re.search(r'Drone\s+(\d+)\s*\(\s*(\d+)m\)', line)
             if m:
                 target = int(m.group(1))
                 dist = int(m.group(2))
                 top_neighbors[current_drone_report].append((target, dist))
-        elif not line.strip() and current_drone_report is not None:
+        elif "GLOBAL NETWORK METRICS" in line:
             current_drone_report = None
 
         # 2. Parse Global Metrics Summary

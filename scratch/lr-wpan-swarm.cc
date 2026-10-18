@@ -108,7 +108,7 @@ public:
     }
 
     void StartApplication() override {
-        if (m_id == 0) std::cout << "All 50 Drones StartApplication called! Running for 1.0s..." << std::endl;
+        if (m_id == 0) std::cout << "All Drones StartApplication called! Running for 1.0s..." << std::endl;
         ScheduleCycle();
     }
     
@@ -208,7 +208,7 @@ private:
         if (g_numDataChannels <= 0 || g_numDataSlots <= 0) {
             m_myClaimedSlot = 0;
             m_myClaimedChannel = 0;
-            uint16_t payload = (m_id & 0x3F);
+            uint16_t payload = (m_id & 0x7F);
             uint8_t buffer[2] = { (uint8_t)(payload & 0xFF), (uint8_t)((payload >> 8) & 0xFF) };
             Ptr<Packet> p = Create<Packet>(buffer, 2);
             SendPacket(MINI_BEACON_SIZE, p, 1);
@@ -255,8 +255,8 @@ private:
         m_myClaimedSlot = bestOptions[pickIdx].first;
         m_myClaimedChannel = bestOptions[pickIdx].second;
 
-        // 位元封裝 (Bit-packing): ID(6 bits), Slot(5 bits), Channel(4 bits) -> Total 15 bits
-        uint16_t payload = (m_id & 0x3F) | ((m_myClaimedSlot & 0x1F) << 6) | ((m_myClaimedChannel & 0x0F) << 11);
+        // 位元封裝 (Bit-packing): ID(7 bits), Slot(5 bits), Channel(4 bits) -> Total 16 bits
+        uint16_t payload = (m_id & 0x7F) | ((m_myClaimedSlot & 0x1F) << 7) | ((m_myClaimedChannel & 0x0F) << 12);
         uint8_t buffer[2] = { (uint8_t)(payload & 0xFF), (uint8_t)((payload >> 8) & 0xFF) };
         Ptr<Packet> p = Create<Packet>(buffer, 2);
                   
@@ -412,10 +412,10 @@ private:
             p->CopyData(buffer, 2);
             uint16_t payload = buffer[0] | (buffer[1] << 8);
             
-            uint8_t senderId = payload & 0x3F;
+            uint8_t senderId = payload & 0x7F;
             std::cout << "[P1_RX] Time: " << now << "ms, Receiver: " << myId << ", Sender: " << (int)senderId << ", RSSI: " << (int)rssi << std::endl;
-            uint8_t claimedSlot = (payload >> 6) & 0x1F;
-            uint8_t claimedChannel = (payload >> 11) & 0x0F;
+            uint8_t claimedSlot = (payload >> 7) & 0x1F;
+            uint8_t claimedChannel = (payload >> 12) & 0x0F;
             
             m_monitorList.push_back({senderId, rssi, m_epoch, claimedSlot, claimedChannel});
             m_discoveryReceivedCount[senderId]++;
@@ -526,6 +526,7 @@ int main(int argc, char *argv[]) {
 
     double spaceSize = 300.0;
     double spaceZ = 100.0;
+    int numNodes = 100;
 
     CommandLine cmd;
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
@@ -533,6 +534,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p1AvoidDist", "RX Deafness defense distance in meters", g_p1AvoidDist);
     cmd.AddValue("numChannels", "Number of Phase 2 data channels (e.g., 0 to 10)", g_numDataChannels);
     cmd.AddValue("numSlots", "Number of Phase 2 data slots (e.g., 5 to 20)", g_numDataSlots);
+    cmd.AddValue("numNodes", "Number of UAV nodes in swarm (e.g., 50, 100)", numNodes);
     cmd.AddValue("spaceSize", "Side length of 3D box (X and Y) in meters", spaceSize);
     cmd.AddValue("spaceZ", "Height of 3D box in meters", spaceZ);
     cmd.Parse(argc, argv);
@@ -544,7 +546,6 @@ int main(int argc, char *argv[]) {
 
     g_cycleMs = (PHASE1_DURATION_US + GAP_US + g_numDataSlots * DATA_SLOT_US) / 1000.0;
 
-    int numNodes = 50; 
     NodeContainer nodes;
     nodes.Create(numNodes);
 

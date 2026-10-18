@@ -4,8 +4,10 @@ import os
 import re
 import sys
 
+num_nodes = int(sys.argv[1]) if len(sys.argv) > 1 else 100
+
 print("=========================================================")
-print("🚀 Starting Experiment: Channel Count Sweep (0 - 10 Ch)")
+print(f"🚀 Starting Experiment: Channel Count Sweep (0 - 10 Ch) [{num_nodes} Drones]")
 print("=========================================================")
 
 channels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -24,8 +26,8 @@ except Exception as e:
     sys.exit(1)
 
 for c in channels:
-    print(f"\n⚡ Running simulation with Phase 2 Data Channels = {c}...")
-    cmd = ["./ns3", "run", f"scratch/lr-wpan-swarm --p2TxPower=-2 --p1TxPower=0 --p1AvoidDist=50 --numChannels={c}"]
+    print(f"\n⚡ Running simulation with Phase 2 Data Channels = {c} (Nodes = {num_nodes})...")
+    cmd = ["./ns3", "run", f"scratch/lr-wpan-swarm --p2TxPower=-2 --p1TxPower=0 --p1AvoidDist=50 --numChannels={c} --numNodes={num_nodes}"]
     
     process = subprocess.Popen(
         cmd,

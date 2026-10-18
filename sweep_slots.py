@@ -4,8 +4,10 @@ import os
 import re
 import sys
 
+num_nodes = int(sys.argv[1]) if len(sys.argv) > 1 else 100
+
 print("=========================================================")
-print("🚀 Starting Experiment: Slot Count Sweep (5 - 20 Slots)")
+print(f"🚀 Starting Experiment: Slot Count Sweep (5 - 20 Slots) [{num_nodes} Drones]")
 print("=========================================================")
 
 slots = list(range(5, 21)) # [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
@@ -24,8 +26,8 @@ except Exception as e:
     sys.exit(1)
 
 for s in slots:
-    print(f"\n⚡ Running simulation with Phase 2 Data Slots = {s}...")
-    cmd = ["./ns3", "run", f"scratch/lr-wpan-swarm --p2TxPower=-2 --p1TxPower=0 --p1AvoidDist=50 --numChannels=6 --numSlots={s}"]
+    print(f"\n⚡ Running simulation with Phase 2 Data Slots = {s} (Nodes = {num_nodes})...")
+    cmd = ["./ns3", "run", f"scratch/lr-wpan-swarm --p2TxPower=-2 --p1TxPower=0 --p1AvoidDist=50 --numChannels=6 --numSlots={s} --numNodes={num_nodes}"]
     
     process = subprocess.Popen(
         cmd,

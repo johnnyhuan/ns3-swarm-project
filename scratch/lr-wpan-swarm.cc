@@ -527,6 +527,7 @@ int main(int argc, char *argv[]) {
     double spaceSize = 300.0;
     double spaceZ = 100.0;
     int numNodes = 100;
+    double nodeSpeed = 10.0; // UAV mobility speed in m/s (default: 10 m/s ~ 36 km/h, 0 for static)
 
     CommandLine cmd;
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
@@ -535,6 +536,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("numChannels", "Number of Phase 2 data channels (e.g., 0 to 10)", g_numDataChannels);
     cmd.AddValue("numSlots", "Number of Phase 2 data slots (e.g., 5 to 20)", g_numDataSlots);
     cmd.AddValue("numNodes", "Number of UAV nodes in swarm (e.g., 50, 100)", numNodes);
+    cmd.AddValue("nodeSpeed", "Speed of UAVs in m/s (default 10.0 m/s, 0 for static hover)", nodeSpeed);
     cmd.AddValue("spaceSize", "Side length of 3D box (X and Y) in meters", spaceSize);
     cmd.AddValue("spaceZ", "Height of 3D box in meters", spaceZ);
     cmd.Parse(argc, argv);
@@ -579,7 +581,16 @@ int main(int argc, char *argv[]) {
     alloc->SetZ(zVar);
     
     mobility.SetPositionAllocator(alloc);
-    mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+    if (nodeSpeed > 0.0) {
+        std::stringstream ssSpeed;
+        ssSpeed << "ns3::UniformRandomVariable[Min=" << (nodeSpeed * 0.8) << "|Max=" << (nodeSpeed * 1.2) << "]";
+        mobility.SetMobilityModel("ns3::RandomWaypointMobilityModel",
+                                  "Speed", StringValue(ssSpeed.str()),
+                                  "Pause", StringValue("ns3::ConstantRandomVariable[Constant=0.0]"),
+                                  "PositionAllocator", PointerValue(alloc));
+    } else {
+        mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+    }
     mobility.Install(nodes);
 
     for (int i = 0; i < numNodes; i++) {
@@ -617,6 +628,9 @@ int main(int argc, char *argv[]) {
     ss << "\n=================================================\n";
     ss << "          GLOBAL NETWORK METRICS (1.0s)          \n";
     ss << "=================================================\n";
+    ss << "UAV Swarm Scale                 : " << numNodes << " drones\n";
+    ss << "UAV Flight Speed                : " << nodeSpeed << " m/s (" << (nodeSpeed > 0.0 ? "3D Random Waypoint" : "Static Hover") << ")\n";
+    ss << "Operational 3D Airspace         : " << spaceSize << "m x " << spaceSize << "m x " << spaceZ << "m\n";
     ss << "Phase 1 TX Attempts             : " << g_p1TxAttempts << " times\n";
     ss << "Phase 1 TX Aborts (CSMA Busy)   : " << g_p1TxAbort << " times\n";
     ss << "Phase 1 TX Success (Sent)       : " << g_p1TxSuccess << " times\n";

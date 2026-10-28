@@ -512,8 +512,7 @@ private:
                       << std::fixed << std::setprecision(1) << std::setw(11) << maxAoI << std::endl;
         }
         
-        double topAcc = (m_topologyCheckCount > 0) ? ((double)m_topologyMatchCount / m_topologyCheckCount) : 0;
-        std::cout << "--> Monitor Member List Match Ratio: " << std::fixed << std::setprecision(1) << topAcc * 100 << "%" << std::endl;
+        // Monitor Member List Match Ratio display removed
     }
 };
 
@@ -526,8 +525,8 @@ int main(int argc, char *argv[]) {
 
     double spaceSize = 300.0;
     double spaceZ = 100.0;
-    int numNodes = 100;
-    double nodeSpeed = 10.0; // UAV mobility speed in m/s (default: 10 m/s ~ 36 km/h, 0 for static)
+    int numNodes = 50;
+    double nodeSpeed = 0.0; // UAV mobility speed in m/s (default: 0 for static hover, can be set with --nodeSpeed=10)
 
     CommandLine cmd;
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
@@ -615,14 +614,10 @@ int main(int argc, char *argv[]) {
     Simulator::Stop(Seconds(1.0));
     Simulator::Run();
     
-    int totalEpochs = (int)(1000.0 / g_cycleMs); 
-    int totalSlots = totalEpochs * g_numDataSlots;
-    double srf = (totalSlots > 0) ? (double)g_totalDataPacketsReceived / totalSlots : 0.0;
     double globalDiscRatio = (g_totalExpectedTopKxEpochs > 0) ? (double)g_totalReceivedDiscoveryTopK / g_totalExpectedTopKxEpochs : 0;
     double globalBcnRatio = (g_totalExpectedTopKxEpochs > 0) ? (double)g_totalReceivedBeaconTopK / g_totalExpectedTopKxEpochs : 0;
     double globalAvgDiscIat = (g_totalCountDiscoveryIatTopK > 0) ? (g_totalSumDiscoveryIatTopK / g_totalCountDiscoveryIatTopK) : 0;
     double globalMeanAoI = (g_totalCountAoITopK > 0) ? (g_totalSumAoITopK / g_totalCountAoITopK) : 0;
-    double globalTopAcc = (g_totalTopologyCheckCount > 0) ? ((double)g_totalTopologyMatchCount / g_totalTopologyCheckCount) : 0;
     
     std::stringstream ss;
     ss << "\n=================================================\n";
@@ -642,12 +637,8 @@ int main(int argc, char *argv[]) {
     ss << "RX Deafness (Slot conflict)  : " << g_rxDeafnessCount << " (" << std::fixed << std::setprecision(1) << (g_totalExpectedRx > 0 ? (double)g_rxDeafnessCount/g_totalExpectedRx*100 : 0) << "%)\n";
     ss << "Resource Collision (Same S+C): " << g_resourceCollisionCount << " (" << std::fixed << std::setprecision(1) << (g_totalExpectedRx > 0 ? (double)g_resourceCollisionCount/g_totalExpectedRx*100 : 0) << "%)\n";
     ss << "-------------------------------------------------\n";
-    ss << "Total 50B Data Packets Delivered: " << g_totalDataPacketsReceived << "\n";
-    ss << "Total Network Slots Elapsed     : " << totalSlots << " slots\n";
-    ss << "Spatial Reuse Factor (SRF)      : " << std::fixed << std::setprecision(2) << srf << " packets/slot\n";
     ss << "Discovery Message Reception Ratio: " << std::fixed << std::setprecision(1) << globalDiscRatio * 100 << "%\n";
     ss << "Beacon Packet Reception Ratio   : " << std::fixed << std::setprecision(1) << globalBcnRatio * 100 << "%\n";
-    ss << "Monitor Member List Match Ratio : " << std::fixed << std::setprecision(1) << globalTopAcc * 100 << "%\n";
     ss << "Avg Discovery Msg IAT (Top-K)   : " << std::fixed << std::setprecision(1) << globalAvgDiscIat << " ms\n";
     ss << "Max Discovery Msg IAT (Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxDiscoveryIatTopK << " ms\n";
     ss << "Mean Beacon Packet AoI (Top-K)  : " << std::fixed << std::setprecision(1) << globalMeanAoI << " ms\n";

@@ -127,17 +127,6 @@ try:
     line1 = ax.plot(durs, disc_vals, marker='s', markersize=8, color="#1f77b4", linewidth=2.5, label='Discovery Message RR (Phase 1)')
     line2 = ax.plot(durs, bcn_vals, marker='o', markersize=8, color="#d62728", linewidth=2.5, label='Beacon Packet PRR (Phase 2)')
     
-    # Highlight 25ms baseline
-    if 25 in durs:
-        idx_25 = durs.index(25)
-        ax.scatter([25], [disc_vals[idx_25]], color="#1f77b4", s=130, zorder=5)
-        ax.scatter([25], [bcn_vals[idx_25]], color="#d62728", s=130, zorder=5)
-        ax.annotate(f'Golden Balance (25ms)\nDisc: {disc_vals[idx_25]:.1f}%\nBcn: {bcn_vals[idx_25]:.1f}%',
-                    xy=(25, bcn_vals[idx_25]), xytext=(27, bcn_vals[idx_25] - 12),
-                    arrowprops=dict(facecolor='#d62728', shrink=0.08, width=1.5, headwidth=6),
-                    fontsize=9.5, fontweight='bold', color="#d62728",
-                    bbox=dict(boxstyle="round,pad=0.35", fc="#ffebee", ec="#d62728", lw=1))
-
     for d, dv, bv in zip(durs, disc_vals, bcn_vals):
         ax.text(d, dv + 1.8, f"{dv:.1f}%", ha='center', va='bottom', fontsize=9, fontweight='bold', color="#1f77b4")
         ax.text(d, bv - 2.5, f"{bv:.1f}%", ha='center', va='top', fontsize=9, fontweight='bold', color="#d62728")
@@ -148,7 +137,7 @@ try:
     ax.set_xticks(durs)
     ax.set_ylim(0, 100)
     ax.grid(True, linestyle='--', alpha=0.6)
-    ax.legend(loc='center right', frameon=True, framealpha=0.9, fontsize=10)
+    ax.legend(loc='lower right', frameon=True, framealpha=0.9, fontsize=10)
     
     plot_path = os.path.join(PROJECT_DIR, "exp_p1_duration_plot.png")
     fig.savefig(plot_path, bbox_inches='tight')

@@ -28,7 +28,7 @@ except Exception as e:
     sys.exit(1)
 
 # Slots: Exactly 5 to 20 without skipping any integer
-slots = list(range(5, 21)) # [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+slots = list(range(5, 21))  # [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 results = []
 
 for idx, s in enumerate(slots, start=1):
@@ -52,8 +52,6 @@ for idx, s in enumerate(slots, start=1):
     
     disc_ratio = 0.0
     bcn_ratio = 0.0
-    avg_iat = 0.0
-    max_iat = 0.0
     mean_aoi = 0.0
     max_aoi = 0.0
     tx_deafness = 0.0
@@ -69,12 +67,6 @@ for idx, s in enumerate(slots, start=1):
         elif "Beacon Packet Reception Ratio" in line:
             m = re.search(r':\s+(\d+\.\d+)%', line)
             if m: bcn_ratio = float(m.group(1))
-        elif "Avg Discovery Msg IAT" in line:
-            m = re.search(r':\s+(\d+\.\d+)\s+ms', line)
-            if m: avg_iat = float(m.group(1))
-        elif "Max Discovery Msg IAT" in line:
-            m = re.search(r':\s+(\d+\.\d+)\s+ms', line)
-            if m: max_iat = float(m.group(1))
         elif "Mean Beacon Packet AoI" in line:
             m = re.search(r':\s+(\d+\.\d+)\s+ms', line)
             if m: mean_aoi = float(m.group(1))
@@ -97,15 +89,13 @@ for idx, s in enumerate(slots, start=1):
         print(f"\n❌ Error in simulation run with Slots = {s}:")
         print("".join(raw_lines[-20:]))
     else:
-        print(f" => Beacon PRR: {bcn_ratio:4.1f}% | AoI: {mean_aoi:5.1f}ms | Coll: {collision:4.1f}% | RX-Deaf: {rx_deafness:4.1f}%")
+        print(f" => Beacon PRR: {bcn_ratio:4.1f}% | AoI: {mean_aoi:5.1f}ms")
         
     results.append({
         "slots": s,
         "cycle_ms": cycle_ms,
         "disc_ratio": disc_ratio,
         "bcn_ratio": bcn_ratio,
-        "avg_iat": avg_iat,
-        "max_iat": max_iat,
         "mean_aoi": mean_aoi,
         "max_aoi": max_aoi,
         "tx_deafness": tx_deafness,
@@ -114,43 +104,27 @@ for idx, s in enumerate(slots, start=1):
     })
 
 # Summary Table
-print("\n" + "="*122)
-print(f"           🏆 EXPERIMENT RESULTS: PHASE 2 DATA SLOTS SWEEP (5 to 20 Slots) [{num_nodes} Drones] 🏆")
-print("="*122)
-print(f"{'Slots':<6} | {'Cycle (ms)':<10} | {'Beacon PRR (%)':<15} | {'Mean AoI (ms)':<14} | {'Max AoI (ms)':<13} | {'Collisions (%)':<15} | {'RX Deaf (%)':<12} | {'TX Deaf (%)':<12} | {'Disc MRR (%)':<12}")
-print("-" * 122)
-
-best_slot_prr = None
-max_prr = -1.0
-best_slot_aoi = None
-min_aoi = 99999.0
-
+print("\n" + "="*80)
+print(f"       🏆 EXPERIMENT RESULTS: PHASE 2 SLOTS SWEEP (5 to 20) [{num_nodes} Drones] 🏆")
+print("="*80)
+print(f"{'Slots':<8} | {'Epoch Cycle':<14} | {'Beacon PRR (%)':<18} | {'Mean AoI (ms)':<15} | {'Max AoI (ms)':<14}")
+print("-" * 80)
 for r in results:
-    if r['bcn_ratio'] > max_prr:
-        max_prr = r['bcn_ratio']
-        best_slot_prr = r['slots']
-    if r['mean_aoi'] > 0 and r['mean_aoi'] < min_aoi:
-        min_aoi = r['mean_aoi']
-        best_slot_aoi = r['slots']
-        
-    print(f"{r['slots']:<6d} | {r['cycle_ms']:>8.1f}ms | {r['bcn_ratio']:>13.1f}% | {r['mean_aoi']:>12.1f}ms | {r['max_aoi']:>11.1f}ms | {r['collision']:>13.1f}% | {r['rx_deafness']:>10.1f}% | {r['tx_deafness']:>10.1f}% | {r['disc_ratio']:>10.1f}%")
+    s_str = f"{r['slots']}"
+    if r['slots'] == 10:
+        s_str += " (基線)"
+    print(f"{s_str:<8} | {r['cycle_ms']:>8.1f} ms    | {r['bcn_ratio']:>16.1f}% | {r['mean_aoi']:>13.1f} ms | {r['max_aoi']:>12.1f} ms")
+print("="*80)
 
-print("="*122)
-print(f"📌 Key Highlights:")
-print(f"   • Highest Beacon PRR : {max_prr:.1f}% achieved at {best_slot_prr} Slots")
-print(f"   • Lowest Mean AoI    : {min_aoi:.1f} ms achieved at {best_slot_aoi} Slots")
-print("="*122)
-
-# Save text summary
+# Save result to text file
 result_file = os.path.join(PROJECT_DIR, "exp_p2_slot_results.txt")
 with open(result_file, "w") as f:
-    f.write(f"# Phase 2 Data Slots Sweep (5 to 20 Slots) - {num_nodes} UAVs, Speed: {node_speed} m/s\n")
-    f.write("Slots,CycleMs,BeaconPRR,MeanAoI_ms,MaxAoI_ms,CollisionPct,RxDeafPct,TxDeafPct,DiscoveryMRR\n")
+    f.write("Slots,Cycle_ms,Beacon_PRR_pct,Mean_AoI_ms,Max_AoI_ms,Collisions_pct,RX_Deafness_pct,TX_Deafness_pct\n")
     for r in results:
-        f.write(f"{r['slots']},{r['cycle_ms']:.1f},{r['bcn_ratio']:.2f},{r['mean_aoi']:.1f},{r['max_aoi']:.1f},{r['collision']:.2f},{r['rx_deafness']:.2f},{r['tx_deafness']:.2f},{r['disc_ratio']:.2f}\n")
+        f.write(f"{r['slots']},{r['cycle_ms']:.1f},{r['bcn_ratio']:.2f},{r['mean_aoi']:.1f},{r['max_aoi']:.1f},{r['collision']:.2f},{r['rx_deafness']:.2f},{r['tx_deafness']:.2f}\n")
 print(f"\n✅ Results saved to {result_file}")
 
-# Generate publication-quality 2-panel plot
+# Generate publication-quality twin y-axis plot (identical visual style to P1 duration/power sweeps)
 try:
     import matplotlib
     matplotlib.use('Agg')
@@ -162,60 +136,46 @@ try:
     slot_vals = [r['slots'] for r in results]
     bcn_vals = [r['bcn_ratio'] for r in results]
     aoi_vals = [r['mean_aoi'] for r in results]
-    coll_vals = [r['collision'] for r in results]
-    rx_deaf_vals = [r['rx_deafness'] for r in results]
-    tx_deaf_vals = [r['tx_deafness'] for r in results]
     cycle_vals = [r['cycle_ms'] for r in results]
     
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10.5, 9.0), dpi=300, sharex=True)
+    fig, ax1 = plt.subplots(figsize=(9.5, 5.5), dpi=300)
     
-    # ---------------- PANEL 1: PRR vs AoI Trade-off ----------------
-    line1 = ax1.plot(slot_vals, bcn_vals, marker='o', markersize=7.5, color="#d62728", linewidth=2.5, label='Phase 2 Beacon PRR (%)')
+    # Left Axis: Beacon PRR (%)
+    line1 = ax1.plot(slot_vals, bcn_vals, marker='o', markersize=8, color="#d62728", linewidth=2.5, label='Beacon Packet PRR (Phase 2)')
     
     for s, bv in zip(slot_vals, bcn_vals):
         ax1.text(s, bv + 1.2, f"{bv:.1f}%", ha='center', va='bottom', fontsize=8.0, fontweight='bold', color="#d62728")
         
-    ax1.set_ylabel('Beacon PRR (%)', fontsize=11.5, fontweight='bold', color="#d62728")
+    ax1.set_xlabel('Phase 2 Data Slots (Configurable per Cycle)', fontsize=11, fontweight='bold', labelpad=8)
+    ax1.set_ylabel('Beacon PRR (%)', fontsize=11, fontweight='bold', color="#d62728")
     ax1.tick_params(axis='y', labelcolor="#d62728")
-    ax1.set_ylim(0, max(bcn_vals) * 1.35 if bcn_vals else 100)
+    ax1.set_xticks(slot_vals)
+    ax1.set_xticklabels([f"{s}\n({c:.1f}ms)" for s, c in zip(slot_vals, cycle_vals)], fontsize=8.5)
+    max_bcn = max(bcn_vals) if bcn_vals else 50.0
+    ax1.set_ylim(0, max(max_bcn * 1.35, 40.0))
     ax1.grid(True, linestyle='--', alpha=0.5)
     
-    ax1_twin = ax1.twinx()
-    line2 = ax1_twin.plot(slot_vals, aoi_vals, marker='^', markersize=7.5, color="#2ca02c", linewidth=2.2, linestyle='--', label='Mean Beacon AoI (ms)')
+    # Right Axis: Mean Beacon AoI (ms)
+    ax2 = ax1.twinx()
+    line2 = ax2.plot(slot_vals, aoi_vals, marker='^', markersize=8, color="#2ca02c", linewidth=2.2, linestyle='--', label='Mean Beacon AoI (Phase 2)')
     
     for s, aoi in zip(slot_vals, aoi_vals):
-        ax1_twin.text(s, aoi + 2.0, f"{aoi:.1f}ms", ha='center', va='bottom', fontsize=8.0, fontweight='bold', color="#2ca02c")
+        ax2.text(s, aoi + 2.0, f"{aoi:.1f}ms", ha='center', va='bottom', fontsize=8.0, fontweight='bold', color="#2ca02c")
         
-    ax1_twin.set_ylabel('Mean Beacon AoI (ms)', fontsize=11.5, fontweight='bold', color="#2ca02c")
-    ax1_twin.tick_params(axis='y', labelcolor="#2ca02c")
-    min_aoi_val = min(aoi_vals) if aoi_vals else 50.0
-    max_aoi_val = max(aoi_vals) if aoi_vals else 200.0
-    ax1_twin.set_ylim(max(0, min_aoi_val * 0.7), max_aoi_val * 1.3)
+    ax2.set_ylabel('Mean Beacon AoI (ms)', fontsize=11, fontweight='bold', color="#2ca02c")
+    ax2.tick_params(axis='y', labelcolor="#2ca02c")
+    min_aoi = min(aoi_vals) if aoi_vals else 50.0
+    max_aoi = max(aoi_vals) if aoi_vals else 200.0
+    ax2.set_ylim(max(0.0, min_aoi * 0.7), max_aoi * 1.35)
     
-    # Combine legend for Panel 1
-    lines1 = line1 + line2
-    labels1 = [l.get_label() for l in lines1]
-    ax1.legend(lines1, labels1, loc='upper left', frameon=True, framealpha=0.9, fontsize=9.5)
-    ax1.set_title(f'Phase 2 Data Slots Sweep (5 - 20 Slots): Reliability vs. Freshness Trade-off\n[{num_nodes} UAVs, Speed: {node_speed} m/s, Channels: 6, P2 Power: -2 dBm]',
-                  fontsize=12.5, fontweight='bold', pad=12)
-
-    # ---------------- PANEL 2: Contention & Deafness Breakdown ----------------
-    ax2.plot(slot_vals, coll_vals, marker='s', markersize=7, color="#e67e22", linewidth=2.0, label='Resource Collision (Same Slot & Channel)')
-    ax2.plot(slot_vals, rx_deaf_vals, marker='D', markersize=6.5, color="#3498db", linewidth=2.0, label='RX Deafness (Slot Conflict on Diff Channels)')
-    ax2.plot(slot_vals, tx_deaf_vals, marker='v', markersize=7, color="#e74c3c", linewidth=2.0, linestyle=':', label='TX Deafness (Target in same slot as my TX)')
+    # Combine legends into upper left or center right
+    lines = line1 + line2
+    labels = [l.get_label() for l in lines]
+    ax1.legend(lines, labels, loc='upper left', frameon=True, framealpha=0.9, fontsize=9.5)
     
-    for s, cv, rv in zip(slot_vals, coll_vals, rx_deaf_vals):
-        ax2.text(s, cv + 0.8, f"{cv:.1f}%", ha='center', va='bottom', fontsize=7.5, color="#e67e22")
-        ax2.text(s, rv - 1.2, f"{rv:.1f}%", ha='center', va='top', fontsize=7.5, color="#3498db")
-        
-    ax2.set_xlabel('Phase 2 Data Slots (Configurable per Cycle)', fontsize=11.5, fontweight='bold', labelpad=8)
-    ax2.set_ylabel('Scheduling Conflict Ratio (%)', fontsize=11.5, fontweight='bold', color="#333333")
-    ax2.set_xticks(slot_vals)
-    ax2.set_xticklabels([f"{s}\n({c:.1f}ms)" for s, c in zip(slot_vals, cycle_vals)], fontsize=8.5)
-    ax2.set_ylim(0, max(max(coll_vals), max(rx_deaf_vals), 30) * 1.35)
-    ax2.grid(True, linestyle='--', alpha=0.5)
-    ax2.legend(loc='upper right', frameon=True, framealpha=0.9, fontsize=9.5)
-    ax2.set_title('Phase 2 Contention & Deafness Breakdown vs. Available Slots', fontsize=11.5, fontweight='bold', pad=10)
+    ax1.set_title(f'Phase 2 Slot Allocation vs. Beacon PRR & AoI ({num_nodes} UAVs, {node_speed} m/s)\n'
+                  f'[Fixed: P1 = 0 dBm (25ms), P2 = -2 dBm, Channels = 6, AvoidDist = 50m]',
+                  fontsize=12.0, fontweight='bold', pad=12)
 
     plot_path = os.path.join(PROJECT_DIR, "exp_p2_slot_plot.png")
     fig.tight_layout()

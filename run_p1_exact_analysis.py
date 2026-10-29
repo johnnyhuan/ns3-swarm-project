@@ -125,21 +125,21 @@ try:
 
     # 1. Donut Chart for Failures
     labels_map = {
-        "RX_DEAFNESS_BUSY_TX": "Receiver Deafness (BUSY_TX)",
         "PREAMBLE_COLLISION_BUSY_RX": "Preamble Collision (BUSY_RX)",
-        "PAYLOAD_INTERFERENCE_CORRUPTION": "Payload Interference (PER Error)",
-        "SENDER_CSMA_ABORT": "Sender CSMA Abort",
         "PREAMBLE_LOW_SINR": "Preamble Low SINR (<= -5dB)",
-        "OUT_OF_RANGE_OR_FADING": "Out of Range / Fading"
+        "SENDER_CSMA_ABORT": "Sender CSMA Access Abort",
+        "OUT_OF_RANGE_OR_FADING": "Radio Turnaround / Transient Busy",
+        "RX_DEAFNESS_BUSY_TX": "Receiver Deafness (BUSY_TX)",
+        "PAYLOAD_INTERFERENCE_CORRUPTION": "Payload Interference (PER Error)"
     }
 
     colors_map = {
-        "RX_DEAFNESS_BUSY_TX": "#e74c3c",                # Coral Red
-        "PREAMBLE_COLLISION_BUSY_RX": "#e67e22",         # Orange
-        "PAYLOAD_INTERFERENCE_CORRUPTION": "#9b59b6",    # Purple
+        "PREAMBLE_COLLISION_BUSY_RX": "#e67e22",         # Deep Orange
+        "PREAMBLE_LOW_SINR": "#f1c40f",                  # Bright Yellow
         "SENDER_CSMA_ABORT": "#3498db",                  # Sky Blue
-        "PREAMBLE_LOW_SINR": "#f1c40f",                  # Yellow
-        "OUT_OF_RANGE_OR_FADING": "#95a5a6"              # Gray
+        "OUT_OF_RANGE_OR_FADING": "#1abc9c",              # Teal / Slate
+        "RX_DEAFNESS_BUSY_TX": "#e74c3c",                # Coral Red
+        "PAYLOAD_INTERFERENCE_CORRUPTION": "#9b59b6"     # Purple
     }
 
     plot_labels = []

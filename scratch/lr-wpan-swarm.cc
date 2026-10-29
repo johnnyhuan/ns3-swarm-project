@@ -28,6 +28,8 @@ const uint32_t DATA_PACKET_SIZE = 50;
 double g_p2TxPower = -2.0; // Phase 2 TX Power (configurable via cmd line, optimal at -2 dBm)
 double g_p1TxPower = 0.0;  // Phase 1 TX Power (configurable via cmd line)
 double g_p1AvoidDist = 50.0; // RX Deafness defense distance in meters
+double g_p1AvoidRssi = -999.0; // Specific defense RSSI threshold in dBm (-106 to -90, overrides p1AvoidDist if set)
+bool g_enableDefense = true; // Defense design switch: true = spatial slot exclusion, false = exact cell avoidance only
 int g_numDataChannels = 6;   // Phase 2 Data Channels (configurable via cmd line, 0 to 10)
 int g_numDataSlots = 10;     // Phase 2 Data Slots (configurable via cmd line, 5 to 20)
 
@@ -340,14 +342,18 @@ private:
                 cost[n.claimedSlot][n.claimedChannel] += 10000;
             }
             
-            // 加入空間防禦：利用距離判斷是否為鄰近無人機 (利用 Friis 公式反推 RSSI 門檻)
-            double avoidRssi = 999.0;
-            if (g_p1AvoidDist > 0.0) {
-                avoidRssi = g_p1TxPower - 46.6777 - 30.0 * std::log10(std::max(1.0, g_p1AvoidDist));
-            }
-            if (n.rssi >= avoidRssi && n.claimedSlot < g_numDataSlots) {
-                for (int c = 0; c < g_numDataChannels; c++) {
-                    cost[n.claimedSlot][c] += 1000;
+            // 加入空間防禦：利用距離或指定之 RSSI 門檻判斷是否為鄰近無人機 (利用 Friis 公式反推 RSSI 門檻)
+            if (g_enableDefense && g_p1AvoidDist > 0.0) {
+                double avoidRssi = -97.65; // 預設 ~ -98 dBm (50m Friis 門檻)
+                if (g_p1AvoidRssi > -900.0) {
+                    avoidRssi = g_p1AvoidRssi;
+                } else if (g_p1AvoidDist > 0.0) {
+                    avoidRssi = g_p1TxPower - 46.6777 - 30.0 * std::log10(std::max(1.0, g_p1AvoidDist));
+                }
+                if (n.rssi >= avoidRssi && n.claimedSlot < g_numDataSlots) {
+                    for (int c = 0; c < g_numDataChannels; c++) {
+                        cost[n.claimedSlot][c] += 1000;
+                    }
                 }
             }
         }
@@ -388,15 +394,12 @@ private:
     }
 
     void ComputeSchedule() {
-        // 第一步：利用距離過濾出真正靠近的鄰機 (計算對應的 RSSI 門檻)
-        double avoidRssi = 999.0;
-        if (g_p1AvoidDist > 0.0) {
-            avoidRssi = g_p1TxPower - 46.6777 - 30.0 * std::log10(std::max(1.0, g_p1AvoidDist));
-        }
+        // 第一步：過濾出 50m 避撞安全監控半徑內的鄰機 (固定以 50m / -98 dBm 評估或最近鄰居)
+        double safetyRssi = g_p1TxPower - 46.6777 - 30.0 * std::log10(50.0); // -97.65 dBm ~ -98 dBm
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
         std::vector<NeighborInfo> filteredList;
         for (auto& n : m_monitorList) {
-            if (n.rssi >= avoidRssi) {
+            if (n.rssi >= safetyRssi) {
                 filteredList.push_back(n);
             }
         }
@@ -826,6 +829,8 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p1TxPower", "Phase 1 TX Power in dBm (e.g., 0, 1, 3)", g_p1TxPower);
     cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);
     cmd.AddValue("p1AvoidDist", "RX Deafness defense distance in meters", g_p1AvoidDist);
+    cmd.AddValue("p1AvoidRssi", "Defense RSSI threshold in dBm (-106 to -90)", g_p1AvoidRssi);
+    cmd.AddValue("enableDefense", "Enable spatial slot defense (default true)", g_enableDefense);
     cmd.AddValue("numChannels", "Number of Phase 2 data channels (e.g., 0 to 10)", g_numDataChannels);
     cmd.AddValue("numSlots", "Number of Phase 2 data slots (e.g., 5 to 20)", g_numDataSlots);
     cmd.AddValue("numNodes", "Number of UAV nodes in swarm (e.g., 50, 100)", numNodes);

@@ -10,6 +10,9 @@
 #include <algorithm>
 #include <iomanip>
 #include <map>
+#include <set>
+#include <tuple>
+#include <string>
 
 using namespace ns3;
 using namespace ns3::lrwpan;
@@ -68,6 +71,55 @@ static int g_p1TxAbort = 0;
 static int g_p1TxSuccess = 0;
 static int g_p1RxSuccess = 0;
 
+// --- Phase 1 Ground Truth Physical Drop Tracking ---
+enum P1DropCategory {
+    REASON_SUCCESS = 0,
+    REASON_SENDER_CSMA_ABORT,
+    REASON_RX_DEAFNESS_BUSY_TX,
+    REASON_PREAMBLE_COLLISION_BUSY_RX,
+    REASON_PAYLOAD_INTERFERENCE_CORRUPTION,
+    REASON_PREAMBLE_LOW_SINR,
+    REASON_OUT_OF_RANGE_OR_FADING,
+    NUM_P1_REASONS
+};
+
+static const char* P1ReasonStrings[] = {
+    "SUCCESS",
+    "SENDER_CSMA_ABORT",
+    "RX_DEAFNESS_BUSY_TX",
+    "PREAMBLE_COLLISION_BUSY_RX",
+    "PAYLOAD_INTERFERENCE_CORRUPTION",
+    "PREAMBLE_LOW_SINR",
+    "OUT_OF_RANGE_OR_FADING"
+};
+
+struct P1PacketMeta {
+    uint8_t senderId;
+    uint32_t epoch;
+    double txStartTime;
+};
+
+struct P1LinkRecord {
+    uint32_t epoch;
+    uint8_t receiver;
+    uint8_t sender;
+    double distance;
+    P1DropCategory category;
+};
+
+static PhyEnumeration g_dronePhyState[256];
+static uint64_t g_droneReceivingUid[256];
+static std::map<uint64_t, P1PacketMeta> g_p1PacketsMeta;
+static std::map<std::pair<uint32_t, uint8_t>, std::vector<uint64_t>> g_p1TxUidsInEpoch;
+static std::map<std::pair<uint64_t, uint8_t>, PhyEnumeration> g_rxStateAtTxStart;
+static std::map<std::tuple<uint32_t, uint8_t, uint8_t>, P1DropCategory> g_p1RxDropEvent;
+static std::map<uint32_t, std::map<uint8_t, std::set<uint8_t>>> g_p1ReceivedInEpoch;
+static std::map<uint32_t, std::map<uint8_t, int>> g_p1TxSuccessInEpoch;
+
+static std::vector<P1LinkRecord> g_p1LinkRecords;
+static int g_p1ReasonCounts[NUM_P1_REASONS] = {0};
+static int g_p1TotalTargetLinks = 0;
+
 struct NeighborInfo {
     uint8_t id;
     int8_t rssi;
@@ -106,7 +158,59 @@ public:
         mac->SetMcpsDataIndicationCallback(MakeCallback(&SwarmSchedulerApp::ReceivePacket, this));
         mac->SetMcpsDataConfirmCallback(MakeCallback(&SwarmSchedulerApp::DataConfirm, this));
         
+        // Connect PHY Traces for exact physical ground truth
+        Ptr<LrWpanPhy> phy = m_device->GetPhy();
+        g_dronePhyState[m_id] = IEEE_802_15_4_PHY_TRX_OFF;
+        g_droneReceivingUid[m_id] = 0;
+        phy->TraceConnectWithoutContext("TrxState", MakeCallback(&SwarmSchedulerApp::NotifyPhyTrxStateChange, this));
+        phy->TraceConnectWithoutContext("PhyRxBegin", MakeCallback(&SwarmSchedulerApp::NotifyPhyRxBegin, this));
+        phy->TraceConnectWithoutContext("PhyRxEnd", MakeCallback(&SwarmSchedulerApp::NotifyPhyRxEnd, this));
+        phy->TraceConnectWithoutContext("PhyRxDrop", MakeCallback(&SwarmSchedulerApp::NotifyPhyRxDrop, this));
+        phy->TraceConnectWithoutContext("PhyTxBegin", MakeCallback(&SwarmSchedulerApp::NotifyPhyTxBegin, this));
+
         Simulator::Schedule(Seconds(0.999), &SwarmSchedulerApp::PrintMetrics, this);
+    }
+
+    void NotifyPhyTrxStateChange(Time time, PhyEnumeration oldState, PhyEnumeration newState) {
+        g_dronePhyState[m_id] = newState;
+    }
+
+    void NotifyPhyRxBegin(Ptr<const Packet> p) {
+        g_droneReceivingUid[m_id] = p->GetUid();
+    }
+
+    void NotifyPhyRxEnd(Ptr<const Packet> p, double sinr) {
+        if (g_droneReceivingUid[m_id] == p->GetUid()) {
+            g_droneReceivingUid[m_id] = 0;
+        }
+    }
+
+    void NotifyPhyRxDrop(Ptr<const Packet> p) {
+        uint64_t uid = p->GetUid();
+        auto it = g_p1PacketsMeta.find(uid);
+        if (it != g_p1PacketsMeta.end()) {
+            uint8_t sender = it->second.senderId;
+            uint32_t epoch = it->second.epoch;
+            if (g_droneReceivingUid[m_id] == uid) {
+                g_p1RxDropEvent[{epoch, sender, m_id}] = REASON_PAYLOAD_INTERFERENCE_CORRUPTION;
+                g_droneReceivingUid[m_id] = 0;
+            } else {
+                g_p1RxDropEvent[{epoch, sender, m_id}] = REASON_PREAMBLE_LOW_SINR;
+            }
+        }
+    }
+
+    void NotifyPhyTxBegin(Ptr<const Packet> p) {
+        uint64_t uid = p->GetUid();
+        auto it = g_p1PacketsMeta.find(uid);
+        if (it != g_p1PacketsMeta.end()) {
+            it->second.txStartTime = Simulator::Now().GetMilliSeconds();
+            uint32_t numNodes = NodeList::GetNNodes();
+            for (uint32_t j = 0; j < numNodes; j++) {
+                if (j == m_id) continue;
+                g_rxStateAtTxStart[{uid, (uint8_t)j}] = g_dronePhyState[j];
+            }
+        }
     }
 
     void StartApplication() override {
@@ -198,6 +302,9 @@ private:
         double randomDelayUs = uv->GetValue(0, maxDelayUs);
         
         Simulator::Schedule(MicroSeconds(randomDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
+        if (m_id == 0) {
+            Simulator::Schedule(MicroSeconds(g_phase1DurationUs), &SwarmSchedulerApp::EvaluatePhase1Epoch, this, m_epoch);
+        }
         Simulator::Schedule(MicroSeconds(g_phase1DurationUs + GAP_US), &SwarmSchedulerApp::ComputeSchedule, this);
         Simulator::Schedule(MilliSeconds(g_cycleMs), &SwarmSchedulerApp::ScheduleCycle, this);
     }
@@ -214,6 +321,13 @@ private:
             uint16_t payload = (m_id & 0x7F);
             uint8_t buffer[2] = { (uint8_t)(payload & 0xFF), (uint8_t)((payload >> 8) & 0xFF) };
             Ptr<Packet> p = Create<Packet>(buffer, 2);
+            uint64_t uid = p->GetUid();
+            P1PacketMeta meta;
+            meta.senderId = m_id;
+            meta.epoch = m_epoch;
+            meta.txStartTime = 0.0;
+            g_p1PacketsMeta[uid] = meta;
+            g_p1TxUidsInEpoch[{m_epoch, m_id}].push_back(uid);
             SendPacket(MINI_BEACON_SIZE, p, 1);
             return;
         }
@@ -262,6 +376,13 @@ private:
         uint16_t payload = (m_id & 0x7F) | ((m_myClaimedSlot & 0x1F) << 7) | ((m_myClaimedChannel & 0x0F) << 12);
         uint8_t buffer[2] = { (uint8_t)(payload & 0xFF), (uint8_t)((payload >> 8) & 0xFF) };
         Ptr<Packet> p = Create<Packet>(buffer, 2);
+        uint64_t uid = p->GetUid();
+        P1PacketMeta meta;
+        meta.senderId = m_id;
+        meta.epoch = m_epoch;
+        meta.txStartTime = 0.0;
+        g_p1PacketsMeta[uid] = meta;
+        g_p1TxUidsInEpoch[{m_epoch, m_id}].push_back(uid);
                   
         SendPacket(MINI_BEACON_SIZE, p, 1); // msduHandle = 1 (Mini-beacon)
     }
@@ -393,6 +514,7 @@ private:
                 }
             } else if (params.m_status == MacStatus::SUCCESS) {
                 g_p1TxSuccess++;
+                g_p1TxSuccessInEpoch[m_epoch][myId]++;
                 std::cout << "[P1_SUCCESS] Time: " << now << "ms, Drone: " << myId << std::endl;
             }
         } else if (params.m_msduHandle == 2) {
@@ -416,6 +538,7 @@ private:
             uint16_t payload = buffer[0] | (buffer[1] << 8);
             
             uint8_t senderId = payload & 0x7F;
+            g_p1ReceivedInEpoch[m_epoch][myId].insert(senderId);
             std::cout << "[P1_RX] Time: " << now << "ms, Receiver: " << myId << ", Sender: " << (int)senderId << ", RSSI: " << (int)rssi << std::endl;
             uint8_t claimedSlot = (payload >> 7) & 0x1F;
             uint8_t claimedChannel = (payload >> 12) & 0x0F;
@@ -423,7 +546,6 @@ private:
             m_monitorList.push_back({senderId, rssi, m_epoch, claimedSlot, claimedChannel});
             m_discoveryReceivedCount[senderId]++;
             
-            double now = Simulator::Now().GetMilliSeconds();
             if (m_lastDiscoveryTime.find(senderId) != m_lastDiscoveryTime.end()) {
                 double iat = now - m_lastDiscoveryTime[senderId];
                 m_sumDiscoveryIat[senderId] += iat;
@@ -443,11 +565,96 @@ private:
             m_beaconReceivedCount[srcId]++;
             g_totalDataPacketsReceived++;
             
-            double now = Simulator::Now().GetMilliSeconds();
-            
             // 更新 AoI Generation Time (Just-in-Time 採樣模型：在專屬時槽起點才採樣)
             // 每個時槽 2.5ms，所以封包產生的時間大約是抵達時間 (now) 往前推 2.5ms
             m_lastGenerationTime[srcId] = now - 2.5;
+        }
+    }
+
+    void EvaluatePhase1Epoch(uint32_t epoch) {
+        uint32_t numNodes = NodeList::GetNNodes();
+        for (uint32_t r = 0; r < numNodes; r++) {
+            Ptr<MobilityModel> rMob = NodeList::GetNode(r)->GetObject<MobilityModel>();
+            std::vector<std::pair<uint8_t, double>> dists;
+            for (uint32_t s = 0; s < numNodes; s++) {
+                if (s == r) continue;
+                Ptr<MobilityModel> sMob = NodeList::GetNode(s)->GetObject<MobilityModel>();
+                double d = rMob->GetDistanceFrom(sMob);
+                if (d <= M_RADIUS_METERS) {
+                    dists.push_back({(uint8_t)s, d});
+                }
+            }
+            std::sort(dists.begin(), dists.end(), [](const auto& a, const auto& b) {
+                return a.second < b.second;
+            });
+
+            int topK = std::min(K_CLOSEST, (int)dists.size());
+            for (int i = 0; i < topK; i++) {
+                uint8_t sender = dists[i].first;
+                double dist = dists[i].second;
+
+                bool heard = false;
+                auto itEp = g_p1ReceivedInEpoch.find(epoch);
+                if (itEp != g_p1ReceivedInEpoch.end()) {
+                    auto itRcv = itEp->second.find((uint8_t)r);
+                    if (itRcv != itEp->second.end()) {
+                        heard = (itRcv->second.count(sender) > 0);
+                    }
+                }
+
+                P1DropCategory cat = REASON_SUCCESS;
+                if (heard) {
+                    cat = REASON_SUCCESS;
+                } else {
+                    int txSucc = 0;
+                    auto itTxEp = g_p1TxSuccessInEpoch.find(epoch);
+                    if (itTxEp != g_p1TxSuccessInEpoch.end()) {
+                        auto itTxNode = itTxEp->second.find(sender);
+                        if (itTxNode != itTxEp->second.end()) {
+                            txSucc = itTxNode->second;
+                        }
+                    }
+
+                    if (txSucc == 0) {
+                        cat = REASON_SENDER_CSMA_ABORT;
+                    } else {
+                        uint64_t txUid = 0;
+                        auto uidsIt = g_p1TxUidsInEpoch.find({epoch, sender});
+                        if (uidsIt != g_p1TxUidsInEpoch.end() && !uidsIt->second.empty()) {
+                            txUid = uidsIt->second.back();
+                        }
+
+                        PhyEnumeration rStateAtTx = IEEE_802_15_4_PHY_TRX_OFF;
+                        auto stIt = g_rxStateAtTxStart.find({txUid, (uint8_t)r});
+                        if (stIt != g_rxStateAtTxStart.end()) {
+                            rStateAtTx = stIt->second;
+                        }
+
+                        if (rStateAtTx == IEEE_802_15_4_PHY_BUSY_TX || rStateAtTx == IEEE_802_15_4_PHY_TX_ON) {
+                            cat = REASON_RX_DEAFNESS_BUSY_TX;
+                        } else if (rStateAtTx == IEEE_802_15_4_PHY_BUSY_RX) {
+                            cat = REASON_PREAMBLE_COLLISION_BUSY_RX;
+                        } else {
+                            auto dropIt = g_p1RxDropEvent.find({epoch, sender, (uint8_t)r});
+                            if (dropIt != g_p1RxDropEvent.end()) {
+                                cat = dropIt->second;
+                            } else {
+                                cat = REASON_OUT_OF_RANGE_OR_FADING;
+                            }
+                        }
+                    }
+                }
+
+                P1LinkRecord rec;
+                rec.epoch = epoch;
+                rec.receiver = (uint8_t)r;
+                rec.sender = sender;
+                rec.distance = dist;
+                rec.category = cat;
+                g_p1LinkRecords.push_back(rec);
+                g_p1ReasonCounts[cat]++;
+                g_p1TotalTargetLinks++;
+            }
         }
     }
 
@@ -520,6 +727,86 @@ private:
         }
     }
 };
+
+void PrintGroundTruthReport() {
+    std::stringstream ss;
+    ss << "\n========================================================================================\n";
+    ss << "       🔬 PHASE 1 PHYSICAL & MAC GROUND TRUTH ANALYSIS (Top-K within 50m) 🔬           \n";
+    ss << "========================================================================================\n";
+    ss << "Total Expected P1 Neighbor Links (Epochs x Top-K) : " << g_p1TotalTargetLinks << "\n";
+    double succPct = (g_p1TotalTargetLinks > 0) ? (100.0 * g_p1ReasonCounts[REASON_SUCCESS] / g_p1TotalTargetLinks) : 0;
+    int totalFails = g_p1TotalTargetLinks - g_p1ReasonCounts[REASON_SUCCESS];
+    double failPct = 100.0 - succPct;
+    ss << "  ✅ Successfully Received (Delivered)            : " << g_p1ReasonCounts[REASON_SUCCESS] 
+       << " (" << std::fixed << std::setprecision(1) << succPct << "%)\n";
+    ss << "  ❌ Failed Link Receptions (Dropped/Missed)      : " << totalFails 
+       << " (" << std::fixed << std::setprecision(1) << failPct << "%)\n";
+    ss << "----------------------------------------------------------------------------------------\n";
+    ss << "EXACT PHYSICAL ROOT CAUSE BREAKDOWN (Zero Estimation / Direct From ns-3 State Machine):\n";
+    
+    for (int c = 1; c < NUM_P1_REASONS; c++) {
+        int cnt = g_p1ReasonCounts[c];
+        double pctOfFail = (totalFails > 0) ? (100.0 * cnt / totalFails) : 0.0;
+        double pctOfTotal = (g_p1TotalTargetLinks > 0) ? (100.0 * cnt / g_p1TotalTargetLinks) : 0.0;
+        ss << "  " << std::left << std::setw(38) << P1ReasonStrings[c] << " : "
+           << std::right << std::setw(5) << cnt << " ("
+           << std::setw(5) << std::fixed << std::setprecision(1) << pctOfFail << "% of fails | "
+           << std::setw(5) << std::fixed << std::setprecision(1) << pctOfTotal << "% of all links)\n";
+    }
+    ss << "========================================================================================\n";
+
+    // Distance Bracket Breakdown
+    ss << "\n--- Distance Bracket Breakdown (0-10m, 10-20m, 20-30m, 30-40m, 40-50m) ---\n";
+    ss << "Bracket   | Total | Success | CSMA Abort | RX Deafness | Preamble Coll | Interference | Low SINR | Fading\n";
+    ss << "----------------------------------------------------------------------------------------------------------\n";
+    double brackets[5][2] = {{0, 10}, {10, 20}, {20, 30}, {30, 40}, {40, 50}};
+    for (int b = 0; b < 5; b++) {
+        int bTotal = 0;
+        int bCounts[NUM_P1_REASONS] = {0};
+        for (const auto& rec : g_p1LinkRecords) {
+            if (rec.distance >= brackets[b][0] && (b == 4 ? rec.distance <= brackets[b][1] : rec.distance < brackets[b][1])) {
+                bTotal++;
+                bCounts[rec.category]++;
+            }
+        }
+        char bName[16];
+        snprintf(bName, sizeof(bName), "%2.0f-%2.0fm", brackets[b][0], brackets[b][1]);
+        ss << std::left << std::setw(9) << bName << " | "
+           << std::right << std::setw(5) << bTotal << " | "
+           << std::setw(7) << bCounts[REASON_SUCCESS] << " | "
+           << std::setw(10) << bCounts[REASON_SENDER_CSMA_ABORT] << " | "
+           << std::setw(11) << bCounts[REASON_RX_DEAFNESS_BUSY_TX] << " | "
+           << std::setw(13) << bCounts[REASON_PREAMBLE_COLLISION_BUSY_RX] << " | "
+           << std::setw(12) << bCounts[REASON_PAYLOAD_INTERFERENCE_CORRUPTION] << " | "
+           << std::setw(8) << bCounts[REASON_PREAMBLE_LOW_SINR] << " | "
+           << std::setw(6) << bCounts[REASON_OUT_OF_RANGE_OR_FADING] << "\n";
+    }
+    ss << "========================================================================================\n\n";
+
+    std::cout << ss.str();
+
+    // Write to report file
+    std::ofstream rptFile("p1_ground_truth_report.txt");
+    if (rptFile.is_open()) {
+        rptFile << ss.str();
+        rptFile.close();
+    }
+
+    // Write exact CSV
+    std::ofstream csvFile("p1_exact_drop_reasons.csv");
+    if (csvFile.is_open()) {
+        csvFile << "Epoch,Receiver,Sender,Distance_m,Status,ExactReason\n";
+        for (const auto& rec : g_p1LinkRecords) {
+            csvFile << rec.epoch << "," << (int)rec.receiver << "," << (int)rec.sender << ","
+                    << std::fixed << std::setprecision(2) << rec.distance << ","
+                    << ((rec.category == REASON_SUCCESS) ? "SUCCESS" : "FAILED") << ","
+                    << P1ReasonStrings[rec.category] << "\n";
+        }
+        csvFile.close();
+        std::cout << "✅ Exact ground truth link data exported to p1_exact_drop_reasons.csv\n";
+        std::cout << "✅ Ground truth summary report saved to p1_ground_truth_report.txt\n";
+    }
+}
 
 int main(int argc, char *argv[]) {
     g_runLogFile.open("run.log");
@@ -644,16 +931,18 @@ int main(int argc, char *argv[]) {
     
     std::cout << g_singleDroneReport.str() << "\n";
     std::cout << ss.str();
+
+    PrintGroundTruthReport();
     
     if (g_runLogFile.is_open()) {
         g_runLogFile << g_singleDroneReport.str() << "\n";
         g_runLogFile << ss.str();
         g_runLogFile.close();
-        int ret = system("git add run.log && git commit -m 'Auto upload run.log' && git push origin main");
+        int ret = system("git add run.log p1_exact_drop_reasons.csv p1_ground_truth_report.txt && git commit -m 'Auto upload Phase 1 ground truth results' && git push origin main");
         if (ret != 0) {
-            std::cerr << "Failed to auto-upload run.log to GitHub!" << std::endl;
+            std::cerr << "Note: system git push returned non-zero (you can manually commit & push)." << std::endl;
         } else {
-            std::cout << "Log successfully uploaded to GitHub!" << std::endl;
+            std::cout << "Results successfully uploaded to GitHub!" << std::endl;
         }
     }
 

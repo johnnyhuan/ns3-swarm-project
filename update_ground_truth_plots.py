@@ -44,72 +44,74 @@ total_fails = total_links - success_links
 plt.rcParams['font.sans-serif'] = ['DejaVu Sans', 'Arial', 'Helvetica']
 plt.rcParams['axes.unicode_minus'] = False
 
-# Mapping of raw labels to verified, physically exact academic labels
-labels_map = [
-    ("PREAMBLE_COLLISION_BUSY_RX", "Preamble Collision (BUSY_RX)", "#e67e22"),           # Deep Orange
-    ("PREAMBLE_LOW_SINR", "Preamble Low SINR (<= -5dB)", "#f1c40f"),                     # Bright Yellow/Amber
-    ("SENDER_CSMA_ABORT", "Sender CSMA Access Abort", "#3498db"),                        # Sky Blue
-    ("OUT_OF_RANGE_OR_FADING", "Radio Turnaround / Transient Busy", "#1abc9c"),          # Teal / Slate (Verified root cause)
-    ("RX_DEAFNESS_BUSY_TX", "Receiver Deafness (BUSY_TX)", "#e74c3c")                     # Coral Red
-]
+# Mapping in original order
+labels_map = {
+    "RX_DEAFNESS_BUSY_TX": "Receiver Deafness (BUSY_TX)",
+    "PREAMBLE_COLLISION_BUSY_RX": "Preamble Collision (BUSY_RX)",
+    "PAYLOAD_INTERFERENCE_CORRUPTION": "Payload Interference (PER Error)",
+    "SENDER_CSMA_ABORT": "Sender CSMA Abort",
+    "PREAMBLE_LOW_SINR": "Preamble Low SINR (<= -5dB)",
+    "OUT_OF_RANGE_OR_FADING": "Radio Turnaround / Transient Busy"
+}
+
+colors_map = {
+    "RX_DEAFNESS_BUSY_TX": "#e74c3c",                # Coral Red
+    "PREAMBLE_COLLISION_BUSY_RX": "#e67e22",         # Orange
+    "PAYLOAD_INTERFERENCE_CORRUPTION": "#9b59b6",    # Purple
+    "SENDER_CSMA_ABORT": "#3498db",                  # Sky Blue
+    "PREAMBLE_LOW_SINR": "#f1c40f",                  # Yellow
+    "OUT_OF_RANGE_OR_FADING": "#95a5a6"              # Gray
+}
 
 plot_labels = []
 plot_sizes = []
 plot_colors = []
 
-for r_key, r_name, r_color in labels_map:
+for r_key, r_name in labels_map.items():
     cnt = fail_reasons.get(r_key, 0)
-    pct = (cnt / total_fails) * 100.0 if total_fails > 0 else 0
-    plot_labels.append(f"{r_name}\n{cnt} links ({pct:.1f}%)")
-    plot_sizes.append(cnt)
-    plot_colors.append(r_color)
+    if cnt > 0:
+        pct = (cnt / total_fails) * 100.0 if total_fails > 0 else 0
+        plot_labels.append(f"{r_name}\n({cnt} links, {pct:.1f}%)")
+        plot_sizes.append(cnt)
+        plot_colors.append(colors_map[r_key])
 
-# 1. DONUT CHART
-fig, ax = plt.subplots(figsize=(11, 8.5), subplot_kw=dict(aspect="equal"))
-wedges, texts, autotexts = ax.pie(
+# 1. ORIGINAL STYLE DONUT CHART
+fig, ax = plt.subplots(figsize=(10, 8), subplot_kw=dict(aspect="equal"))
+wedges, texts = ax.pie(
     plot_sizes,
-    autopct='%1.1f%%',
-    pctdistance=0.78,
+    labels=plot_labels,
     colors=plot_colors,
-    startangle=135,
-    wedgeprops=dict(width=0.42, edgecolor='white', linewidth=2.5),
-    textprops=dict(fontsize=11, fontweight='bold')
+    startangle=140,
+    wedgeprops=dict(width=0.4, edgecolor='white', linewidth=2),
+    textprops=dict(fontsize=11)
 )
 
-for autotext in autotexts:
-    autotext.set_color('black')
-
-# Center summary text
-ax.text(0, 0, f"Total Drops\n{total_fails:,}\n(24.6%)",
-        ha='center', va='center', fontsize=15, fontweight='bold', color='#2c3e50')
-
-# Legend with absolute counts
-legend_labels = [f"{lbl.splitlines()[0]}: {sz:,} ({sz/total_fails*100:.1f}%)" for lbl, sz in zip(plot_labels, plot_sizes)]
-ax.legend(wedges, legend_labels,
-          title="Root Causes (Zero Heuristics / PHY Truth)",
-          loc="center left",
-          bbox_to_anchor=(0.95, 0.5),
-          fontsize=10.5,
-          title_fontsize=11.5,
-          frameon=True,
-          edgecolor='#bdc3c7')
-
-ax.set_title(f"Phase 1 Exact Physical Layer Failure Breakdown [75 UAV Swarm, 50m Top-5]\n"
-             f"Total Evaluated Links: {total_links:,} | Delivered: {success_links:,} (75.4%) | Dropped: {total_fails:,} (24.6%)",
-             fontsize=13, fontweight='bold', pad=25)
+ax.set_title(f"Phase 1 Exact Physical Failure Breakdown [75 UAVs, 50m Top-5 Links]\n"
+             f"Total Links: {total_links:,} | Success: {success_links:,} ({(success_links/total_links)*100:.1f}%) | "
+             f"Failed: {total_fails:,} ({(total_fails/total_links)*100:.1f}%)",
+             fontsize=13, fontweight='bold', pad=20)
 
 donut_path = os.path.join(PROJECT_DIR, "p1_ground_truth_donut.png")
 plt.tight_layout()
-plt.savefig(donut_path, dpi=300, bbox_inches='tight')
+plt.savefig(donut_path, dpi=300)
 plt.close()
-print(f"✅ Re-generated donut chart: {donut_path}")
+print(f"✅ Re-generated original-style donut chart: {donut_path}")
 
 # 2. STACKED BAR CHART
 fig, ax = plt.subplots(figsize=(11, 6.5))
 x = range(len(dist_brackets))
 
+categories = [
+    ("RX_DEAFNESS_BUSY_TX", "Receiver Deafness", colors_map["RX_DEAFNESS_BUSY_TX"]),
+    ("PREAMBLE_COLLISION_BUSY_RX", "Preamble Collision", colors_map["PREAMBLE_COLLISION_BUSY_RX"]),
+    ("PAYLOAD_INTERFERENCE_CORRUPTION", "Payload Interference", colors_map["PAYLOAD_INTERFERENCE_CORRUPTION"]),
+    ("SENDER_CSMA_ABORT", "Sender CSMA Abort", colors_map["SENDER_CSMA_ABORT"]),
+    ("PREAMBLE_LOW_SINR", "Preamble Low SINR", colors_map["PREAMBLE_LOW_SINR"]),
+    ("OUT_OF_RANGE_OR_FADING", "Radio Turnaround / Transient Busy", colors_map["OUT_OF_RANGE_OR_FADING"])
+]
+
 bottoms = [0] * len(dist_brackets)
-for cat_key, cat_name, cat_color in labels_map:
+for cat_key, cat_name, cat_color in categories:
     vals = [bracket_counts[b][cat_key] for b in dist_brackets]
     if sum(vals) > 0:
         ax.bar(x, vals, bottom=bottoms, label=f"{cat_name} (Total: {sum(vals)})", color=cat_color, width=0.55, edgecolor='black', linewidth=0.6)
@@ -125,6 +127,6 @@ ax.grid(axis='y', linestyle='--', alpha=0.5)
 
 dist_path = os.path.join(PROJECT_DIR, "p1_ground_truth_distance.png")
 plt.tight_layout()
-plt.savefig(dist_path, dpi=300, bbox_inches='tight')
+plt.savefig(dist_path, dpi=300)
 plt.close()
 print(f"✅ Re-generated distance chart: {dist_path}")

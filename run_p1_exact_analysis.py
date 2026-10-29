@@ -125,21 +125,21 @@ try:
 
     # 1. Donut Chart for Failures
     labels_map = {
-        "PREAMBLE_COLLISION_BUSY_RX": "Preamble Collision (BUSY_RX)",
-        "PREAMBLE_LOW_SINR": "Preamble Low SINR (<= -5dB)",
-        "SENDER_CSMA_ABORT": "Sender CSMA Access Abort",
-        "OUT_OF_RANGE_OR_FADING": "Radio Turnaround / Transient Busy",
         "RX_DEAFNESS_BUSY_TX": "Receiver Deafness (BUSY_TX)",
-        "PAYLOAD_INTERFERENCE_CORRUPTION": "Payload Interference (PER Error)"
+        "PREAMBLE_COLLISION_BUSY_RX": "Preamble Collision (BUSY_RX)",
+        "PAYLOAD_INTERFERENCE_CORRUPTION": "Payload Interference (PER Error)",
+        "SENDER_CSMA_ABORT": "Sender CSMA Abort",
+        "PREAMBLE_LOW_SINR": "Preamble Low SINR (<= -5dB)",
+        "OUT_OF_RANGE_OR_FADING": "Radio Turnaround / Transient Busy"
     }
 
     colors_map = {
-        "PREAMBLE_COLLISION_BUSY_RX": "#e67e22",         # Deep Orange
-        "PREAMBLE_LOW_SINR": "#f1c40f",                  # Bright Yellow
-        "SENDER_CSMA_ABORT": "#3498db",                  # Sky Blue
-        "OUT_OF_RANGE_OR_FADING": "#1abc9c",              # Teal / Slate
         "RX_DEAFNESS_BUSY_TX": "#e74c3c",                # Coral Red
-        "PAYLOAD_INTERFERENCE_CORRUPTION": "#9b59b6"     # Purple
+        "PREAMBLE_COLLISION_BUSY_RX": "#e67e22",         # Orange
+        "PAYLOAD_INTERFERENCE_CORRUPTION": "#9b59b6",    # Purple
+        "SENDER_CSMA_ABORT": "#3498db",                  # Sky Blue
+        "PREAMBLE_LOW_SINR": "#f1c40f",                  # Yellow
+        "OUT_OF_RANGE_OR_FADING": "#95a5a6"              # Gray
     }
 
     plot_labels = []
@@ -184,7 +184,8 @@ try:
         ("PREAMBLE_COLLISION_BUSY_RX", "Preamble Collision", colors_map["PREAMBLE_COLLISION_BUSY_RX"]),
         ("PAYLOAD_INTERFERENCE_CORRUPTION", "Payload Interference", colors_map["PAYLOAD_INTERFERENCE_CORRUPTION"]),
         ("SENDER_CSMA_ABORT", "Sender CSMA Abort", colors_map["SENDER_CSMA_ABORT"]),
-        ("OUT_OF_RANGE_OR_FADING", "Fading / Noise", colors_map["OUT_OF_RANGE_OR_FADING"])
+        ("PREAMBLE_LOW_SINR", "Preamble Low SINR", colors_map["PREAMBLE_LOW_SINR"]),
+        ("OUT_OF_RANGE_OR_FADING", "Radio Turnaround / Transient Busy", colors_map["OUT_OF_RANGE_OR_FADING"])
     ]
 
     bottoms = [0] * len(dist_brackets)

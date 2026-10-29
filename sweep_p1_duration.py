@@ -122,22 +122,42 @@ try:
     disc_vals = [r['disc_ratio'] for r in results]
     bcn_vals = [r['bcn_ratio'] for r in results]
     
-    fig, ax = plt.subplots(figsize=(8.5, 5.2), dpi=300)
+    fig, ax1 = plt.subplots(figsize=(9.0, 5.5), dpi=300)
     
-    line1 = ax.plot(durs, disc_vals, marker='s', markersize=8, color="#1f77b4", linewidth=2.5, label='Discovery Message RR (Phase 1)')
-    line2 = ax.plot(durs, bcn_vals, marker='o', markersize=8, color="#d62728", linewidth=2.5, label='Beacon Packet PRR (Phase 2)')
+    # Left Axis: Reception Ratios (%)
+    line1 = ax1.plot(durs, disc_vals, marker='s', markersize=8, color="#1f77b4", linewidth=2.5, label='Discovery Message RR (Phase 1)')
+    line2 = ax1.plot(durs, bcn_vals, marker='o', markersize=8, color="#d62728", linewidth=2.5, label='Beacon Packet PRR (Phase 2)')
     
     for d, dv, bv in zip(durs, disc_vals, bcn_vals):
-        ax.text(d, dv + 1.8, f"{dv:.1f}%", ha='center', va='bottom', fontsize=9, fontweight='bold', color="#1f77b4")
-        ax.text(d, bv - 2.5, f"{bv:.1f}%", ha='center', va='top', fontsize=9, fontweight='bold', color="#d62728")
+        ax1.text(d, dv + 1.8, f"{dv:.1f}%", ha='center', va='bottom', fontsize=8.5, fontweight='bold', color="#1f77b4")
+        ax1.text(d, bv - 2.8, f"{bv:.1f}%", ha='center', va='top', fontsize=8.5, fontweight='bold', color="#d62728")
         
-    ax.set_title(f'Phase 1 Broadcast Duration vs. Reception Ratios ({num_nodes} Drones, {node_speed} m/s)', fontsize=13, fontweight='bold', pad=12)
-    ax.set_xlabel('Phase 1 Duration (ms)', fontsize=11, fontweight='bold')
-    ax.set_ylabel('Reception Ratio (%)', fontsize=11, fontweight='bold')
-    ax.set_xticks(durs)
-    ax.set_ylim(0, 100)
-    ax.grid(True, linestyle='--', alpha=0.6)
-    ax.legend(loc='lower right', frameon=True, framealpha=0.9, fontsize=10)
+    ax1.set_title(f'Phase 1 Duration vs. Reception Ratios & Beacon AoI ({num_nodes} Drones, {node_speed} m/s)', fontsize=12.5, fontweight='bold', pad=12)
+    ax1.set_xlabel('Phase 1 Duration (ms)', fontsize=11, fontweight='bold')
+    ax1.set_ylabel('Reception Ratio (%)', fontsize=11, fontweight='bold', color="#333333")
+    ax1.set_xticks(durs)
+    ax1.set_ylim(0, 100)
+    ax1.grid(True, linestyle='--', alpha=0.5)
+
+    # Right Axis: Mean Beacon AoI (ms)
+    ax2 = ax1.twinx()
+    aoi_vals = [r['mean_aoi'] for r in results]
+    line3 = ax2.plot(durs, aoi_vals, marker='^', markersize=8, color="#2ca02c", linewidth=2.2, linestyle='--', label='Mean Beacon AoI (Phase 2)')
+    
+    for d, aoi in zip(durs, aoi_vals):
+        ax2.text(d, aoi + 2.0, f"{aoi:.1f}ms", ha='center', va='bottom', fontsize=8.5, fontweight='bold', color="#2ca02c")
+        
+    ax2.set_ylabel('Mean Beacon AoI (ms)', fontsize=11, fontweight='bold', color="#2ca02c")
+    ax2.tick_params(axis='y', labelcolor="#2ca02c")
+    
+    min_aoi = min(aoi_vals) if aoi_vals else 100.0
+    max_aoi = max(aoi_vals) if aoi_vals else 200.0
+    ax2.set_ylim(max(0.0, min_aoi * 0.7), max_aoi * 1.35)
+
+    # Combine legends into lower right
+    lines = line1 + line2 + line3
+    labels = [l.get_label() for l in lines]
+    ax1.legend(lines, labels, loc='lower right', frameon=True, framealpha=0.9, fontsize=9.5)
     
     plot_path = os.path.join(PROJECT_DIR, "exp_p1_duration_plot.png")
     fig.savefig(plot_path, bbox_inches='tight')

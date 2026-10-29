@@ -45,7 +45,7 @@ output_lines = []
 capture = False
 for line in process.stdout:
     output_lines.append(line)
-    if "GLOBAL NETWORK METRICS" in line:
+    if "=== Drone" in line or "GLOBAL NETWORK METRICS" in line:
         capture = True
     if capture:
         print(line, end="")

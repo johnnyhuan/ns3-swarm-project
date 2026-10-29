@@ -59,6 +59,7 @@ static int g_totalCountAoITopK = 0;
 static double g_globalMaxAoITopK = 0;
 static int g_totalTopologyMatchCount = 0;
 static int g_totalTopologyCheckCount = 0;
+static std::stringstream g_singleDroneReport;
 
 // Phase 1 專用統計
 static int g_p1TxAttempts = 0;
@@ -488,31 +489,33 @@ private:
         g_totalTopologyCheckCount += m_topologyCheckCount;
 
 
-        std::cout << "\n=== Drone " << std::setw(2) << (int)m_id << " Metrics Report (Top " << K_CLOSEST << " within " << M_RADIUS_METERS << "m) ===" << std::endl;
-        std::cout << "Target (Dist)  | Disc. Ratio | Bcn Ratio | Avg Disc. IAT | Max Disc. IAT | Mean Bcn AoI | Max Bcn AoI" << std::endl;
-        std::cout << "-----------------------------------------------------------------------------------------------------" << std::endl;
-        
-        for (int i = 0; i < std::min(K_CLOSEST, (int)godDistances.size()); i++) {
-            uint8_t target = godDistances[i].first;
-            double dist = godDistances[i].second;
+        static bool s_printedSampleDrone = false;
+        if (!s_printedSampleDrone && (godDistances.size() > 0 || m_id == 0)) {
+            s_printedSampleDrone = true;
+            g_singleDroneReport << "\n=== Drone " << std::setw(2) << (int)m_id << " Metrics Report (Top " << K_CLOSEST << " within " << M_RADIUS_METERS << "m) ===\n";
+            g_singleDroneReport << "Target (Dist)  | Disc. Ratio | Bcn Ratio | Avg Disc. IAT | Max Disc. IAT | Mean Bcn AoI | Max Bcn AoI\n";
+            g_singleDroneReport << "-----------------------------------------------------------------------------------------------------\n";
             
-            double discRatio = (double)m_discoveryReceivedCount[target] / m_epoch;
-            double bcnRatio = (double)m_beaconReceivedCount[target] / m_epoch;
-            double avgDiscIat = (m_countDiscoveryIat[target] > 0) ? (m_sumDiscoveryIat[target] / m_countDiscoveryIat[target]) : 0;
-            double maxDiscIat = (m_maxDiscoveryIat.find(target) != m_maxDiscoveryIat.end()) ? m_maxDiscoveryIat[target] : 0;
-            double meanAoI = (m_countAoI[target] > 0) ? (m_sumAoI[target] / m_countAoI[target]) : 0;
-            double maxAoI = (m_maxAoI.find(target) != m_maxAoI.end()) ? m_maxAoI[target] : 0;
-            
-            std::cout << "Drone " << std::setw(2) << (int)target << " (" << std::setw(3) << (int)dist << "m) | "
-                      << std::fixed << std::setprecision(1) << std::setw(11) << discRatio * 100 << " | "
-                      << std::fixed << std::setprecision(1) << std::setw(9) << bcnRatio * 100 << " | "
-                      << std::fixed << std::setprecision(1) << std::setw(13) << avgDiscIat << " | "
-                      << std::fixed << std::setprecision(1) << std::setw(13) << maxDiscIat << " | "
-                      << std::fixed << std::setprecision(1) << std::setw(12) << meanAoI << " | "
-                      << std::fixed << std::setprecision(1) << std::setw(11) << maxAoI << std::endl;
+            for (int i = 0; i < std::min(K_CLOSEST, (int)godDistances.size()); i++) {
+                uint8_t target = godDistances[i].first;
+                double dist = godDistances[i].second;
+                
+                double discRatio = (double)m_discoveryReceivedCount[target] / m_epoch;
+                double bcnRatio = (double)m_beaconReceivedCount[target] / m_epoch;
+                double avgDiscIat = (m_countDiscoveryIat[target] > 0) ? (m_sumDiscoveryIat[target] / m_countDiscoveryIat[target]) : 0;
+                double maxDiscIat = (m_maxDiscoveryIat.find(target) != m_maxDiscoveryIat.end()) ? m_maxDiscoveryIat[target] : 0;
+                double meanAoI = (m_countAoI[target] > 0) ? (m_sumAoI[target] / m_countAoI[target]) : 0;
+                double maxAoI = (m_maxAoI.find(target) != m_maxAoI.end()) ? m_maxAoI[target] : 0;
+                
+                g_singleDroneReport << "Drone " << std::setw(2) << (int)target << " (" << std::setw(3) << (int)dist << "m) | "
+                                    << std::fixed << std::setprecision(1) << std::setw(11) << discRatio * 100 << " | "
+                                    << std::fixed << std::setprecision(1) << std::setw(9) << bcnRatio * 100 << " | "
+                                    << std::fixed << std::setprecision(1) << std::setw(13) << avgDiscIat << " | "
+                                    << std::fixed << std::setprecision(1) << std::setw(13) << maxDiscIat << " | "
+                                    << std::fixed << std::setprecision(1) << std::setw(12) << meanAoI << " | "
+                                    << std::fixed << std::setprecision(1) << std::setw(11) << maxAoI << "\n";
+            }
         }
-        
-        // Monitor Member List Match Ratio display removed
     }
 };
 
@@ -649,9 +652,11 @@ int main(int argc, char *argv[]) {
         std::cout.rdbuf(g_originalCoutBuffer);
     }
     
+    std::cout << g_singleDroneReport.str() << "\n";
     std::cout << ss.str();
     
     if (g_runLogFile.is_open()) {
+        g_runLogFile << g_singleDroneReport.str() << "\n";
         g_runLogFile << ss.str();
         g_runLogFile.close();
         int ret = system("git add run.log && git commit -m 'Auto upload run.log' && git push origin main");

@@ -125,22 +125,23 @@ try:
     plt.rcParams['axes.unicode_minus'] = False
 
     # 1. Donut Chart for Failures (Exact Original Style with Direct Slice Labels)
+    # Order structured so large slices insulate smaller slices, preventing text overlap
     labels_map = {
-        "P1_DISCOVERY_MISS": "P1 Discovery Miss (Unscheduled)",
+        "PHY_LOW_SINR_OR_FADING": "PHY Low SINR / Fading",
         "TX_DEAFNESS_SAME_SLOT": "TX Deafness (Same Slot as TX)",
+        "P1_DISCOVERY_MISS": "P1 Discovery Miss (Unscheduled)",
         "RX_DEAFNESS_SLOT_CONFLICT": "RX Deafness (Slot Conflict)",
         "RESOURCE_COLLISION_SAME_SLOT_CH": "Resource Collision (Same S+C)",
-        "SENDER_CSMA_ABORT": "Sender CSMA Abort",
-        "PHY_LOW_SINR_OR_FADING": "PHY Low SINR / Fading"
+        "SENDER_CSMA_ABORT": "Sender CSMA Abort"
     }
 
     colors_map = {
-        "P1_DISCOVERY_MISS": "#9b59b6",                 # Purple (Phase 1 cascade)
+        "PHY_LOW_SINR_OR_FADING": "#f1c40f",             # Yellow (Fading/Noise)
         "TX_DEAFNESS_SAME_SLOT": "#e74c3c",             # Coral Red (Transmitting)
+        "P1_DISCOVERY_MISS": "#9b59b6",                 # Purple (Phase 1 cascade)
         "RX_DEAFNESS_SLOT_CONFLICT": "#3498db",         # Sky Blue (Listening to someone else)
         "RESOURCE_COLLISION_SAME_SLOT_CH": "#e67e22",   # Deep Orange (Co-channel collision)
-        "SENDER_CSMA_ABORT": "#1abc9c",                 # Teal (Sender backoff abort)
-        "PHY_LOW_SINR_OR_FADING": "#f1c40f"             # Yellow (Fading/Noise)
+        "SENDER_CSMA_ABORT": "#1abc9c"                  # Teal (Sender backoff abort)
     }
 
     plot_labels = []
@@ -155,14 +156,14 @@ try:
             plot_sizes.append(cnt)
             plot_colors.append(colors_map[r_key])
 
-    fig, ax = plt.subplots(figsize=(10, 8), subplot_kw=dict(aspect="equal"))
+    fig, ax = plt.subplots(figsize=(10.5, 8.5), subplot_kw=dict(aspect="equal"))
     wedges, texts = ax.pie(
         plot_sizes,
         labels=plot_labels,
         colors=plot_colors,
-        startangle=140,
+        startangle=130,
         wedgeprops=dict(width=0.4, edgecolor='white', linewidth=2),
-        textprops=dict(fontsize=11)
+        textprops=dict(fontsize=10.5)
     )
 
     ax.set_title(f"Phase 2 Exact Physical Failure Breakdown [75 UAVs, 50m Top-5 Links]\n"

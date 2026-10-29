@@ -1,0 +1,27 @@
+
+========================================================================================
+       🔬 PHASE 1 PHYSICAL & MAC GROUND TRUTH ANALYSIS (Top-K within 50m) 🔬           
+========================================================================================
+Total Expected P1 Neighbor Links (Epochs x Top-K) : 4997
+  ✅ Successfully Received (Delivered)            : 3766 (75.4%)
+  ❌ Failed Link Receptions (Dropped/Missed)      : 1231 (24.6%)
+----------------------------------------------------------------------------------------
+EXACT PHYSICAL ROOT CAUSE BREAKDOWN (Zero Estimation / Direct From ns-3 State Machine):
+  SENDER_CSMA_ABORT                      :   121 (  9.8% of fails |   2.4% of all links)
+  RX_DEAFNESS_BUSY_TX                    :    93 (  7.6% of fails |   1.9% of all links)
+  PREAMBLE_COLLISION_BUSY_RX             :   582 ( 47.3% of fails |  11.6% of all links)
+  PAYLOAD_INTERFERENCE_CORRUPTION        :     0 (  0.0% of fails |   0.0% of all links)
+  PREAMBLE_LOW_SINR                      :   324 ( 26.3% of fails |   6.5% of all links)
+  OUT_OF_RANGE_OR_FADING                 :   111 (  9.0% of fails |   2.2% of all links)
+========================================================================================
+
+--- Distance Bracket Breakdown (0-10m, 10-20m, 20-30m, 30-40m, 40-50m) ---
+Bracket   | Total | Success | CSMA Abort | RX Deafness | Preamble Coll | Interference | Low SINR | Fading
+----------------------------------------------------------------------------------------------------------
+ 0-10m    |    58 |      49 |          1 |           1 |             5 |            0 |        1 |      1
+10-20m    |   388 |     298 |         13 |           7 |            47 |            0 |       12 |     11
+20-30m    |   652 |     498 |         20 |          14 |            68 |            0 |       29 |     23
+30-40m    |  2059 |    1597 |         48 |          40 |           229 |            0 |      105 |     40
+40-50m    |  1840 |    1324 |         39 |          31 |           233 |            0 |      177 |     36
+========================================================================================
+

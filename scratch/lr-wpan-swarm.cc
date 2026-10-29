@@ -530,8 +530,8 @@ int main(int argc, char *argv[]) {
 
     double spaceSize = 300.0;
     double spaceZ = 100.0;
-    int numNodes = 50;
-    double nodeSpeed = 0.0; // UAV mobility speed in m/s (default: 0 for static hover, can be set with --nodeSpeed=10)
+    int numNodes = 75;
+    double nodeSpeed = 10.0; // UAV mobility speed in m/s (default: 10 m/s ~ 36 km/h, 0 for static hover)
 
     CommandLine cmd;
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);

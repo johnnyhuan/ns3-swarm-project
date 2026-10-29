@@ -5,7 +5,7 @@ import re
 import sys
 
 # Parameters
-num_nodes = int(sys.argv[1]) if len(sys.argv) > 1 else 100
+num_nodes = int(sys.argv[1]) if len(sys.argv) > 1 else 75
 node_speed = float(sys.argv[2]) if len(sys.argv) > 2 else 10.0
 
 print("=========================================================================")

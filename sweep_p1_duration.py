@@ -56,10 +56,10 @@ for idx, dur in enumerate(durations, start=1):
     raw_lines = []
     for line in process.stdout:
         raw_lines.append(line)
-        if "Discovery Message Reception Ratio:" in line:
-            m = re.search(r'Discovery Message Reception Ratio:\s*([\d.]+)%', line)
+        if "Discovery Message Reception Ratio" in line:
+            m = re.search(r'Discovery Message Reception Ratio\s*:\s*([\d.]+)%', line)
             if m: disc_ratio = float(m.group(1))
-        elif "Beacon Packet Reception Ratio:" in line:
+        elif "Beacon Packet Reception Ratio" in line:
             m = re.search(r'Beacon Packet Reception Ratio\s*:\s*([\d.]+)%', line)
             if m: bcn_ratio = float(m.group(1))
         elif "Avg Discovery Msg IAT (Top-K)" in line:

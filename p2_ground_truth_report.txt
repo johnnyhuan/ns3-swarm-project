@@ -1,0 +1,27 @@
+
+========================================================================================
+       🔬 PHASE 2 PHYSICAL & MAC GROUND TRUTH ANALYSIS (Top-K within 50m) 🔬           
+========================================================================================
+Total Expected P2 Neighbor Links (Epochs x Top-K) : 4751
+  ✅ Successfully Received (Delivered)            : 1582 (33.3%)
+  ❌ Failed Link Receptions (Dropped/Missed)      : 3169 (66.7%)
+----------------------------------------------------------------------------------------
+EXACT PHYSICAL ROOT CAUSE BREAKDOWN (Zero Estimation / Direct From Protocol Pipeline):
+  P1_DISCOVERY_MISS                      :  1080 ( 34.1% of fails |  22.7% of all links)
+  TX_DEAFNESS_SAME_SLOT                  :    33 (  1.0% of fails |   0.7% of all links)
+  RX_DEAFNESS_SLOT_CONFLICT              :   188 (  5.9% of fails |   4.0% of all links)
+  RESOURCE_COLLISION_SAME_SLOT_CH        :   146 (  4.6% of fails |   3.1% of all links)
+  SENDER_CSMA_ABORT                      :   153 (  4.8% of fails |   3.2% of all links)
+  PHY_LOW_SINR_OR_FADING                 :  1569 ( 49.5% of fails |  33.0% of all links)
+========================================================================================
+
+--- Distance Bracket Breakdown (0-10m, 10-20m, 20-30m, 30-40m, 40-50m) ---
+Bracket   | Total | Success | P1 Disc Miss | TX Deafness | RX Deafness | Collision | CSMA Abort | PHY Fading
+----------------------------------------------------------------------------------------------------------
+ 0-10m    |    54 |      25 |            8 |           0 |           0 |         0 |          5 |         16
+10-20m    |   372 |     119 |           82 |           5 |           0 |         8 |         13 |        145
+20-30m    |   614 |     210 |          129 |           3 |           2 |        28 |         20 |        222
+30-40m    |  1957 |     708 |          398 |          10 |          53 |        46 |         63 |        679
+40-50m    |  1754 |     520 |          463 |          15 |         133 |        64 |         52 |        507
+========================================================================================
+

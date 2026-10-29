@@ -819,6 +819,7 @@ int main(int argc, char *argv[]) {
     double spaceZ = 100.0;
     int numNodes = 75;
     double nodeSpeed = 10.0; // UAV mobility speed in m/s (default: 10 m/s ~ 36 km/h, 0 for static hover)
+    bool autoPush = false;
 
     CommandLine cmd;
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
@@ -831,6 +832,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("nodeSpeed", "Speed of UAVs in m/s (default 10.0 m/s, 0 for static hover)", nodeSpeed);
     cmd.AddValue("spaceSize", "Side length of 3D box (X and Y) in meters", spaceSize);
     cmd.AddValue("spaceZ", "Height of 3D box in meters", spaceZ);
+    cmd.AddValue("autoPush", "Auto git push results", autoPush);
     cmd.Parse(argc, argv);
 
     if (g_numDataSlots > MAX_DATA_SLOTS) {
@@ -923,6 +925,12 @@ int main(int argc, char *argv[]) {
     ss << "Max Discovery Msg IAT (Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxDiscoveryIatTopK << " ms\n";
     ss << "Mean Beacon Packet AoI (Top-K)  : " << std::fixed << std::setprecision(1) << globalMeanAoI << " ms\n";
     ss << "Max Beacon Packet AoI (Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxAoITopK << " ms\n";
+    ss << "-------------------------------------------------\n";
+    ss << "=== PHASE 2 CONTENTION & DEAFNESS METRICS ===\n";
+    ss << "Total Scheduled Top-K Neighbor Beacons: " << g_totalExpectedRx << "\n";
+    ss << "TX Deafness (Same slot as TX)         : " << g_txDeafnessCount << " (" << std::fixed << std::setprecision(1) << (g_totalExpectedRx > 0 ? (double)g_txDeafnessCount/g_totalExpectedRx*100 : 0) << "%)\n";
+    ss << "RX Deafness (Slot conflict)           : " << g_rxDeafnessCount << " (" << std::fixed << std::setprecision(1) << (g_totalExpectedRx > 0 ? (double)g_rxDeafnessCount/g_totalExpectedRx*100 : 0) << "%)\n";
+    ss << "Resource Collision (Same S+C)         : " << g_resourceCollisionCount << " (" << std::fixed << std::setprecision(1) << (g_totalExpectedRx > 0 ? (double)g_resourceCollisionCount/g_totalExpectedRx*100 : 0) << "%)\n";
     ss << "=================================================\n\n";
 
     if (g_originalCoutBuffer) {
@@ -938,11 +946,13 @@ int main(int argc, char *argv[]) {
         g_runLogFile << g_singleDroneReport.str() << "\n";
         g_runLogFile << ss.str();
         g_runLogFile.close();
-        int ret = system("git add run.log p1_exact_drop_reasons.csv p1_ground_truth_report.txt && git commit -m 'Auto upload Phase 1 ground truth results' && git push origin main");
-        if (ret != 0) {
-            std::cerr << "Note: system git push returned non-zero (you can manually commit & push)." << std::endl;
-        } else {
-            std::cout << "Results successfully uploaded to GitHub!" << std::endl;
+        if (autoPush) {
+            int ret = system("git add run.log p1_exact_drop_reasons.csv p1_ground_truth_report.txt && git commit -m 'Auto upload Phase 1 ground truth results' && git push origin main");
+            if (ret != 0) {
+                std::cerr << "Note: system git push returned non-zero (you can manually commit & push)." << std::endl;
+            } else {
+                std::cout << "Results successfully uploaded to GitHub!" << std::endl;
+            }
         }
     }
 

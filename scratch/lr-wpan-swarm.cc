@@ -28,8 +28,9 @@ double g_p1AvoidDist = 50.0; // RX Deafness defense distance in meters
 int g_numDataChannels = 6;   // Phase 2 Data Channels (configurable via cmd line, 0 to 10)
 int g_numDataSlots = 10;     // Phase 2 Data Slots (configurable via cmd line, 5 to 20)
 
-double g_cycleMs = 51.0;            // Dynamically computed: 25 + 1 + (g_numDataSlots * 2.5)
-const double PHASE1_DURATION_US = 25000.0; // 恢復為 25ms 最佳狀態
+double g_p1DurationMs = 25.0; // Phase 1 Duration in ms (configurable via cmd line, 10 to 40)
+double g_phase1DurationUs = 25000.0;
+double g_cycleMs = 51.0;            // Dynamically computed: g_p1DurationMs + 1 + (g_numDataSlots * 2.5)
 const double GAP_US = 1000.0; 
 const int MAX_DATA_SLOTS = 32;            // Maximum supported slots (up to 31 in 5-bit encoding)
 const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels
@@ -193,10 +194,11 @@ private:
         SwitchChannelAndPower(BROADCAST_CHANNEL, (int8_t)g_p1TxPower);
         
         Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
-        double randomDelayUs = uv->GetValue(0, PHASE1_DURATION_US - 2000.0);
+        double maxDelayUs = std::max(1000.0, g_phase1DurationUs - 2000.0);
+        double randomDelayUs = uv->GetValue(0, maxDelayUs);
         
         Simulator::Schedule(MicroSeconds(randomDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
-        Simulator::Schedule(MicroSeconds(PHASE1_DURATION_US + GAP_US), &SwarmSchedulerApp::ComputeSchedule, this);
+        Simulator::Schedule(MicroSeconds(g_phase1DurationUs + GAP_US), &SwarmSchedulerApp::ComputeSchedule, this);
         Simulator::Schedule(MilliSeconds(g_cycleMs), &SwarmSchedulerApp::ScheduleCycle, this);
     }
 
@@ -383,7 +385,7 @@ private:
                 g_p1TxAbort++;
                 std::cout << "[P1_ABORT] Time: " << now << "ms, Drone: " << myId << std::endl;
                 // 如果還在 Phase 1 的有效時間內 (保留最後 2ms 緩衝)，則安排重新決策
-                if (now < m_epochStartTime + (PHASE1_DURATION_US / 1000.0) - 2.0) {
+                if (now < m_epochStartTime + g_p1DurationMs - 2.0) {
                     // 隨機等待 0.1 ~ 0.5 毫秒，讓對方的情報傳達過來，也錯開重試時間
                     Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
                     double retryDelay = uv->GetValue(0.1, 0.5);
@@ -534,6 +536,7 @@ int main(int argc, char *argv[]) {
     CommandLine cmd;
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
     cmd.AddValue("p1TxPower", "Phase 1 TX Power in dBm (e.g., 0, 1, 3)", g_p1TxPower);
+    cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);
     cmd.AddValue("p1AvoidDist", "RX Deafness defense distance in meters", g_p1AvoidDist);
     cmd.AddValue("numChannels", "Number of Phase 2 data channels (e.g., 0 to 10)", g_numDataChannels);
     cmd.AddValue("numSlots", "Number of Phase 2 data slots (e.g., 5 to 20)", g_numDataSlots);
@@ -548,7 +551,8 @@ int main(int argc, char *argv[]) {
         g_numDataSlots = MAX_DATA_SLOTS;
     }
 
-    g_cycleMs = (PHASE1_DURATION_US + GAP_US + g_numDataSlots * DATA_SLOT_US) / 1000.0;
+    g_phase1DurationUs = g_p1DurationMs * 1000.0;
+    g_cycleMs = (g_phase1DurationUs + GAP_US + g_numDataSlots * DATA_SLOT_US) / 1000.0;
 
     NodeContainer nodes;
     nodes.Create(numNodes);

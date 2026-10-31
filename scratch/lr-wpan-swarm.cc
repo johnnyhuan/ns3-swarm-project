@@ -139,12 +139,14 @@ struct ScheduleSlot {
 // --- Phase 2 Ground Truth Physical Drop Tracking ---
 enum P2DropCategory {
     P2_REASON_SUCCESS = 0,
-    P2_REASON_P1_DISCOVERY_MISS,
-    P2_REASON_TX_DEAFNESS_SAME_SLOT,
-    P2_REASON_RX_DEAFNESS_SLOT_CONFLICT,
-    P2_REASON_RESOURCE_COLLISION_SAME_SLOT_CH,
-    P2_REASON_SENDER_CSMA_ABORT,
-    P2_REASON_PHY_LOW_SINR_OR_FADING,
+    P2_REASON_P1_DISCOVERY_MISS,             // Unscheduled in P2 because P1 discovery failed
+    P2_REASON_TX_DEAFNESS_SAME_SLOT,         // Half-duplex: receiver transmitting in same slot
+    P2_REASON_RX_DEAFNESS_SLOT_CONFLICT,     // Receiver listening to another neighbor in this slot
+    P2_REASON_PAYLOAD_INTERFERENCE_DROP,     // Receiver locked preamble, but mid-flight packet corrupted by interference
+    P2_REASON_PREAMBLE_COLLISION_OR_LOW_SINR,// Preamble collided with another packet or SINR <= -5dB during preamble
+    P2_REASON_RECEIVER_CHANNEL_MISMATCH,     // Receiver radio was on a different channel
+    P2_REASON_RADIO_TURNAROUND_BUSY,         // Receiver was on correct channel but in turnaround/transient busy
+    P2_REASON_SENDER_CSMA_ABORT,             // Sender aborted transmission due to busy channel at slot start
     NUM_P2_REASONS
 };
 
@@ -153,9 +155,19 @@ static const char* P2ReasonStrings[] = {
     "P1_DISCOVERY_MISS",
     "TX_DEAFNESS_SAME_SLOT",
     "RX_DEAFNESS_SLOT_CONFLICT",
-    "RESOURCE_COLLISION_SAME_SLOT_CH",
-    "SENDER_CSMA_ABORT",
-    "PHY_LOW_SINR_OR_FADING"
+    "PAYLOAD_INTERFERENCE_DROP",
+    "PREAMBLE_COLLISION_OR_LOW_SINR",
+    "RECEIVER_CHANNEL_MISMATCH",
+    "RADIO_TURNAROUND_BUSY",
+    "SENDER_CSMA_ABORT"
+};
+
+struct P2PacketMeta {
+    uint8_t senderId;
+    uint32_t epoch;
+    uint8_t slot;
+    uint8_t channel;
+    double txStartTime;
 };
 
 struct P2LinkRecord {
@@ -169,6 +181,15 @@ struct P2LinkRecord {
 static std::vector<P2LinkRecord> g_p2LinkRecords;
 static int g_p2ReasonCounts[NUM_P2_REASONS] = {0};
 static int g_p2TotalTargetLinks = 0;
+
+static uint8_t g_droneCurrentChannel[256];
+static std::map<uint64_t, P2PacketMeta> g_p2PacketsMeta;
+static std::map<std::pair<uint32_t, uint8_t>, std::vector<uint64_t>> g_p2TxUidsInEpoch;
+static std::map<std::pair<uint64_t, uint8_t>, PhyEnumeration> g_p2RxStateAtTxStart;
+static std::map<std::pair<uint64_t, uint8_t>, uint8_t> g_p2RxChannelAtTxStart;
+static std::map<std::tuple<uint32_t, uint8_t, uint8_t>, P2DropCategory> g_p2RxDropEvent;
+static std::map<std::tuple<uint32_t, uint8_t, uint8_t>, bool> g_p2RxBeginEvent;
+static std::map<std::tuple<uint32_t, uint8_t, uint8_t>, double> g_p2RxEndSinr;
 
 static std::map<uint32_t, std::map<uint8_t, std::set<uint8_t>>> g_p2ReceivedInEpoch;
 static std::map<uint32_t, std::map<uint8_t, bool>> g_p2TxAbortInEpoch;
@@ -206,6 +227,7 @@ public:
         Ptr<LrWpanPhy> phy = m_device->GetPhy();
         g_dronePhyState[m_id] = IEEE_802_15_4_PHY_TRX_OFF;
         g_droneReceivingUid[m_id] = 0;
+        g_droneCurrentChannel[m_id] = BROADCAST_CHANNEL;
         phy->TraceConnectWithoutContext("TrxState", MakeCallback(&SwarmSchedulerApp::NotifyPhyTrxStateChange, this));
         phy->TraceConnectWithoutContext("PhyRxBegin", MakeCallback(&SwarmSchedulerApp::NotifyPhyRxBegin, this));
         phy->TraceConnectWithoutContext("PhyRxEnd", MakeCallback(&SwarmSchedulerApp::NotifyPhyRxEnd, this));
@@ -220,12 +242,23 @@ public:
     }
 
     void NotifyPhyRxBegin(Ptr<const Packet> p) {
-        g_droneReceivingUid[m_id] = p->GetUid();
+        uint64_t uid = p->GetUid();
+        g_droneReceivingUid[m_id] = uid;
+
+        auto it2 = g_p2PacketsMeta.find(uid);
+        if (it2 != g_p2PacketsMeta.end()) {
+            g_p2RxBeginEvent[{it2->second.epoch, it2->second.senderId, m_id}] = true;
+        }
     }
 
     void NotifyPhyRxEnd(Ptr<const Packet> p, double sinr) {
-        if (g_droneReceivingUid[m_id] == p->GetUid()) {
+        uint64_t uid = p->GetUid();
+        if (g_droneReceivingUid[m_id] == uid) {
             g_droneReceivingUid[m_id] = 0;
+        }
+        auto it2 = g_p2PacketsMeta.find(uid);
+        if (it2 != g_p2PacketsMeta.end()) {
+            g_p2RxEndSinr[{it2->second.epoch, it2->second.senderId, m_id}] = sinr;
         }
     }
 
@@ -242,6 +275,18 @@ public:
                 g_p1RxDropEvent[{epoch, sender, m_id}] = REASON_PREAMBLE_LOW_SINR;
             }
         }
+
+        auto it2 = g_p2PacketsMeta.find(uid);
+        if (it2 != g_p2PacketsMeta.end()) {
+            uint8_t sender = it2->second.senderId;
+            uint32_t epoch = it2->second.epoch;
+            if (g_droneReceivingUid[m_id] == uid) {
+                g_p2RxDropEvent[{epoch, sender, m_id}] = P2_REASON_PAYLOAD_INTERFERENCE_DROP;
+                g_droneReceivingUid[m_id] = 0;
+            } else {
+                g_p2RxDropEvent[{epoch, sender, m_id}] = P2_REASON_PREAMBLE_COLLISION_OR_LOW_SINR;
+            }
+        }
     }
 
     void NotifyPhyTxBegin(Ptr<const Packet> p) {
@@ -253,6 +298,17 @@ public:
             for (uint32_t j = 0; j < numNodes; j++) {
                 if (j == m_id) continue;
                 g_rxStateAtTxStart[{uid, (uint8_t)j}] = g_dronePhyState[j];
+            }
+        }
+
+        auto it2 = g_p2PacketsMeta.find(uid);
+        if (it2 != g_p2PacketsMeta.end()) {
+            it2->second.txStartTime = Simulator::Now().GetMilliSeconds();
+            uint32_t numNodes = NodeList::GetNNodes();
+            for (uint32_t j = 0; j < numNodes; j++) {
+                if (j == m_id) continue;
+                g_p2RxStateAtTxStart[{uid, (uint8_t)j}] = g_dronePhyState[j];
+                g_p2RxChannelAtTxStart[{uid, (uint8_t)j}] = g_droneCurrentChannel[j];
             }
         }
     }
@@ -294,6 +350,7 @@ private:
     int m_topologyCheckCount;
 
     void SwitchChannelAndPower(uint8_t ch, int8_t txPowerDbm) {
+        g_droneCurrentChannel[m_id] = ch;
         Ptr<PhyPibAttributes> attrs = Create<PhyPibAttributes>();
         attrs->phyCurrentChannel = ch;
         // Pack txPowerDbm into 6-bit two's complement for phyTransmitPower
@@ -544,6 +601,17 @@ private:
             double now = Simulator::Now().GetMilliSeconds();
             std::cout << "[P2_ATTEMPT] Time: " << now << "ms, Drone: " << myId << ", Slot: " << slotIndex << ", Channel: " << (int)s.channel << std::endl;
             Ptr<Packet> p = Create<Packet>(DATA_PACKET_SIZE);
+            uint64_t uid = p->GetUid();
+
+            P2PacketMeta meta;
+            meta.senderId = myId;
+            meta.epoch = m_epoch;
+            meta.slot = slotIndex;
+            meta.channel = s.channel;
+            meta.txStartTime = now;
+            g_p2PacketsMeta[uid] = meta;
+            g_p2TxUidsInEpoch[{m_epoch, (uint8_t)myId}].push_back(uid);
+
             SendPacket(DATA_PACKET_SIZE, p, 2); // msduHandle = 2 (Data packet)
         } else if (s.action == ScheduleSlot::RX) {
             SwitchChannelAndPower(s.channel, g_p2TxPower);
@@ -760,41 +828,62 @@ private:
 
                     if (!discoveredInP1) {
                         cat = P2_REASON_P1_DISCOVERY_MISS;
+                    } else if (g_p2TxAbortInEpoch[epoch][sender]) {
+                        cat = P2_REASON_SENDER_CSMA_ABORT;
                     } else {
-                        uint8_t sSlot = g_droneClaimedSlot[epoch][sender];
-                        uint8_t sCh = g_droneClaimedChannel[epoch][sender];
-                        uint8_t rSlot = g_droneClaimedSlot[epoch][(uint8_t)r];
+                        // Sender actually transmitted a packet into the air!
+                        // Find sender's transmitted UID in this epoch
+                        uint64_t txUid = 0;
+                        auto uidsIt = g_p2TxUidsInEpoch.find({epoch, sender});
+                        if (uidsIt != g_p2TxUidsInEpoch.end() && !uidsIt->second.empty()) {
+                            txUid = uidsIt->second.back();
+                        }
 
-                        if (rSlot == sSlot) {
+                        uint8_t sChannel = 0;
+                        auto metaIt = g_p2PacketsMeta.find(txUid);
+                        if (metaIt != g_p2PacketsMeta.end()) {
+                            sChannel = metaIt->second.channel;
+                        }
+
+                        // Inspect receiver r's radio at takeoff
+                        PhyEnumeration rStateAtTx = IEEE_802_15_4_PHY_TRX_OFF;
+                        uint8_t rChannelAtTx = 0;
+                        auto stIt = g_p2RxStateAtTxStart.find({txUid, (uint8_t)r});
+                        if (stIt != g_p2RxStateAtTxStart.end()) {
+                            rStateAtTx = stIt->second;
+                        }
+                        auto chIt = g_p2RxChannelAtTxStart.find({txUid, (uint8_t)r});
+                        if (chIt != g_p2RxChannelAtTxStart.end()) {
+                            rChannelAtTx = chIt->second;
+                        }
+
+                        // 1. Was receiver r transmitting (half-duplex deaf)?
+                        if (rStateAtTx == IEEE_802_15_4_PHY_BUSY_TX || rStateAtTx == IEEE_802_15_4_PHY_TX_ON) {
                             cat = P2_REASON_TX_DEAFNESS_SAME_SLOT;
-                        } else if (g_p2SlotAction[epoch][(uint8_t)r][sSlot] == ScheduleSlot::RX &&
-                                   g_p2SlotTarget[epoch][(uint8_t)r][sSlot] != sender) {
-                            cat = P2_REASON_RX_DEAFNESS_SLOT_CONFLICT;
-                        } else if (g_p2SlotAction[epoch][(uint8_t)r][sSlot] == ScheduleSlot::RX &&
-                                   g_p2SlotTarget[epoch][(uint8_t)r][sSlot] == sender) {
-                            if (g_p2TxAbortInEpoch[epoch][sender]) {
-                                cat = P2_REASON_SENDER_CSMA_ABORT;
+                        }
+                        // 2. Was receiver r on a different channel?
+                        else if (rChannelAtTx != sChannel) {
+                            uint8_t sSlot = g_droneClaimedSlot[epoch][sender];
+                            if (g_p2SlotAction[epoch][(uint8_t)r][sSlot] == ScheduleSlot::RX &&
+                                g_p2SlotTarget[epoch][(uint8_t)r][sSlot] != sender) {
+                                cat = P2_REASON_RX_DEAFNESS_SLOT_CONFLICT;
                             } else {
-                                bool coChannelConflict = false;
-                                for (uint32_t other = 0; other < numNodes; other++) {
-                                    if (other == sender) continue;
-                                    if (g_droneClaimedSlot[epoch][other] == sSlot &&
-                                        g_droneClaimedChannel[epoch][other] == sCh) {
-                                        Ptr<MobilityModel> otherMob = NodeList::GetNode(other)->GetObject<MobilityModel>();
-                                        if (rMob->GetDistanceFrom(otherMob) <= 100.0) {
-                                            coChannelConflict = true;
-                                            break;
-                                        }
-                                    }
-                                }
-                                if (coChannelConflict) {
-                                    cat = P2_REASON_RESOURCE_COLLISION_SAME_SLOT_CH;
-                                } else {
-                                    cat = P2_REASON_PHY_LOW_SINR_OR_FADING;
-                                }
+                                cat = P2_REASON_RECEIVER_CHANNEL_MISMATCH;
                             }
-                        } else {
-                            cat = P2_REASON_RX_DEAFNESS_SLOT_CONFLICT;
+                        }
+                        // 3. r was on the SAME channel as s!
+                        else {
+                            // Check exact PHY drop event recorded for this packet at r
+                            auto dropIt = g_p2RxDropEvent.find({epoch, sender, (uint8_t)r});
+                            if (dropIt != g_p2RxDropEvent.end()) {
+                                cat = dropIt->second; // PAYLOAD_INTERFERENCE_DROP or PREAMBLE_COLLISION_OR_LOW_SINR
+                            } else if (rStateAtTx == IEEE_802_15_4_PHY_BUSY_RX) {
+                                cat = P2_REASON_PREAMBLE_COLLISION_OR_LOW_SINR;
+                            } else if (rStateAtTx == IEEE_802_15_4_PHY_TRX_OFF) {
+                                cat = P2_REASON_RADIO_TURNAROUND_BUSY;
+                            } else {
+                                cat = P2_REASON_PREAMBLE_COLLISION_OR_LOW_SINR;
+                            }
                         }
                     }
                 }
@@ -991,8 +1080,8 @@ void PrintPhase2GroundTruthReport() {
 
     // Distance Bracket Breakdown
     ss << "\n--- Distance Bracket Breakdown (0-10m, 10-20m, 20-30m, 30-40m, 40-50m) ---\n";
-    ss << "Bracket   | Total | Success | P1 Disc Miss | TX Deafness | RX Deafness | Collision | CSMA Abort | PHY Fading\n";
-    ss << "----------------------------------------------------------------------------------------------------------\n";
+    ss << "Bracket   | Total | Success | P1 Miss | TX Deaf | RX Deaf | Payload Drop | Preamble Drop | Ch Mismatch | Turnaround | CSMA Abort\n";
+    ss << "----------------------------------------------------------------------------------------------------------------------------\n";
     double brackets[5][2] = {{0, 10}, {10, 20}, {20, 30}, {30, 40}, {40, 50}};
     for (int b = 0; b < 5; b++) {
         int bTotal = 0;
@@ -1008,14 +1097,16 @@ void PrintPhase2GroundTruthReport() {
         ss << std::left << std::setw(9) << bName << " | "
            << std::right << std::setw(5) << bTotal << " | "
            << std::setw(7) << bCounts[P2_REASON_SUCCESS] << " | "
-           << std::setw(12) << bCounts[P2_REASON_P1_DISCOVERY_MISS] << " | "
-           << std::setw(11) << bCounts[P2_REASON_TX_DEAFNESS_SAME_SLOT] << " | "
-           << std::setw(11) << bCounts[P2_REASON_RX_DEAFNESS_SLOT_CONFLICT] << " | "
-           << std::setw(9) << bCounts[P2_REASON_RESOURCE_COLLISION_SAME_SLOT_CH] << " | "
-           << std::setw(10) << bCounts[P2_REASON_SENDER_CSMA_ABORT] << " | "
-           << std::setw(10) << bCounts[P2_REASON_PHY_LOW_SINR_OR_FADING] << "\n";
+           << std::setw(7) << bCounts[P2_REASON_P1_DISCOVERY_MISS] << " | "
+           << std::setw(7) << bCounts[P2_REASON_TX_DEAFNESS_SAME_SLOT] << " | "
+           << std::setw(7) << bCounts[P2_REASON_RX_DEAFNESS_SLOT_CONFLICT] << " | "
+           << std::setw(12) << bCounts[P2_REASON_PAYLOAD_INTERFERENCE_DROP] << " | "
+           << std::setw(13) << bCounts[P2_REASON_PREAMBLE_COLLISION_OR_LOW_SINR] << " | "
+           << std::setw(11) << bCounts[P2_REASON_RECEIVER_CHANNEL_MISMATCH] << " | "
+           << std::setw(10) << bCounts[P2_REASON_RADIO_TURNAROUND_BUSY] << " | "
+           << std::setw(10) << bCounts[P2_REASON_SENDER_CSMA_ABORT] << "\n";
     }
-    ss << "========================================================================================\n\n";
+    ss << "============================================================================================================================\n\n";
 
     std::cout << ss.str();
 

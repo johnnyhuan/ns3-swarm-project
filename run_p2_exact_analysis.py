@@ -127,21 +127,25 @@ try:
     # 1. Donut Chart for Failures (Exact Original Style with Direct Slice Labels)
     # Order structured so large slices insulate smaller slices, preventing text overlap
     labels_map = {
-        "PHY_LOW_SINR_OR_FADING": "PHY Low SINR / Fading",
-        "TX_DEAFNESS_SAME_SLOT": "TX Deafness (Same Slot as TX)",
         "P1_DISCOVERY_MISS": "P1 Discovery Miss (Unscheduled)",
+        "TX_DEAFNESS_SAME_SLOT": "TX Deafness (Same Slot as TX)",
         "RX_DEAFNESS_SLOT_CONFLICT": "RX Deafness (Slot Conflict)",
-        "RESOURCE_COLLISION_SAME_SLOT_CH": "Resource Collision (Same S+C)",
+        "PAYLOAD_INTERFERENCE_DROP": "Payload Interference Corruption",
+        "PREAMBLE_COLLISION_OR_LOW_SINR": "Preamble Collision / Low SINR",
+        "RECEIVER_CHANNEL_MISMATCH": "Receiver Channel Mismatch",
+        "RADIO_TURNAROUND_BUSY": "Radio Turnaround / Transient Busy",
         "SENDER_CSMA_ABORT": "Sender CSMA Abort"
     }
 
     colors_map = {
-        "PHY_LOW_SINR_OR_FADING": "#f1c40f",             # Yellow (Fading/Noise)
-        "TX_DEAFNESS_SAME_SLOT": "#e74c3c",             # Coral Red (Transmitting)
         "P1_DISCOVERY_MISS": "#9b59b6",                 # Purple (Phase 1 cascade)
+        "TX_DEAFNESS_SAME_SLOT": "#e74c3c",             # Coral Red (Transmitting)
         "RX_DEAFNESS_SLOT_CONFLICT": "#3498db",         # Sky Blue (Listening to someone else)
-        "RESOURCE_COLLISION_SAME_SLOT_CH": "#e67e22",   # Deep Orange (Co-channel collision)
-        "SENDER_CSMA_ABORT": "#1abc9c"                  # Teal (Sender backoff abort)
+        "PAYLOAD_INTERFERENCE_DROP": "#e67e22",         # Deep Orange (Mid-flight interference)
+        "PREAMBLE_COLLISION_OR_LOW_SINR": "#f1c40f",    # Yellow (Preamble collision/weak)
+        "RECEIVER_CHANNEL_MISMATCH": "#1abc9c",         # Teal (Channel mismatch)
+        "RADIO_TURNAROUND_BUSY": "#95a5a6",             # Gray (Radio turnaround / transient)
+        "SENDER_CSMA_ABORT": "#2ecc71"                  # Emerald Green (Sender CSMA abort)
     }
 
     plot_labels = []
@@ -185,9 +189,11 @@ try:
         ("P1_DISCOVERY_MISS", "P1 Discovery Miss", colors_map["P1_DISCOVERY_MISS"]),
         ("TX_DEAFNESS_SAME_SLOT", "TX Deafness (Same Slot)", colors_map["TX_DEAFNESS_SAME_SLOT"]),
         ("RX_DEAFNESS_SLOT_CONFLICT", "RX Deafness (Slot Conflict)", colors_map["RX_DEAFNESS_SLOT_CONFLICT"]),
-        ("RESOURCE_COLLISION_SAME_SLOT_CH", "Resource Collision (Same S+C)", colors_map["RESOURCE_COLLISION_SAME_SLOT_CH"]),
-        ("SENDER_CSMA_ABORT", "Sender CSMA Abort", colors_map["SENDER_CSMA_ABORT"]),
-        ("PHY_LOW_SINR_OR_FADING", "PHY Low SINR / Fading", colors_map["PHY_LOW_SINR_OR_FADING"])
+        ("PAYLOAD_INTERFERENCE_DROP", "Payload Interference", colors_map["PAYLOAD_INTERFERENCE_DROP"]),
+        ("PREAMBLE_COLLISION_OR_LOW_SINR", "Preamble Collision / Low SINR", colors_map["PREAMBLE_COLLISION_OR_LOW_SINR"]),
+        ("RECEIVER_CHANNEL_MISMATCH", "Channel Mismatch", colors_map["RECEIVER_CHANNEL_MISMATCH"]),
+        ("RADIO_TURNAROUND_BUSY", "Radio Turnaround Busy", colors_map["RADIO_TURNAROUND_BUSY"]),
+        ("SENDER_CSMA_ABORT", "Sender CSMA Abort", colors_map["SENDER_CSMA_ABORT"])
     ]
 
     bottoms = [0] * len(dist_brackets)

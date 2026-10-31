@@ -8,20 +8,22 @@ Total Expected P2 Neighbor Links (Epochs x Top-K) : 4751
 ----------------------------------------------------------------------------------------
 EXACT PHYSICAL ROOT CAUSE BREAKDOWN (Zero Estimation / Direct From Protocol Pipeline):
   P1_DISCOVERY_MISS                      :  1080 ( 34.1% of fails |  22.7% of all links)
-  TX_DEAFNESS_SAME_SLOT                  :    33 (  1.0% of fails |   0.7% of all links)
-  RX_DEAFNESS_SLOT_CONFLICT              :   188 (  5.9% of fails |   4.0% of all links)
-  RESOURCE_COLLISION_SAME_SLOT_CH        :   146 (  4.6% of fails |   3.1% of all links)
-  SENDER_CSMA_ABORT                      :   153 (  4.8% of fails |   3.2% of all links)
-  PHY_LOW_SINR_OR_FADING                 :  1569 ( 49.5% of fails |  33.0% of all links)
+  TX_DEAFNESS_SAME_SLOT                  :    29 (  0.9% of fails |   0.6% of all links)
+  RX_DEAFNESS_SLOT_CONFLICT              :   161 (  5.1% of fails |   3.4% of all links)
+  PAYLOAD_INTERFERENCE_DROP              :     0 (  0.0% of fails |   0.0% of all links)
+  PREAMBLE_COLLISION_OR_LOW_SINR         :  1710 ( 54.0% of fails |  36.0% of all links)
+  RECEIVER_CHANNEL_MISMATCH              :    21 (  0.7% of fails |   0.4% of all links)
+  RADIO_TURNAROUND_BUSY                  :     0 (  0.0% of fails |   0.0% of all links)
+  SENDER_CSMA_ABORT                      :   168 (  5.3% of fails |   3.5% of all links)
 ========================================================================================
 
 --- Distance Bracket Breakdown (0-10m, 10-20m, 20-30m, 30-40m, 40-50m) ---
-Bracket   | Total | Success | P1 Disc Miss | TX Deafness | RX Deafness | Collision | CSMA Abort | PHY Fading
-----------------------------------------------------------------------------------------------------------
- 0-10m    |    54 |      25 |            8 |           0 |           0 |         0 |          5 |         16
-10-20m    |   372 |     119 |           82 |           5 |           0 |         8 |         13 |        145
-20-30m    |   614 |     210 |          129 |           3 |           2 |        28 |         20 |        222
-30-40m    |  1957 |     708 |          398 |          10 |          53 |        46 |         63 |        679
-40-50m    |  1754 |     520 |          463 |          15 |         133 |        64 |         52 |        507
-========================================================================================
+Bracket   | Total | Success | P1 Miss | TX Deaf | RX Deaf | Payload Drop | Preamble Drop | Ch Mismatch | Turnaround | CSMA Abort
+----------------------------------------------------------------------------------------------------------------------------
+ 0-10m    |    54 |      25 |       8 |       0 |       0 |            0 |            16 |           0 |          0 |          5
+10-20m    |   372 |     119 |      82 |       3 |       0 |            0 |           154 |           1 |          0 |         13
+20-30m    |   614 |     210 |     129 |       5 |       2 |            0 |           247 |           1 |          0 |         20
+30-40m    |  1957 |     708 |     398 |      13 |      44 |            0 |           719 |           7 |          0 |         68
+40-50m    |  1754 |     520 |     463 |       8 |     115 |            0 |           574 |          12 |          0 |         62
+============================================================================================================================
 

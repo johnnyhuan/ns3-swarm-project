@@ -127,14 +127,14 @@ try:
     # 1. Donut Chart for Failures (Exact Original Style with Direct Slice Labels)
     # Order structured so large slices insulate smaller slices, preventing text overlap
     labels_map = {
-        "P1_DISCOVERY_MISS": "P1 Discovery Miss (Unscheduled)",
-        "TX_DEAFNESS_SAME_SLOT": "TX Deafness (Same Slot as TX)",
-        "RX_DEAFNESS_SLOT_CONFLICT": "RX Deafness (Slot Conflict)",
-        "PAYLOAD_INTERFERENCE_DROP": "Payload Interference Corruption",
         "PREAMBLE_COLLISION_OR_LOW_SINR": "Preamble Collision / Low SINR",
+        "TX_DEAFNESS_SAME_SLOT": "TX Deafness (Same Slot as TX)",
+        "P1_DISCOVERY_MISS": "P1 Discovery Miss (Unscheduled)",
+        "RX_DEAFNESS_SLOT_CONFLICT": "RX Deafness (Slot Conflict)",
+        "SENDER_CSMA_ABORT": "Sender CSMA Abort",
         "RECEIVER_CHANNEL_MISMATCH": "Receiver Channel Mismatch",
-        "RADIO_TURNAROUND_BUSY": "Radio Turnaround / Transient Busy",
-        "SENDER_CSMA_ABORT": "Sender CSMA Abort"
+        "PAYLOAD_INTERFERENCE_DROP": "Payload Interference Corruption",
+        "RADIO_TURNAROUND_BUSY": "Radio Turnaround / Transient Busy"
     }
 
     colors_map = {
@@ -148,27 +148,53 @@ try:
         "SENDER_CSMA_ABORT": "#2ecc71"                  # Emerald Green (Sender CSMA abort)
     }
 
+    plot_order = [
+        "PREAMBLE_COLLISION_OR_LOW_SINR",
+        "TX_DEAFNESS_SAME_SLOT",
+        "P1_DISCOVERY_MISS",
+        "RX_DEAFNESS_SLOT_CONFLICT",
+        "SENDER_CSMA_ABORT",
+        "RECEIVER_CHANNEL_MISMATCH",
+        "PAYLOAD_INTERFERENCE_DROP",
+        "RADIO_TURNAROUND_BUSY"
+    ]
+
     plot_labels = []
     plot_sizes = []
     plot_colors = []
 
-    for r_key, r_name in labels_map.items():
+    for r_key in plot_order:
         cnt = fail_reasons.get(r_key, 0)
         if cnt > 0:
+            r_name = labels_map[r_key]
             pct = (cnt / total_fails) * 100.0 if total_fails > 0 else 0
             plot_labels.append(f"{r_name}\n({cnt:,} links, {pct:.1f}%)")
             plot_sizes.append(cnt)
             plot_colors.append(colors_map[r_key])
 
-    fig, ax = plt.subplots(figsize=(10.5, 8.5), subplot_kw=dict(aspect="equal"))
+    fig, ax = plt.subplots(figsize=(11, 8.5), subplot_kw=dict(aspect="equal"))
     wedges, texts = ax.pie(
         plot_sizes,
         labels=plot_labels,
         colors=plot_colors,
-        startangle=130,
+        startangle=65,
         wedgeprops=dict(width=0.4, edgecolor='white', linewidth=2),
         textprops=dict(fontsize=10.5)
     )
+
+    # Adjust text positions slightly to prevent text collision
+    for t in texts:
+        pos = list(t.get_position())
+        if 'Receiver Channel Mismatch' in t.get_text():
+            pos[1] += 0.08
+            pos[0] += 0.02
+            t.set_position(pos)
+        elif 'Sender CSMA Abort' in t.get_text():
+            pos[0] += 0.05
+            t.set_position(pos)
+        elif 'TX Deafness' in t.get_text():
+            pos[1] -= 0.04
+            t.set_position(pos)
 
     ax.set_title(f"Phase 2 Exact Physical Failure Breakdown [75 UAVs, 50m Top-5 Links]\n"
                  f"Total Links: {total_links:,} | Success: {success_links:,} ({(success_links/total_links)*100:.1f}%) | "
@@ -176,8 +202,7 @@ try:
                  fontsize=13, fontweight='bold', pad=20)
 
     donut_path = os.path.join(PROJECT_DIR, "p2_ground_truth_donut.png")
-    plt.tight_layout()
-    plt.savefig(donut_path, dpi=300)
+    plt.savefig(donut_path, dpi=300, bbox_inches='tight')
     plt.close()
     print(f"📈 Phase 2 Donut chart saved to: {donut_path}")
 

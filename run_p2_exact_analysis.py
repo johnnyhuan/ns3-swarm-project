@@ -127,7 +127,8 @@ try:
     # 1. Donut Chart for Failures (Exact Original Style with Direct Slice Labels)
     # Order structured so large slices insulate smaller slices, preventing text overlap
     labels_map = {
-        "PREAMBLE_COLLISION_OR_LOW_SINR": "Preamble Collision / Low SINR",
+        "PREAMBLE_LOW_SINR": "Preamble Low SINR (<= -5dB)",
+        "PREAMBLE_COLLISION_BUSY_RX": "Preamble Collision (Busy RX)",
         "TX_DEAFNESS_SAME_SLOT": "TX Deafness (Same Slot as TX)",
         "P1_DISCOVERY_MISS": "P1 Discovery Miss (Unscheduled)",
         "RX_DEAFNESS_SLOT_CONFLICT": "RX Deafness (Slot Conflict)",
@@ -142,14 +143,16 @@ try:
         "TX_DEAFNESS_SAME_SLOT": "#e74c3c",             # Coral Red (Transmitting)
         "RX_DEAFNESS_SLOT_CONFLICT": "#3498db",         # Sky Blue (Listening to someone else)
         "PAYLOAD_INTERFERENCE_DROP": "#e67e22",         # Deep Orange (Mid-flight interference)
-        "PREAMBLE_COLLISION_OR_LOW_SINR": "#f1c40f",    # Yellow (Preamble collision/weak)
+        "PREAMBLE_COLLISION_BUSY_RX": "#e67e22",        # Amber Orange (Preamble collision / Antenna Busy)
+        "PREAMBLE_LOW_SINR": "#f1c40f",                 # Yellow (Preamble Low SINR)
         "RECEIVER_CHANNEL_MISMATCH": "#1abc9c",         # Teal (Channel mismatch)
         "RADIO_TURNAROUND_BUSY": "#95a5a6",             # Gray (Radio turnaround / transient)
         "SENDER_CSMA_ABORT": "#2ecc71"                  # Emerald Green (Sender CSMA abort)
     }
 
     plot_order = [
-        "PREAMBLE_COLLISION_OR_LOW_SINR",
+        "PREAMBLE_LOW_SINR",
+        "PREAMBLE_COLLISION_BUSY_RX",
         "TX_DEAFNESS_SAME_SLOT",
         "P1_DISCOVERY_MISS",
         "RX_DEAFNESS_SLOT_CONFLICT",
@@ -215,7 +218,8 @@ try:
         ("TX_DEAFNESS_SAME_SLOT", "TX Deafness (Same Slot)", colors_map["TX_DEAFNESS_SAME_SLOT"]),
         ("RX_DEAFNESS_SLOT_CONFLICT", "RX Deafness (Slot Conflict)", colors_map["RX_DEAFNESS_SLOT_CONFLICT"]),
         ("PAYLOAD_INTERFERENCE_DROP", "Payload Interference", colors_map["PAYLOAD_INTERFERENCE_DROP"]),
-        ("PREAMBLE_COLLISION_OR_LOW_SINR", "Preamble Collision / Low SINR", colors_map["PREAMBLE_COLLISION_OR_LOW_SINR"]),
+        ("PREAMBLE_COLLISION_BUSY_RX", "Preamble Collision (Busy RX)", colors_map["PREAMBLE_COLLISION_BUSY_RX"]),
+        ("PREAMBLE_LOW_SINR", "Preamble Low SINR", colors_map["PREAMBLE_LOW_SINR"]),
         ("RECEIVER_CHANNEL_MISMATCH", "Channel Mismatch", colors_map["RECEIVER_CHANNEL_MISMATCH"]),
         ("RADIO_TURNAROUND_BUSY", "Radio Turnaround Busy", colors_map["RADIO_TURNAROUND_BUSY"]),
         ("SENDER_CSMA_ABORT", "Sender CSMA Abort", colors_map["SENDER_CSMA_ABORT"])

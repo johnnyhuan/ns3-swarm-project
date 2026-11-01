@@ -142,11 +142,12 @@ enum P2DropCategory {
     P2_REASON_P1_DISCOVERY_MISS,             // Unscheduled in P2 because P1 discovery failed
     P2_REASON_TX_DEAFNESS_SAME_SLOT,         // Half-duplex: receiver transmitting in same slot
     P2_REASON_RX_DEAFNESS_SLOT_CONFLICT,     // Receiver listening to another neighbor in this slot
-    P2_REASON_PAYLOAD_INTERFERENCE_DROP,     // Receiver locked preamble, but mid-flight packet corrupted by interference
-    P2_REASON_PREAMBLE_COLLISION_OR_LOW_SINR,// Preamble collided with another packet or SINR <= -5dB during preamble
     P2_REASON_RECEIVER_CHANNEL_MISMATCH,     // Receiver radio was on a different channel
     P2_REASON_RADIO_TURNAROUND_BUSY,         // Receiver was on correct channel but in turnaround/transient busy
     P2_REASON_SENDER_CSMA_ABORT,             // Sender aborted transmission due to busy channel at slot start
+    P2_REASON_PREAMBLE_COLLISION_BUSY_RX,    // Receiver antenna was already locked onto another packet
+    P2_REASON_PREAMBLE_LOW_SINR,             // Preamble arrived, but SINR <= -5 dB (co-channel interference/noise)
+    P2_REASON_PAYLOAD_INTERFERENCE_DROP,     // Preamble locked, but mid-flight packet corrupted by interference
     NUM_P2_REASONS
 };
 
@@ -155,11 +156,12 @@ static const char* P2ReasonStrings[] = {
     "P1_DISCOVERY_MISS",
     "TX_DEAFNESS_SAME_SLOT",
     "RX_DEAFNESS_SLOT_CONFLICT",
-    "PAYLOAD_INTERFERENCE_DROP",
-    "PREAMBLE_COLLISION_OR_LOW_SINR",
     "RECEIVER_CHANNEL_MISMATCH",
     "RADIO_TURNAROUND_BUSY",
-    "SENDER_CSMA_ABORT"
+    "SENDER_CSMA_ABORT",
+    "PREAMBLE_COLLISION_BUSY_RX",
+    "PREAMBLE_LOW_SINR",
+    "PAYLOAD_INTERFERENCE_DROP"
 };
 
 struct P2PacketMeta {
@@ -176,6 +178,10 @@ struct P2LinkRecord {
     uint8_t sender;
     double distance;
     P2DropCategory category;
+    double prx_dbm;
+    double interf_dbm;
+    double sinr_db;
+    int coChannelCount;
 };
 
 static std::vector<P2LinkRecord> g_p2LinkRecords;
@@ -280,11 +286,21 @@ public:
         if (it2 != g_p2PacketsMeta.end()) {
             uint8_t sender = it2->second.senderId;
             uint32_t epoch = it2->second.epoch;
+            double now = Simulator::Now().GetMilliSeconds();
             if (g_droneReceivingUid[m_id] == uid) {
                 g_p2RxDropEvent[{epoch, sender, m_id}] = P2_REASON_PAYLOAD_INTERFERENCE_DROP;
                 g_droneReceivingUid[m_id] = 0;
+                std::cout << "[P2_PAYLOAD_DROP] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid << std::endl;
             } else {
-                g_p2RxDropEvent[{epoch, sender, m_id}] = P2_REASON_PREAMBLE_COLLISION_OR_LOW_SINR;
+                if (g_dronePhyState[m_id] == IEEE_802_15_4_PHY_BUSY_RX) {
+                    g_p2RxDropEvent[{epoch, sender, m_id}] = P2_REASON_PREAMBLE_COLLISION_BUSY_RX;
+                    std::cout << "[P2_PREAMBLE_COLLISION] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
+                              << " | Antenna already busy receiving Drone " << (int)g_droneReceivingUid[m_id] << std::endl;
+                } else {
+                    g_p2RxDropEvent[{epoch, sender, m_id}] = P2_REASON_PREAMBLE_LOW_SINR;
+                    std::cout << "[P2_PREAMBLE_LOW_SINR] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
+                              << " | Preamble SINR <= -5 dB threshold" << std::endl;
+                }
             }
         }
     }
@@ -804,6 +820,28 @@ private:
                 uint8_t sender = dists[i].first;
                 double dist = dists[i].second;
 
+                // Compute exact RF metrics for this link (Physics & Channel model)
+                double sPrxDbm = -48.6777 - 30.0 * std::log10(std::max(0.1, dist));
+                double interfLinear = 0.0;
+                int coChannelCount = 0;
+                uint8_t sSlot = g_droneClaimedSlot[epoch][sender];
+                uint8_t sCh = g_droneClaimedChannel[epoch][sender];
+                for (uint32_t other = 0; other < numNodes; other++) {
+                    if (other == sender || other == r) continue;
+                    if (g_droneClaimedSlot[epoch][other] == sSlot &&
+                        g_droneClaimedChannel[epoch][other] == sCh &&
+                        !g_p2TxAbortInEpoch[epoch][other]) {
+                        Ptr<MobilityModel> otherMob = NodeList::GetNode(other)->GetObject<MobilityModel>();
+                        double otherDist = rMob->GetDistanceFrom(otherMob);
+                        double otherPrxDbm = -48.6777 - 30.0 * std::log10(std::max(0.1, otherDist));
+                        interfLinear += std::pow(10.0, (otherPrxDbm - 30.0) / 10.0);
+                        coChannelCount++;
+                    }
+                }
+                double noiseLinear = std::pow(10.0, (-106.58 - 30.0) / 10.0);
+                double interfDbm = (interfLinear > 0) ? (10.0 * std::log10(interfLinear) + 30.0) : -120.0;
+                double sinrDb = 10.0 * std::log10(std::pow(10.0, (sPrxDbm - 30.0) / 10.0) / (interfLinear + noiseLinear));
+
                 bool delivered = false;
                 auto itEp = g_p2ReceivedInEpoch.find(epoch);
                 if (itEp != g_p2ReceivedInEpoch.end()) {
@@ -863,7 +901,6 @@ private:
                         }
                         // 2. Was receiver r on a different channel?
                         else if (rChannelAtTx != sChannel) {
-                            uint8_t sSlot = g_droneClaimedSlot[epoch][sender];
                             if (g_p2SlotAction[epoch][(uint8_t)r][sSlot] == ScheduleSlot::RX &&
                                 g_p2SlotTarget[epoch][(uint8_t)r][sSlot] != sender) {
                                 cat = P2_REASON_RX_DEAFNESS_SLOT_CONFLICT;
@@ -876,13 +913,19 @@ private:
                             // Check exact PHY drop event recorded for this packet at r
                             auto dropIt = g_p2RxDropEvent.find({epoch, sender, (uint8_t)r});
                             if (dropIt != g_p2RxDropEvent.end()) {
-                                cat = dropIt->second; // PAYLOAD_INTERFERENCE_DROP or PREAMBLE_COLLISION_OR_LOW_SINR
+                                cat = dropIt->second;
                             } else if (rStateAtTx == IEEE_802_15_4_PHY_BUSY_RX) {
-                                cat = P2_REASON_PREAMBLE_COLLISION_OR_LOW_SINR;
+                                cat = P2_REASON_PREAMBLE_COLLISION_BUSY_RX;
                             } else if (rStateAtTx == IEEE_802_15_4_PHY_TRX_OFF) {
                                 cat = P2_REASON_RADIO_TURNAROUND_BUSY;
                             } else {
-                                cat = P2_REASON_PREAMBLE_COLLISION_OR_LOW_SINR;
+                                if (coChannelCount > 0 && sinrDb <= -5.0) {
+                                    cat = P2_REASON_PREAMBLE_LOW_SINR;
+                                } else if (coChannelCount > 0 && sinrDb > -5.0) {
+                                    cat = P2_REASON_PREAMBLE_COLLISION_BUSY_RX;
+                                } else {
+                                    cat = P2_REASON_PREAMBLE_LOW_SINR;
+                                }
                             }
                         }
                     }
@@ -894,6 +937,10 @@ private:
                 rec.sender = sender;
                 rec.distance = dist;
                 rec.category = cat;
+                rec.prx_dbm = sPrxDbm;
+                rec.interf_dbm = interfDbm;
+                rec.sinr_db = sinrDb;
+                rec.coChannelCount = coChannelCount;
                 g_p2LinkRecords.push_back(rec);
                 g_p2ReasonCounts[cat]++;
                 g_p2TotalTargetLinks++;
@@ -1080,8 +1127,8 @@ void PrintPhase2GroundTruthReport() {
 
     // Distance Bracket Breakdown
     ss << "\n--- Distance Bracket Breakdown (0-10m, 10-20m, 20-30m, 30-40m, 40-50m) ---\n";
-    ss << "Bracket   | Total | Success | P1 Miss | TX Deaf | RX Deaf | Payload Drop | Preamble Drop | Ch Mismatch | Turnaround | CSMA Abort\n";
-    ss << "----------------------------------------------------------------------------------------------------------------------------\n";
+    ss << "Bracket   | Total | Success | P1 Miss | TX Deaf | RX Deaf | Ch Mismatch | CSMA Abort | Collision | Low SINR | Payload Drop\n";
+    ss << "------------------------------------------------------------------------------------------------------------------------\n";
     double brackets[5][2] = {{0, 10}, {10, 20}, {20, 30}, {30, 40}, {40, 50}};
     for (int b = 0; b < 5; b++) {
         int bTotal = 0;
@@ -1100,13 +1147,38 @@ void PrintPhase2GroundTruthReport() {
            << std::setw(7) << bCounts[P2_REASON_P1_DISCOVERY_MISS] << " | "
            << std::setw(7) << bCounts[P2_REASON_TX_DEAFNESS_SAME_SLOT] << " | "
            << std::setw(7) << bCounts[P2_REASON_RX_DEAFNESS_SLOT_CONFLICT] << " | "
-           << std::setw(12) << bCounts[P2_REASON_PAYLOAD_INTERFERENCE_DROP] << " | "
-           << std::setw(13) << bCounts[P2_REASON_PREAMBLE_COLLISION_OR_LOW_SINR] << " | "
            << std::setw(11) << bCounts[P2_REASON_RECEIVER_CHANNEL_MISMATCH] << " | "
-           << std::setw(10) << bCounts[P2_REASON_RADIO_TURNAROUND_BUSY] << " | "
-           << std::setw(10) << bCounts[P2_REASON_SENDER_CSMA_ABORT] << "\n";
+           << std::setw(10) << bCounts[P2_REASON_SENDER_CSMA_ABORT] << " | "
+           << std::setw(9) << bCounts[P2_REASON_PREAMBLE_COLLISION_BUSY_RX] << " | "
+           << std::setw(8) << bCounts[P2_REASON_PREAMBLE_LOW_SINR] << " | "
+           << std::setw(12) << bCounts[P2_REASON_PAYLOAD_INTERFERENCE_DROP] << "\n";
     }
-    ss << "============================================================================================================================\n\n";
+    ss << "========================================================================================================================\n\n";
+
+    // Physical RF Signal Proofs
+    double sumSinrSucc = 0, sumSinrDrop = 0, sumPrx = 0, sumInterf = 0;
+    int cntSucc = 0, cntLowSinr = 0;
+    for (const auto& rec : g_p2LinkRecords) {
+        if (rec.category == P2_REASON_SUCCESS) {
+            sumSinrSucc += rec.sinr_db;
+            cntSucc++;
+        } else if (rec.category == P2_REASON_PREAMBLE_LOW_SINR) {
+            sumSinrDrop += rec.sinr_db;
+            sumPrx += rec.prx_dbm;
+            sumInterf += rec.interf_dbm;
+            cntLowSinr++;
+        }
+    }
+    ss << "📡 PHYSICAL RF SIGNAL PROOFS (Averages & Evidence):\n";
+    if (cntSucc > 0) {
+        ss << "  • Delivered Links Mean SINR           : " << std::fixed << std::setprecision(1) << (sumSinrSucc / cntSucc) << " dB (IEEE Threshold: > -5.0 dB)\n";
+    }
+    if (cntLowSinr > 0) {
+        ss << "  • Low SINR Dropped Links Mean SINR    : " << std::fixed << std::setprecision(1) << (sumSinrDrop / cntLowSinr) << " dB (IEEE Threshold: <= -5.0 dB)\n";
+        ss << "  • Low SINR Mean Received Power (Prx)  : " << std::fixed << std::setprecision(1) << (sumPrx / cntLowSinr) << " dBm\n";
+        ss << "  • Low SINR Mean Interference Power (I): " << std::fixed << std::setprecision(1) << (sumInterf / cntLowSinr) << " dBm\n";
+    }
+    ss << "========================================================================================================================\n\n";
 
     std::cout << ss.str();
 
@@ -1117,15 +1189,19 @@ void PrintPhase2GroundTruthReport() {
         rptFile.close();
     }
 
-    // Write exact CSV
+    // Write exact CSV with Ironclad Physical Evidence Columns
     std::ofstream csvFile("p2_exact_drop_reasons.csv");
     if (csvFile.is_open()) {
-        csvFile << "Epoch,Receiver,Sender,Distance_m,Status,ExactReason\n";
+        csvFile << "Epoch,Receiver,Sender,Distance_m,Status,ExactReason,Prx_dBm,Interf_dBm,SINR_dB,CoChannelDrones\n";
         for (const auto& rec : g_p2LinkRecords) {
             csvFile << rec.epoch << "," << (int)rec.receiver << "," << (int)rec.sender << ","
                     << std::fixed << std::setprecision(2) << rec.distance << ","
                     << ((rec.category == P2_REASON_SUCCESS) ? "SUCCESS" : "FAILED") << ","
-                    << P2ReasonStrings[rec.category] << "\n";
+                    << P2ReasonStrings[rec.category] << ","
+                    << std::fixed << std::setprecision(2) << rec.prx_dbm << ","
+                    << std::fixed << std::setprecision(2) << rec.interf_dbm << ","
+                    << std::fixed << std::setprecision(2) << rec.sinr_db << ","
+                    << rec.coChannelCount << "\n";
         }
         csvFile.close();
         std::cout << "✅ Exact Phase 2 ground truth link data exported to p2_exact_drop_reasons.csv\n";

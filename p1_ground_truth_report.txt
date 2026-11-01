@@ -3,14 +3,14 @@
        🔬 PHASE 1 PHYSICAL & MAC GROUND TRUTH ANALYSIS (Top-K within 50m) 🔬           
 ========================================================================================
 Total Expected P1 Neighbor Links (Epochs x Top-K) : 4997
-  ✅ Successfully Received (Delivered)            : 3766 (75.4%)
-  ❌ Failed Link Receptions (Dropped/Missed)      : 1231 (24.6%)
+  ✅ Successfully Received (Delivered)            : 3816 (76.4%)
+  ❌ Failed Link Receptions (Dropped/Missed)      : 1181 (23.6%)
 ----------------------------------------------------------------------------------------
 EXACT PHYSICAL ROOT CAUSE BREAKDOWN (Zero Estimation / Direct From ns-3 State Machine):
-  SENDER_CSMA_ABORT                      :   121 (  9.8% of fails |   2.4% of all links)
-  RX_DEAFNESS_BUSY_TX                    :    93 (  7.6% of fails |   1.9% of all links)
-  PREAMBLE_COLLISION_BUSY_RX             :   913 ( 74.2% of fails |  18.3% of all links)
-  PREAMBLE_LOW_SINR                      :   104 (  8.4% of fails |   2.1% of all links)
+  SENDER_CSMA_ABORT                      :   212 ( 18.0% of fails |   4.2% of all links)
+  RX_DEAFNESS_BUSY_TX                    :   124 ( 10.5% of fails |   2.5% of all links)
+  PREAMBLE_COLLISION_BUSY_RX             :   698 ( 59.1% of fails |  14.0% of all links)
+  PREAMBLE_LOW_SINR                      :   147 ( 12.4% of fails |   2.9% of all links)
   RADIO_TURNAROUND_BUSY                  :     0 (  0.0% of fails |   0.0% of all links)
   PAYLOAD_INTERFERENCE_CORRUPTION        :     0 (  0.0% of fails |   0.0% of all links)
 ========================================================================================
@@ -18,17 +18,17 @@ EXACT PHYSICAL ROOT CAUSE BREAKDOWN (Zero Estimation / Direct From ns-3 State Ma
 --- Distance Bracket Breakdown (0-10m, 10-20m, 20-30m, 30-40m, 40-50m) ---
 Bracket   | Total | Success | CSMA Abort | RX Deafness | Preamble Coll | Low SINR | Turnaround | Payload Drop
 --------------------------------------------------------------------------------------------------------
- 0-10m    |    58 |      49 |          1 |           1 |             6 |        1 |          0 |            0
-10-20m    |   388 |     298 |         13 |           7 |            63 |        7 |          0 |            0
-20-30m    |   652 |     498 |         20 |          14 |           106 |       14 |          0 |            0
-30-40m    |  2059 |    1597 |         48 |          40 |           340 |       34 |          0 |            0
-40-50m    |  1840 |    1324 |         39 |          31 |           398 |       48 |          0 |            0
+ 0-10m    |    58 |      49 |          5 |           0 |             4 |        0 |          0 |            0
+10-20m    |   388 |     336 |         19 |           4 |            27 |        2 |          0 |            0
+20-30m    |   652 |     525 |         26 |          22 |            65 |       14 |          0 |            0
+30-40m    |  2059 |    1532 |         85 |          64 |           296 |       82 |          0 |            0
+40-50m    |  1840 |    1374 |         77 |          34 |           306 |       49 |          0 |            0
 ========================================================================================================
 
 📡 PHYSICAL RF SIGNAL PROOFS (Averages & Evidence):
-  • Delivered Links Mean SINR           : 10.8 dB (IEEE Threshold: > -5.0 dB)
-  • Low SINR Dropped Links Mean SINR    : 5.8 dB (IEEE Threshold: <= -5.0 dB)
-  • Low SINR Mean Received Power (Prx)  : -92.9 dBm
-  • Low SINR Mean Interference Power (I): -102.6 dBm
+  • Delivered Links Mean SINR           : 10.3 dB (IEEE Threshold: > -5.0 dB)
+  • Low SINR Dropped Links Mean SINR    : 1.8 dB (IEEE Threshold: <= -5.0 dB)
+  • Low SINR Mean Received Power (Prx)  : -93.8 dBm
+  • Low SINR Mean Interference Power (I): -98.5 dBm
 ========================================================================================================
 

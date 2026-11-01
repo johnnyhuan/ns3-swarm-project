@@ -36,6 +36,7 @@ int g_numDataSlots = 10;     // Phase 2 Data Slots (configurable via cmd line, 5
 double g_p1DurationMs = 25.0; // Phase 1 Duration in ms (configurable via cmd line, 10 to 40)
 double g_phase1DurationUs = 25000.0;
 double g_cycleMs = 51.0;            // Dynamically computed: g_p1DurationMs + 1 + (g_numDataSlots * 2.5)
+double g_simTime = 10.0;            // Total simulation duration in seconds (default 10.0s)
 const double GAP_US = 1000.0; 
 const int MAX_DATA_SLOTS = 32;            // Maximum supported slots (up to 31 in 5-bit encoding)
 const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels
@@ -248,7 +249,7 @@ public:
         phy->TraceConnectWithoutContext("PhyRxDrop", MakeCallback(&SwarmSchedulerApp::NotifyPhyRxDrop, this));
         phy->TraceConnectWithoutContext("PhyTxBegin", MakeCallback(&SwarmSchedulerApp::NotifyPhyTxBegin, this));
 
-        Simulator::Schedule(Seconds(0.999), &SwarmSchedulerApp::PrintMetrics, this);
+        Simulator::Schedule(Seconds(g_simTime - 0.001), &SwarmSchedulerApp::PrintMetrics, this);
     }
 
     void NotifyPhyTrxStateChange(Time time, PhyEnumeration oldState, PhyEnumeration newState) {
@@ -1255,6 +1256,48 @@ void PrintGroundTruthReport() {
     }
     ss << "========================================================================================================\n\n";
 
+    // -------------------------------------------------------------------------------------
+    // Steady-State Converged Analysis (Last 2.0s: t = (simTime - 2.0)s to simTime)
+    // -------------------------------------------------------------------------------------
+    double steadyStartSec = std::max(0.0, g_simTime - 2.0);
+    uint32_t steadyStartEpoch = (uint32_t)(steadyStartSec * 1000.0 / g_cycleMs) + 1;
+    uint32_t steadyTotalLinks = 0;
+    uint32_t steadyReasons[NUM_P1_REASONS] = {0};
+
+    for (const auto& rec : g_p1LinkRecords) {
+        if (rec.epoch >= steadyStartEpoch) {
+            steadyTotalLinks++;
+            steadyReasons[rec.category]++;
+        }
+    }
+
+    if (steadyTotalLinks > 0) {
+        double steadySuccPct = 100.0 * steadyReasons[REASON_SUCCESS] / steadyTotalLinks;
+        uint32_t steadyFails = steadyTotalLinks - steadyReasons[REASON_SUCCESS];
+        double steadyFailPct = 100.0 - steadySuccPct;
+
+        ss << "========================================================================================\n";
+        ss << "       🎯 STEADY-STATE CONVERGED ANALYSIS (Last 2.0s: t = " << std::fixed << std::setprecision(1) << steadyStartSec << "s ~ " << g_simTime << "s) 🎯\n";
+        ss << "========================================================================================\n";
+        ss << "Steady-State P1 Target Links (Epoch " << steadyStartEpoch << "+)           : " << steadyTotalLinks << "\n";
+        ss << "  ✅ Successfully Received (Delivered)            : " << steadyReasons[REASON_SUCCESS] 
+           << " (" << std::fixed << std::setprecision(1) << steadySuccPct << "%)\n";
+        ss << "  ❌ Failed Link Receptions (Dropped/Missed)      : " << steadyFails 
+           << " (" << std::fixed << std::setprecision(1) << steadyFailPct << "%)\n";
+        ss << "----------------------------------------------------------------------------------------\n";
+        ss << "STEADY-STATE EXACT PHYSICAL ROOT CAUSE BREAKDOWN:\n";
+        for (int c = 1; c < NUM_P1_REASONS; c++) {
+            int cnt = steadyReasons[c];
+            double pctOfFail = (steadyFails > 0) ? (100.0 * cnt / steadyFails) : 0.0;
+            double pctOfTotal = (steadyTotalLinks > 0) ? (100.0 * cnt / steadyTotalLinks) : 0.0;
+            ss << "  " << std::left << std::setw(38) << P1ReasonStrings[c] << " : "
+               << std::right << std::setw(5) << cnt << " ("
+               << std::setw(5) << std::fixed << std::setprecision(1) << pctOfFail << "% of fails | "
+               << std::setw(5) << std::fixed << std::setprecision(1) << pctOfTotal << "% of all links)\n";
+        }
+        ss << "========================================================================================\n\n";
+    }
+
     std::cout << ss.str();
 
     // Write to report file
@@ -1412,6 +1455,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
     cmd.AddValue("p1TxPower", "Phase 1 TX Power in dBm (e.g., 0, 1, 3)", g_p1TxPower);
     cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);
+    cmd.AddValue("simTime", "Total simulation duration in seconds (default 10.0)", g_simTime);
     cmd.AddValue("enableP1Sidelink", "Enable Sidelink-inspired Semi-Persistent Scheduling for Phase 1 (default false)", g_enableP1Sidelink);
     cmd.AddValue("p1SlotUs", "Phase 1 Sidelink slot duration in microseconds (default 600.0)", g_p1SlotUs);
     cmd.AddValue("p1AvoidDist", "RX Deafness defense distance in meters", g_p1AvoidDist);
@@ -1494,11 +1538,11 @@ int main(int argc, char *argv[]) {
         app->Setup(dev, i);
         nodes.Get(i)->AddApplication(app);
         app->SetStartTime(Seconds(0.0));
-        app->SetStopTime(Seconds(1.0)); 
+        app->SetStopTime(Seconds(g_simTime)); 
     }
 
-    std::cout << "Starting Simulation for 1.0s..." << std::endl;
-    Simulator::Stop(Seconds(1.0));
+    std::cout << "Starting Simulation for " << g_simTime << "s..." << std::endl;
+    Simulator::Stop(Seconds(g_simTime));
     Simulator::Run();
     
     double globalDiscRatio = (g_totalExpectedTopKxEpochs > 0) ? (double)g_totalReceivedDiscoveryTopK / g_totalExpectedTopKxEpochs : 0;
@@ -1508,7 +1552,7 @@ int main(int argc, char *argv[]) {
     
     std::stringstream ss;
     ss << "\n=================================================\n";
-    ss << "          GLOBAL NETWORK METRICS (1.0s)          \n";
+    ss << "          GLOBAL NETWORK METRICS (" << std::fixed << std::setprecision(1) << g_simTime << "s)          \n";
     ss << "=================================================\n";
     ss << "Discovery Message Reception Ratio: " << std::fixed << std::setprecision(1) << globalDiscRatio * 100 << "%\n";
     ss << "Beacon Packet Reception Ratio   : " << std::fixed << std::setprecision(1) << globalBcnRatio * 100 << "%\n";

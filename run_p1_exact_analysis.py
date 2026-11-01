@@ -125,36 +125,46 @@ try:
 
     # 1. Donut Chart for Failures
     labels_map = {
-        "RX_DEAFNESS_BUSY_TX": "Receiver Deafness (BUSY_TX)",
         "PREAMBLE_COLLISION_BUSY_RX": "Preamble Collision (BUSY_RX)",
-        "PAYLOAD_INTERFERENCE_CORRUPTION": "Payload Interference (PER Error)",
-        "SENDER_CSMA_ABORT": "Sender CSMA Abort",
         "PREAMBLE_LOW_SINR": "Preamble Low SINR (<= -5dB)",
-        "OUT_OF_RANGE_OR_FADING": "Radio Turnaround / Transient Busy"
+        "RX_DEAFNESS_BUSY_TX": "Receiver Deafness (BUSY_TX)",
+        "SENDER_CSMA_ABORT": "Sender CSMA Abort",
+        "RADIO_TURNAROUND_BUSY": "Radio Turnaround / Transient Busy",
+        "PAYLOAD_INTERFERENCE_CORRUPTION": "Payload Interference (PER Error)"
     }
 
     colors_map = {
-        "RX_DEAFNESS_BUSY_TX": "#e74c3c",                # Coral Red
         "PREAMBLE_COLLISION_BUSY_RX": "#e67e22",         # Orange
-        "PAYLOAD_INTERFERENCE_CORRUPTION": "#9b59b6",    # Purple
-        "SENDER_CSMA_ABORT": "#3498db",                  # Sky Blue
         "PREAMBLE_LOW_SINR": "#f1c40f",                  # Yellow
-        "OUT_OF_RANGE_OR_FADING": "#95a5a6"              # Gray
+        "RX_DEAFNESS_BUSY_TX": "#e74c3c",                # Coral Red
+        "SENDER_CSMA_ABORT": "#3498db",                  # Sky Blue
+        "RADIO_TURNAROUND_BUSY": "#95a5a6",              # Gray
+        "PAYLOAD_INTERFERENCE_CORRUPTION": "#9b59b6"     # Purple
     }
+
+    plot_order = [
+        "PREAMBLE_COLLISION_BUSY_RX",
+        "PREAMBLE_LOW_SINR",
+        "SENDER_CSMA_ABORT",
+        "RADIO_TURNAROUND_BUSY",
+        "RX_DEAFNESS_BUSY_TX",
+        "PAYLOAD_INTERFERENCE_CORRUPTION"
+    ]
 
     plot_labels = []
     plot_sizes = []
     plot_colors = []
 
-    for r_key, r_name in labels_map.items():
+    for r_key in plot_order:
         cnt = fail_reasons.get(r_key, 0)
         if cnt > 0:
+            r_name = labels_map[r_key]
             pct = (cnt / total_fails) * 100.0 if total_fails > 0 else 0
-            plot_labels.append(f"{r_name}\n({cnt} links, {pct:.1f}%)")
+            plot_labels.append(f"{r_name}\n({cnt:,} links, {pct:.1f}%)")
             plot_sizes.append(cnt)
             plot_colors.append(colors_map[r_key])
 
-    fig, ax = plt.subplots(figsize=(10, 8), subplot_kw=dict(aspect="equal"))
+    fig, ax = plt.subplots(figsize=(10.5, 8.5), subplot_kw=dict(aspect="equal"))
     wedges, texts = ax.pie(
         plot_sizes,
         labels=plot_labels,
@@ -165,47 +175,47 @@ try:
     )
 
     ax.set_title(f"Phase 1 Exact Physical Failure Breakdown [75 UAVs, 50m Top-5 Links]\n"
-                 f"Total Links: {total_links} | Success: {success_links} ({(success_links/total_links)*100:.1f}%) | "
-                 f"Failed: {total_fails} ({(total_fails/total_links)*100:.1f}%)",
+                 f"Total Links: {total_links:,} | Success: {success_links:,} ({(success_links/total_links)*100:.1f}%) | "
+                 f"Failed: {total_fails:,} ({(total_fails/total_links)*100:.1f}%)",
                  fontsize=13, fontweight='bold', pad=20)
 
     donut_path = os.path.join(PROJECT_DIR, "p1_ground_truth_donut.png")
-    plt.tight_layout()
-    plt.savefig(donut_path, dpi=300)
+    plt.savefig(donut_path, dpi=300, bbox_inches='tight')
     plt.close()
     print(f"📈 Donut chart saved to: {donut_path}")
 
     # 2. Stacked Bar Chart across Distance Brackets
-    fig, ax = plt.subplots(figsize=(11, 6))
+    fig, ax = plt.subplots(figsize=(11, 6.5))
     x = range(len(dist_brackets))
     
     categories = [
-        ("RX_DEAFNESS_BUSY_TX", "Receiver Deafness", colors_map["RX_DEAFNESS_BUSY_TX"]),
-        ("PREAMBLE_COLLISION_BUSY_RX", "Preamble Collision", colors_map["PREAMBLE_COLLISION_BUSY_RX"]),
-        ("PAYLOAD_INTERFERENCE_CORRUPTION", "Payload Interference", colors_map["PAYLOAD_INTERFERENCE_CORRUPTION"]),
-        ("SENDER_CSMA_ABORT", "Sender CSMA Abort", colors_map["SENDER_CSMA_ABORT"]),
+        ("PREAMBLE_COLLISION_BUSY_RX", "Preamble Collision (BUSY_RX)", colors_map["PREAMBLE_COLLISION_BUSY_RX"]),
         ("PREAMBLE_LOW_SINR", "Preamble Low SINR", colors_map["PREAMBLE_LOW_SINR"]),
-        ("OUT_OF_RANGE_OR_FADING", "Radio Turnaround / Transient Busy", colors_map["OUT_OF_RANGE_OR_FADING"])
+        ("RX_DEAFNESS_BUSY_TX", "Receiver Deafness (BUSY_TX)", colors_map["RX_DEAFNESS_BUSY_TX"]),
+        ("SENDER_CSMA_ABORT", "Sender CSMA Abort", colors_map["SENDER_CSMA_ABORT"]),
+        ("RADIO_TURNAROUND_BUSY", "Radio Turnaround Busy", colors_map["RADIO_TURNAROUND_BUSY"]),
+        ("PAYLOAD_INTERFERENCE_CORRUPTION", "Payload Interference", colors_map["PAYLOAD_INTERFERENCE_CORRUPTION"])
     ]
 
     bottoms = [0] * len(dist_brackets)
     for cat_key, cat_name, cat_color in categories:
         vals = [bracket_counts[b][cat_key] for b in dist_brackets]
         if sum(vals) > 0:
-            ax.bar(x, vals, bottom=bottoms, label=cat_name, color=cat_color, width=0.55, edgecolor='black', linewidth=0.5)
+            ax.bar(x, vals, bottom=bottoms, label=f"{cat_name} (Total: {sum(vals):,})", color=cat_color, width=0.55, edgecolor='black', linewidth=0.5)
             bottoms = [bottoms[i] + vals[i] for i in range(len(dist_brackets))]
 
     ax.set_xticks(x)
     ax.set_xticklabels(dist_brackets, fontsize=11, fontweight='bold')
     ax.set_xlabel("Distance Bracket between UAVs", fontsize=12, fontweight='bold', labelpad=10)
     ax.set_ylabel("Number of Failed Link Receptions", fontsize=12, fontweight='bold')
-    ax.set_title("Phase 1 Failure Causes vs. Spatial Distance (Ground Truth)", fontsize=13, fontweight='bold')
-    ax.legend(loc="upper right", frameon=True, fontsize=10)
+    ax.set_title("Phase 1 Failure Causes vs. Spatial Distance (Ground Truth)", fontsize=13, fontweight='bold', pad=15)
+    ax.legend(loc="upper right", frameon=True, fontsize=10, edgecolor='#bdc3c7')
     ax.grid(axis='y', linestyle='--', alpha=0.5)
 
     dist_path = os.path.join(PROJECT_DIR, "p1_ground_truth_distance.png")
-    plt.tight_layout()
-    plt.savefig(dist_path, dpi=300)
+    plt.savefig(dist_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"📈 Distance breakdown chart saved to: {dist_path}")
     plt.close()
     print(f"📈 Distance breakdown chart saved to: {dist_path}")
 

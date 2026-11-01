@@ -41,6 +41,10 @@ const int MAX_DATA_SLOTS = 32;            // Maximum supported slots (up to 31 i
 const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels
 const double DATA_SLOT_US = 2500.0; 
 
+// Sidelink S-SPS (Semi-Persistent Scheduling) for Phase 1
+bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
+double g_p1SlotUs = 1000.0;      // Phase 1 Sidelink slot duration in microseconds (default 1.0 ms)
+
 const uint8_t BROADCAST_CHANNEL = 11;
 
 // --- 目標條件設定 ---
@@ -211,7 +215,7 @@ static std::map<uint32_t, std::map<uint8_t, std::map<int, uint8_t>>> g_p2SlotTar
 
 class SwarmSchedulerApp : public Application {
 public:
-    SwarmSchedulerApp() : m_epoch(0), m_myClaimedSlot(0), m_myClaimedChannel(0), m_topologyMatchCount(0), m_topologyCheckCount(0), m_epochStartTime(0) {}
+    SwarmSchedulerApp() : m_epoch(0), m_myClaimedSlot(0), m_myClaimedChannel(0), m_topologyMatchCount(0), m_topologyCheckCount(0), m_epochStartTime(0), m_p1ClaimedSlot(-1), m_p1ConflictOccurred(false) {}
 
     void Setup(Ptr<LrWpanNetDevice> dev, uint8_t id) {
         m_device = dev;
@@ -254,6 +258,14 @@ public:
     void NotifyPhyRxBegin(Ptr<const Packet> p) {
         uint64_t uid = p->GetUid();
         g_droneReceivingUid[m_id] = uid;
+
+        if (g_enableP1Sidelink && g_droneCurrentChannel[m_id] == BROADCAST_CHANNEL) {
+            double timeInP1Us = (Simulator::Now().GetMilliSeconds() - m_epochStartTime) * 1000.0;
+            if (timeInP1Us >= 0 && timeInP1Us < g_phase1DurationUs) {
+                int slotIdx = (int)(timeInP1Us / g_p1SlotUs);
+                m_p1OccupiedSlotsThisEpoch.insert(slotIdx);
+            }
+        }
 
         auto it2 = g_p2PacketsMeta.find(uid);
         if (it2 != g_p2PacketsMeta.end()) {
@@ -379,6 +391,11 @@ private:
     int m_topologyMatchCount;
     int m_topologyCheckCount;
 
+    // Phase 1 Sidelink S-SPS variables
+    int m_p1ClaimedSlot;
+    bool m_p1ConflictOccurred;
+    std::set<int> m_p1OccupiedSlotsThisEpoch;
+
     void SwitchChannelAndPower(uint8_t ch, int8_t txPowerDbm) {
         g_droneCurrentChannel[m_id] = ch;
         Ptr<PhyPibAttributes> attrs = Create<PhyPibAttributes>();
@@ -428,11 +445,44 @@ private:
         // Phase 1 (Broadcast): Configurable range
         SwitchChannelAndPower(BROADCAST_CHANNEL, (int8_t)g_p1TxPower);
         
-        Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
-        double maxDelayUs = std::max(1000.0, g_phase1DurationUs - 2000.0);
-        double randomDelayUs = uv->GetValue(0, maxDelayUs);
-        
-        Simulator::Schedule(MicroSeconds(randomDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
+        if (!g_enableP1Sidelink) {
+            Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
+            double maxDelayUs = std::max(1000.0, g_phase1DurationUs - 2000.0);
+            double randomDelayUs = uv->GetValue(0, maxDelayUs);
+            Simulator::Schedule(MicroSeconds(randomDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
+        } else {
+            // Sidelink S-SPS mode for Phase 1
+            double availP1Us = std::max(1000.0, g_phase1DurationUs - 2000.0);
+            int numP1Slots = std::max(1, (int)(availP1Us / g_p1SlotUs));
+
+            // Reselect slot if first epoch or if collision was detected in previous epoch
+            if (m_p1ClaimedSlot < 0 || m_p1ConflictOccurred || m_p1ClaimedSlot >= numP1Slots) {
+                std::vector<int> candidates;
+                for (int s = 0; s < numP1Slots; s++) {
+                    if (m_p1OccupiedSlotsThisEpoch.find(s) == m_p1OccupiedSlotsThisEpoch.end()) {
+                        candidates.push_back(s);
+                    }
+                }
+                if (candidates.empty()) {
+                    for (int s = 0; s < numP1Slots; s++) candidates.push_back(s);
+                }
+                Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
+                int idx = uv->GetInteger(0, candidates.size() - 1);
+                m_p1ClaimedSlot = candidates[idx];
+                m_p1ConflictOccurred = false;
+            }
+            m_p1OccupiedSlotsThisEpoch.clear();
+
+            // Semi-persistent slot position fixed!
+            // Start of slot + micro-jitter for intra-slot CSMA/CCA tie-breaking
+            double slotStartUs = m_p1ClaimedSlot * g_p1SlotUs;
+            Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
+            double maxJitterUs = std::min(150.0, g_p1SlotUs * 0.2);
+            double jitterUs = uv->GetValue(0, maxJitterUs);
+            double txDelayUs = slotStartUs + jitterUs;
+
+            Simulator::Schedule(MicroSeconds(txDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
+        }
         if (m_id == 0) {
             Simulator::Schedule(MicroSeconds(g_phase1DurationUs), &SwarmSchedulerApp::EvaluatePhase1Epoch, this, m_epoch);
             double p2DoneUs = g_phase1DurationUs + GAP_US + (g_numDataSlots * DATA_SLOT_US) + 100.0;
@@ -656,16 +706,53 @@ private:
             if (params.m_status == MacStatus::CHANNEL_ACCESS_FAILURE) {
                 g_p1TxAbort++;
                 std::cout << "[P1_ABORT] Time: " << now << "ms, Drone: " << myId << std::endl;
-                // 如果還在 Phase 1 的有效時間內 (保留最後 2ms 緩衝)，則安排重新決策
-                if (now < m_epochStartTime + g_p1DurationMs - 2.0) {
-                    // 隨機等待 0.1 ~ 0.5 毫秒，讓對方的情報傳達過來，也錯開重試時間
-                    Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
-                    double retryDelay = uv->GetValue(0.1, 0.5);
-                    Simulator::Schedule(MilliSeconds(retryDelay), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
+                
+                if (g_enableP1Sidelink) {
+                    m_p1ConflictOccurred = true;
+                    std::cout << "[P1_SIDELINK_CONFLICT] Time: " << now << "ms, Drone: " << myId 
+                              << " lost slot " << m_p1ClaimedSlot << " (sensed busy). Slower node yielding!" << std::endl;
+                    
+                    // Attempt immediate migration to a later free slot in current epoch
+                    double availP1Us = std::max(1000.0, g_phase1DurationUs - 2000.0);
+                    int numP1Slots = std::max(1, (int)(availP1Us / g_p1SlotUs));
+                    double timeInP1Us = (now - m_epochStartTime) * 1000.0;
+                    int currentSlot = (int)(timeInP1Us / g_p1SlotUs);
+                    
+                    std::vector<int> laterFreeSlots;
+                    for (int s = currentSlot + 1; s < numP1Slots; s++) {
+                        if (m_p1OccupiedSlotsThisEpoch.find(s) == m_p1OccupiedSlotsThisEpoch.end()) {
+                            laterFreeSlots.push_back(s);
+                        }
+                    }
+                    if (!laterFreeSlots.empty()) {
+                        Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
+                        int idx = uv->GetInteger(0, laterFreeSlots.size() - 1);
+                        m_p1ClaimedSlot = laterFreeSlots[idx];
+                        m_p1ConflictOccurred = false;
+                        
+                        double nextTxUs = m_p1ClaimedSlot * g_p1SlotUs + uv->GetValue(0, 50.0);
+                        double delayUs = nextTxUs - timeInP1Us;
+                        if (delayUs > 50.0) {
+                            std::cout << "[P1_SIDELINK_MIGRATE] Drone " << myId << " migrating to later slot " 
+                                      << m_p1ClaimedSlot << " in current epoch!" << std::endl;
+                            Simulator::Schedule(MicroSeconds(delayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
+                        }
+                    }
+                } else {
+                    // 如果還在 Phase 1 的有效時間內 (保留最後 2ms 緩衝)，則安排重新決策
+                    if (now < m_epochStartTime + g_p1DurationMs - 2.0) {
+                        // 隨機等待 0.1 ~ 0.5 毫秒，讓對方的情報傳達過來，也錯開重試時間
+                        Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
+                        double retryDelay = uv->GetValue(0.1, 0.5);
+                        Simulator::Schedule(MilliSeconds(retryDelay), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
+                    }
                 }
             } else if (params.m_status == MacStatus::SUCCESS) {
                 g_p1TxSuccess++;
                 g_p1TxSuccessInEpoch[m_epoch][myId]++;
+                if (g_enableP1Sidelink) {
+                    m_p1ConflictOccurred = false; // Successfully retained
+                }
                 std::cout << "[P1_SUCCESS] Time: " << now << "ms, Drone: " << myId << std::endl;
             }
         } else if (params.m_msduHandle == 2) {
@@ -685,6 +772,13 @@ private:
 
         if (p->GetSize() == MINI_BEACON_SIZE) {
             g_p1RxSuccess++;
+            if (g_enableP1Sidelink) {
+                double timeInP1Us = (now - m_epochStartTime) * 1000.0;
+                if (timeInP1Us >= 0 && timeInP1Us < g_phase1DurationUs) {
+                    int slotIdx = (int)(timeInP1Us / g_p1SlotUs);
+                    m_p1OccupiedSlotsThisEpoch.insert(slotIdx);
+                }
+            }
             uint8_t buffer[2];
             p->CopyData(buffer, 2);
             uint16_t payload = buffer[0] | (buffer[1] << 8);
@@ -1318,6 +1412,8 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
     cmd.AddValue("p1TxPower", "Phase 1 TX Power in dBm (e.g., 0, 1, 3)", g_p1TxPower);
     cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);
+    cmd.AddValue("enableP1Sidelink", "Enable Sidelink-inspired Semi-Persistent Scheduling for Phase 1 (default false)", g_enableP1Sidelink);
+    cmd.AddValue("p1SlotUs", "Phase 1 Sidelink slot duration in microseconds (default 1000.0)", g_p1SlotUs);
     cmd.AddValue("p1AvoidDist", "RX Deafness defense distance in meters", g_p1AvoidDist);
     cmd.AddValue("p1AvoidRssi", "Defense RSSI threshold in dBm (-106 to -90)", g_p1AvoidRssi);
     cmd.AddValue("enableDefense", "Enable spatial slot defense (default true)", g_enableDefense);

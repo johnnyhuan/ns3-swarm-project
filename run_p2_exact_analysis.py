@@ -151,13 +151,13 @@ try:
     }
 
     plot_order = [
-        "PREAMBLE_LOW_SINR",
         "PREAMBLE_COLLISION_BUSY_RX",
         "TX_DEAFNESS_SAME_SLOT",
         "P1_DISCOVERY_MISS",
         "RX_DEAFNESS_SLOT_CONFLICT",
         "SENDER_CSMA_ABORT",
         "RECEIVER_CHANNEL_MISMATCH",
+        "PREAMBLE_LOW_SINR",
         "PAYLOAD_INTERFERENCE_DROP",
         "RADIO_TURNAROUND_BUSY"
     ]
@@ -189,14 +189,18 @@ try:
     for t in texts:
         pos = list(t.get_position())
         if 'Receiver Channel Mismatch' in t.get_text():
-            pos[1] += 0.08
-            pos[0] += 0.02
+            pos[1] += 0.06
+            pos[0] += 0.05
             t.set_position(pos)
         elif 'Sender CSMA Abort' in t.get_text():
             pos[0] += 0.05
             t.set_position(pos)
         elif 'TX Deafness' in t.get_text():
             pos[1] -= 0.04
+            t.set_position(pos)
+        elif 'Preamble Low SINR' in t.get_text():
+            pos[1] += 0.04
+            pos[0] -= 0.06
             t.set_position(pos)
 
     ax.set_title(f"Phase 2 Exact Physical Failure Breakdown [75 UAVs, 50m Top-5 Links]\n"

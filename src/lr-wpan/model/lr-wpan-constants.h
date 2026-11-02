@@ -46,9 +46,9 @@ constexpr uint32_t aMaxPhyPacketSize{127};
 /**
  * The turnaround time in symbol periods for switching the transceiver from RX to TX or
  * vice-versa.
- * Tuned to BLE 5.4: 80 symbols @ 2 Msym/s = 40 us fast PLL turnaround time.
+ * See Table 22 in section 6.4.1 of IEEE 802.15.4-2006
  */
-constexpr uint32_t aTurnaroundTime{80};
+constexpr uint32_t aTurnaroundTime{12};
 
 ///////////////////
 // MAC constants //
@@ -94,12 +94,9 @@ constexpr uint32_t aMaxLostBeacons{4};
 constexpr uint32_t aMaxSIFSFrameSize{18};
 
 /**
- * Number of symbols per CSMA/CA time unit.
- * Tuned to BLE 5.4 LE 2M: 400 symbols @ 2 Msym/s = 200 us backoff slot unit.
- * Ensures backoff slot (200 us) > Turnaround (40 us) + CCA (20 us) + frame air time (84 us),
- * completely eliminating transceiver turnaround blindness and serializing contention across 23 ms.
+ * Number of symbols per CSMA/CA time unit, default 20 symbols.
  */
-constexpr uint32_t aUnitBackoffPeriod{400};
+constexpr uint32_t aUnitBackoffPeriod{20};
 
 /**
  * The maximum number of octets added by the MAC sublayer to the MAC payload o a a beacon frame.

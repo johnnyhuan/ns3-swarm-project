@@ -14,7 +14,7 @@ NS3_DIR = os.path.expanduser("~/ns-3-dev")
 if not os.path.exists(NS3_DIR):
     NS3_DIR = PROJECT_DIR
 
-# Sync scratch/lr-wpan-swarm.cc and modified BLE 5.4 PHY/MAC files to NS3_DIR if needed
+# Sync scratch/lr-wpan-swarm.cc and modified PHY files to NS3_DIR if needed
 sync_files = [
     "scratch/lr-wpan-swarm.cc",
     "src/lr-wpan/model/lr-wpan-phy.cc",
@@ -32,6 +32,7 @@ for rel_path in sync_files:
             subprocess.run(["cp", src_f, dst_f], check=True)
         except Exception as e:
             print(f"Error syncing {rel_path}: {e}")
+            sys.exit(1)
 
 num_nodes = int(sys.argv[1]) if len(sys.argv) > 1 else 75
 node_speed = float(sys.argv[2]) if len(sys.argv) > 2 else 10.0

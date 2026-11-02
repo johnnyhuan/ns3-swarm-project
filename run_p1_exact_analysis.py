@@ -38,7 +38,7 @@ NS3_DIR = os.path.expanduser("~/ns-3-dev")
 if not os.path.exists(NS3_DIR):
     NS3_DIR = PROJECT_DIR
 
-# 1. Sync updated lr-wpan-swarm.cc and modified BLE 5.4 PHY/MAC files to NS3_DIR
+# 1. Sync updated lr-wpan-swarm.cc and modified PHY files to NS3_DIR
 sync_files = [
     "scratch/lr-wpan-swarm.cc",
     "src/lr-wpan/model/lr-wpan-phy.cc",

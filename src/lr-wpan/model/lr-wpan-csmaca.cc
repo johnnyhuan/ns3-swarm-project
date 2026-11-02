@@ -384,8 +384,7 @@ LrWpanCsmaCa::CanProceed()
     //
     //       note: phyCCADuration & 950Mhz band PHYs are
     //             not currently implemented in ns-3.
-    double ccaSymbolsPerCw = (m_mac->GetPhy()->GetDataOrSymbolRate(false) > 500000.0) ? 40.0 : 8.0;
-    ccaSymbols += ccaSymbolsPerCw * m_CW;
+    ccaSymbols += 8 * m_CW;
 
     // The MAC sublayer shall proceed if the remaining CSMA-CA algorithm steps
     // can be completed before the end of the CAP.

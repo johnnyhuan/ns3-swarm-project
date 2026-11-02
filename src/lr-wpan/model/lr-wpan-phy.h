@@ -540,13 +540,6 @@ class LrWpanPhy : public SpectrumPhy
     double GetCurrentSignalPsd();
 
     /**
-     * Get the peak signal power measured during the ongoing or most recent CCA period in dBm.
-     *
-     * @return peak signal power in dBm.
-     */
-    double GetCcaPeakPowerDbm() const;
-
-    /**
      * Assign a fixed random variable stream number to the random variables
      * used by this model.  Return the number of streams that have been assigned.
      *

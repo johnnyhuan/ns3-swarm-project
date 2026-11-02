@@ -59,15 +59,30 @@ static int g_totalExpectedRx = 0;
 static int g_txDeafnessCount = 0; 
 static int g_rxDeafnessCount = 0; 
 static int g_resourceCollisionCount = 0;
-static int g_totalExpectedTopKxEpochs = 0;
-static int g_totalReceivedDiscoveryTopK = 0;
-static int g_totalReceivedBeaconTopK = 0;
-static double g_totalSumDiscoveryIatTopK = 0;
-static int g_totalCountDiscoveryIatTopK = 0;
-static double g_globalMaxDiscoveryIatTopK = 0;
-static double g_totalSumAoITopK = 0;
-static int g_totalCountAoITopK = 0;
-static double g_globalMaxAoITopK = 0;
+
+// Dynamic Real-Time Top-5 Metrics (Per-Cycle Moment Evaluation Across 0-10s)
+static double g_dynSumDiscoveryIat = 0.0;
+static int g_dynCountDiscoveryIat = 0;
+static double g_dynMaxDiscoveryIat = 0.0;
+static std::map<std::pair<uint8_t, uint8_t>, double> g_lastDiscoveryRxTime;
+
+static double g_dynSumAoI = 0.0;
+static int g_dynCountAoI = 0;
+static double g_dynMaxAoI = 0.0;
+static std::map<std::pair<uint8_t, uint8_t>, double> g_lastBeaconRxGenTime;
+
+// Drone 0 real-time top-5 tracking for sample drone report
+static std::map<uint8_t, int> g_d0Top5Expected;
+static std::map<uint8_t, int> g_d0Top5DiscRx;
+static std::map<uint8_t, int> g_d0Top5BcnRx;
+static std::map<uint8_t, double> g_d0SumDiscIat;
+static std::map<uint8_t, int> g_d0CountDiscIat;
+static std::map<uint8_t, double> g_d0MaxDiscIat;
+static std::map<uint8_t, double> g_d0SumAoI;
+static std::map<uint8_t, int> g_d0CountAoI;
+static std::map<uint8_t, double> g_d0MaxAoI;
+static std::map<uint8_t, double> g_d0LastDist;
+
 static int g_totalTopologyMatchCount = 0;
 static int g_totalTopologyCheckCount = 0;
 static std::stringstream g_singleDroneReport;
@@ -896,6 +911,23 @@ private:
                 P1DropCategory cat = REASON_SUCCESS;
                 if (heard) {
                     cat = REASON_SUCCESS;
+                    double nowMs = Simulator::Now().GetMilliSeconds();
+                    auto lastIt = g_lastDiscoveryRxTime.find({(uint8_t)r, sender});
+                    if (lastIt != g_lastDiscoveryRxTime.end()) {
+                        double iat = nowMs - lastIt->second;
+                        if (iat > 0) {
+                            g_dynSumDiscoveryIat += iat;
+                            g_dynCountDiscoveryIat++;
+                            if (iat > g_dynMaxDiscoveryIat) g_dynMaxDiscoveryIat = iat;
+
+                            if (r == 0) {
+                                g_d0SumDiscIat[sender] += iat;
+                                g_d0CountDiscIat[sender]++;
+                                if (iat > g_d0MaxDiscIat[sender]) g_d0MaxDiscIat[sender] = iat;
+                            }
+                        }
+                    }
+                    g_lastDiscoveryRxTime[{(uint8_t)r, sender}] = nowMs;
                 } else {
                     int txSucc = 0;
                     auto itTxEp = g_p1TxSuccessInEpoch.find(epoch);
@@ -935,6 +967,14 @@ private:
                                 }
                             }
                         }
+                    }
+                }
+
+                if (r == 0) {
+                    g_d0Top5Expected[sender]++;
+                    g_d0LastDist[sender] = dist;
+                    if (heard) {
+                        g_d0Top5DiscRx[sender]++;
                     }
                 }
 
@@ -1009,8 +1049,13 @@ private:
                 }
 
                 P2DropCategory cat = P2_REASON_SUCCESS;
+                double nowMs = Simulator::Now().GetMilliSeconds();
                 if (delivered) {
                     cat = P2_REASON_SUCCESS;
+                    g_lastBeaconRxGenTime[{(uint8_t)r, sender}] = nowMs - 2.5;
+                    if (r == 0) {
+                        g_d0Top5BcnRx[sender]++;
+                    }
                 } else {
                     bool discoveredInP1 = false;
                     auto itP1Ep = g_p2DiscoveredInP1.find(epoch);
@@ -1088,6 +1133,22 @@ private:
                     }
                 }
 
+                auto genIt = g_lastBeaconRxGenTime.find({(uint8_t)r, sender});
+                if (genIt != g_lastBeaconRxGenTime.end()) {
+                    double aoi = nowMs - genIt->second;
+                    if (aoi > 0) {
+                        g_dynSumAoI += aoi;
+                        g_dynCountAoI++;
+                        if (aoi > g_dynMaxAoI) g_dynMaxAoI = aoi;
+
+                        if (r == 0) {
+                            g_d0SumAoI[sender] += aoi;
+                            g_d0CountAoI[sender]++;
+                            if (aoi > g_d0MaxAoI[sender]) g_d0MaxAoI[sender] = aoi;
+                        }
+                    }
+                }
+
                 P2LinkRecord rec;
                 rec.epoch = epoch;
                 rec.receiver = (uint8_t)r;
@@ -1106,66 +1167,46 @@ private:
     }
 
     void PrintMetrics() {
-        Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
-        std::vector<std::pair<uint8_t, double>> godDistances;
-        for (uint32_t i = 0; i < NodeList::GetNNodes(); i++) {
-            if (i == m_id) continue;
-            Ptr<MobilityModel> otherMobility = NodeList::GetNode(i)->GetObject<MobilityModel>();
-            double dist = myMobility->GetDistanceFrom(otherMobility);
-            if (dist <= M_RADIUS_METERS) {
-                godDistances.push_back({i, dist});
-            }
-        }
-        std::sort(godDistances.begin(), godDistances.end(), [](const auto& a, const auto& b) {
-            return a.second < b.second;
-        });
-
-        int expectedTop = std::min(K_CLOSEST, (int)godDistances.size());
-        g_totalExpectedTopKxEpochs += expectedTop * m_epoch;
-        
-        for (int i = 0; i < expectedTop; i++) {
-            uint8_t target = godDistances[i].first;
-            g_totalReceivedDiscoveryTopK += m_discoveryReceivedCount[target];
-            g_totalReceivedBeaconTopK += m_beaconReceivedCount[target];
-            
-            g_totalSumDiscoveryIatTopK += m_sumDiscoveryIat[target];
-            g_totalCountDiscoveryIatTopK += m_countDiscoveryIat[target];
-            if (m_maxDiscoveryIat.find(target) != m_maxDiscoveryIat.end() && m_maxDiscoveryIat[target] > g_globalMaxDiscoveryIatTopK) {
-                g_globalMaxDiscoveryIatTopK = m_maxDiscoveryIat[target];
-            }
-            
-            g_totalSumAoITopK += m_sumAoI[target];
-            g_totalCountAoITopK += m_countAoI[target];
-            if (m_maxAoI.find(target) != m_maxAoI.end() && m_maxAoI[target] > g_globalMaxAoITopK) {
-                g_globalMaxAoITopK = m_maxAoI[target];
-            }
-        }
-        
         g_totalTopologyMatchCount += m_topologyMatchCount;
         g_totalTopologyCheckCount += m_topologyCheckCount;
 
-
         static bool s_printedSampleDrone = false;
-        if (!s_printedSampleDrone && (godDistances.size() > 0 || m_id == 0)) {
+        if (!s_printedSampleDrone && m_id == 0) {
             s_printedSampleDrone = true;
-            g_singleDroneReport << "\n=== Drone " << std::setw(2) << (int)m_id << " Metrics Report (Top " << K_CLOSEST << " within " << M_RADIUS_METERS << "m) ===\n";
+            g_singleDroneReport << "\n=== Drone  0 Metrics Report (Real-Time Top " << K_CLOSEST << " within " << M_RADIUS_METERS << "m) ===\n";
             g_singleDroneReport << "Target (Dist)  | Disc. Ratio | Bcn Ratio | Avg Disc. IAT | Max Disc. IAT | Mean Bcn AoI | Max Bcn AoI\n";
             g_singleDroneReport << "-----------------------------------------------------------------------------------------------------\n";
             
-            for (int i = 0; i < std::min(K_CLOSEST, (int)godDistances.size()); i++) {
-                uint8_t target = godDistances[i].first;
-                double dist = godDistances[i].second;
+            // Pick Drone 0's top neighbors at final moment
+            Ptr<MobilityModel> myMob = m_device->GetNode()->GetObject<MobilityModel>();
+            std::vector<std::pair<uint8_t, double>> currDists;
+            for (uint32_t i = 1; i < NodeList::GetNNodes(); i++) {
+                Ptr<MobilityModel> otherMob = NodeList::GetNode(i)->GetObject<MobilityModel>();
+                double dist = myMob->GetDistanceFrom(otherMob);
+                if (dist <= M_RADIUS_METERS) {
+                    currDists.push_back({(uint8_t)i, dist});
+                }
+            }
+            std::sort(currDists.begin(), currDists.end(), [](const auto& a, const auto& b) {
+                return a.second < b.second;
+            });
+
+            int expectedTop = std::min(K_CLOSEST, (int)currDists.size());
+            for (int i = 0; i < expectedTop; i++) {
+                uint8_t target = currDists[i].first;
+                double dist = currDists[i].second;
                 
-                double discRatio = (double)m_discoveryReceivedCount[target] / m_epoch;
-                double bcnRatio = (double)m_beaconReceivedCount[target] / m_epoch;
-                double avgDiscIat = (m_countDiscoveryIat[target] > 0) ? (m_sumDiscoveryIat[target] / m_countDiscoveryIat[target]) : 0;
-                double maxDiscIat = (m_maxDiscoveryIat.find(target) != m_maxDiscoveryIat.end()) ? m_maxDiscoveryIat[target] : 0;
-                double meanAoI = (m_countAoI[target] > 0) ? (m_sumAoI[target] / m_countAoI[target]) : 0;
-                double maxAoI = (m_maxAoI.find(target) != m_maxAoI.end()) ? m_maxAoI[target] : 0;
-                
+                int expEpochs = g_d0Top5Expected[target];
+                double discRatio = (expEpochs > 0) ? (100.0 * g_d0Top5DiscRx[target] / expEpochs) : 0.0;
+                double bcnRatio = (expEpochs > 0) ? (100.0 * g_d0Top5BcnRx[target] / expEpochs) : 0.0;
+                double avgDiscIat = (g_d0CountDiscIat[target] > 0) ? (g_d0SumDiscIat[target] / g_d0CountDiscIat[target]) : 0.0;
+                double maxDiscIat = g_d0MaxDiscIat[target];
+                double meanAoI = (g_d0CountAoI[target] > 0) ? (g_d0SumAoI[target] / g_d0CountAoI[target]) : 0.0;
+                double maxAoI = g_d0MaxAoI[target];
+
                 g_singleDroneReport << "Drone " << std::setw(2) << (int)target << " (" << std::setw(3) << (int)dist << "m) | "
-                                    << std::fixed << std::setprecision(1) << std::setw(11) << discRatio * 100 << " | "
-                                    << std::fixed << std::setprecision(1) << std::setw(9) << bcnRatio * 100 << " | "
+                                    << std::fixed << std::setprecision(1) << std::setw(10) << discRatio << "% | "
+                                    << std::fixed << std::setprecision(1) << std::setw(8) << bcnRatio << "% | "
                                     << std::fixed << std::setprecision(1) << std::setw(13) << avgDiscIat << " | "
                                     << std::fixed << std::setprecision(1) << std::setw(13) << maxDiscIat << " | "
                                     << std::fixed << std::setprecision(1) << std::setw(12) << meanAoI << " | "
@@ -1544,21 +1585,22 @@ int main(int argc, char *argv[]) {
     Simulator::Stop(Seconds(g_simTime));
     Simulator::Run();
     
-    double globalDiscRatio = (g_totalExpectedTopKxEpochs > 0) ? (double)g_totalReceivedDiscoveryTopK / g_totalExpectedTopKxEpochs : 0;
-    double globalBcnRatio = (g_totalExpectedTopKxEpochs > 0) ? (double)g_totalReceivedBeaconTopK / g_totalExpectedTopKxEpochs : 0;
-    double globalAvgDiscIat = (g_totalCountDiscoveryIatTopK > 0) ? (g_totalSumDiscoveryIatTopK / g_totalCountDiscoveryIatTopK) : 0;
-    double globalMeanAoI = (g_totalCountAoITopK > 0) ? (g_totalSumAoITopK / g_totalCountAoITopK) : 0;
+    double globalDiscRatio = (g_p1TotalTargetLinks > 0) ? (double)g_p1ReasonCounts[REASON_SUCCESS] / g_p1TotalTargetLinks : 0.0;
+    double globalBcnRatio = (g_p2TotalTargetLinks > 0) ? (double)g_p2ReasonCounts[P2_REASON_SUCCESS] / g_p2TotalTargetLinks : 0.0;
+    double globalAvgDiscIat = (g_dynCountDiscoveryIat > 0) ? (g_dynSumDiscoveryIat / g_dynCountDiscoveryIat) : 0.0;
+    double globalMeanAoI = (g_dynCountAoI > 0) ? (g_dynSumAoI / g_dynCountAoI) : 0.0;
     
     std::stringstream ss;
     ss << "\n=================================================\n";
-    ss << "          GLOBAL NETWORK METRICS (" << std::fixed << std::setprecision(1) << g_simTime << "s)          \n";
+    ss << "       GLOBAL NETWORK METRICS (0.0s ~ " << std::fixed << std::setprecision(1) << g_simTime << "s)       \n";
+    ss << "    (Dynamic Real-Time Top-5 Neighbors Average)   \n";
     ss << "=================================================\n";
     ss << "Discovery Message Reception Ratio: " << std::fixed << std::setprecision(1) << globalDiscRatio * 100 << "%\n";
     ss << "Beacon Packet Reception Ratio   : " << std::fixed << std::setprecision(1) << globalBcnRatio * 100 << "%\n";
     ss << "Avg Discovery Msg IAT (Top-K)   : " << std::fixed << std::setprecision(1) << globalAvgDiscIat << " ms\n";
-    ss << "Max Discovery Msg IAT (Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxDiscoveryIatTopK << " ms\n";
+    ss << "Max Discovery Msg IAT (Top-K)   : " << std::fixed << std::setprecision(1) << g_dynMaxDiscoveryIat << " ms\n";
     ss << "Mean Beacon Packet AoI (Top-K)  : " << std::fixed << std::setprecision(1) << globalMeanAoI << " ms\n";
-    ss << "Max Beacon Packet AoI (Top-K)   : " << std::fixed << std::setprecision(1) << g_globalMaxAoITopK << " ms\n";
+    ss << "Max Beacon Packet AoI (Top-K)   : " << std::fixed << std::setprecision(1) << g_dynMaxAoI << " ms\n";
     ss << "-------------------------------------------------\n";
     ss << "=== PHASE 2 CONTENTION & DEAFNESS METRICS ===\n";
     ss << "Total Scheduled Top-K Neighbor Beacons: " << g_totalExpectedRx << "\n";
@@ -1566,6 +1608,12 @@ int main(int argc, char *argv[]) {
     ss << "RX Deafness (Slot conflict)           : " << g_rxDeafnessCount << " (" << std::fixed << std::setprecision(1) << (g_totalExpectedRx > 0 ? (double)g_rxDeafnessCount/g_totalExpectedRx*100 : 0) << "%)\n";
     ss << "Resource Collision (Same S+C)         : " << g_resourceCollisionCount << " (" << std::fixed << std::setprecision(1) << (g_totalExpectedRx > 0 ? (double)g_resourceCollisionCount/g_totalExpectedRx*100 : 0) << "%)\n";
     ss << "=================================================\n\n";
+
+    std::ofstream mFile("metrics.txt");
+    if (mFile.is_open()) {
+        mFile << ss.str();
+        mFile.close();
+    }
 
     if (g_originalCoutBuffer) {
         std::cout.rdbuf(g_originalCoutBuffer);

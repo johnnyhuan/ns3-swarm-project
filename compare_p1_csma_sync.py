@@ -14,16 +14,22 @@ NS3_DIR = os.path.expanduser("~/ns-3-dev")
 if not os.path.exists(NS3_DIR):
     NS3_DIR = PROJECT_DIR
 
-# Sync scratch/lr-wpan-swarm.cc to NS3_DIR if needed
-src_cc = os.path.join(PROJECT_DIR, "scratch/lr-wpan-swarm.cc")
-dst_cc = os.path.join(NS3_DIR, "scratch/lr-wpan-swarm.cc")
-if os.path.abspath(src_cc) != os.path.abspath(dst_cc):
-    try:
-        print(f"=> Syncing {src_cc} to {dst_cc}...")
-        subprocess.run(["cp", src_cc, dst_cc], check=True)
-    except Exception as e:
-        print(f"Error syncing code: {e}")
-        sys.exit(1)
+# Sync scratch/lr-wpan-swarm.cc and modified BLE 5.4 PHY files to NS3_DIR if needed
+sync_files = [
+    "scratch/lr-wpan-swarm.cc",
+    "src/lr-wpan/model/lr-wpan-phy.cc",
+    "src/lr-wpan/model/lr-wpan-constants.h"
+]
+for rel_path in sync_files:
+    src_f = os.path.join(PROJECT_DIR, rel_path)
+    dst_f = os.path.join(NS3_DIR, rel_path)
+    if os.path.exists(src_f) and os.path.abspath(src_f) != os.path.abspath(dst_f):
+        try:
+            print(f"=> Syncing {src_f} to {dst_f}...")
+            os.makedirs(os.path.dirname(dst_f), exist_ok=True)
+            subprocess.run(["cp", src_f, dst_f], check=True)
+        except Exception as e:
+            print(f"Error syncing {rel_path}: {e}")
 
 num_nodes = int(sys.argv[1]) if len(sys.argv) > 1 else 75
 node_speed = float(sys.argv[2]) if len(sys.argv) > 2 else 10.0

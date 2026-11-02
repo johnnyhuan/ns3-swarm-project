@@ -45,6 +45,7 @@ const double DATA_SLOT_US = 2500.0;
 // Sidelink S-SPS (Semi-Persistent Scheduling) for Phase 1
 bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
 double g_p1SlotUs = 1000.0;      // Phase 1 Sidelink slot duration in microseconds (default 1000 us)
+double g_p1CcaThresholdDbm = -96.58; // Phase 1 CSMA CCA Energy Detection Threshold in dBm (default: -96.58, standard 802.15.4)
 
 const uint8_t BROADCAST_CHANNEL = 11;
 
@@ -245,7 +246,8 @@ public:
         csma->SetMac(mac);
         
         csma->SetLrWpanMacStateCallback(MakeCallback(&LrWpanMac::SetLrWpanMacState, mac));
-        m_device->GetPhy()->SetPlmeCcaConfirmCallback(MakeCallback(&LrWpanCsmaCa::PlmeCcaConfirm, csma));
+        m_csma = csma;
+        m_device->GetPhy()->SetPlmeCcaConfirmCallback(MakeCallback(&SwarmSchedulerApp::CustomPlmeCcaConfirm, this));
 
         mac->SetPanId(1);
         mac->SetRxOnWhenIdle(true);
@@ -265,6 +267,20 @@ public:
         phy->TraceConnectWithoutContext("PhyTxBegin", MakeCallback(&SwarmSchedulerApp::NotifyPhyTxBegin, this));
 
         Simulator::Schedule(Seconds(g_simTime - 0.001), &SwarmSchedulerApp::PrintMetrics, this);
+    }
+
+    void CustomPlmeCcaConfirm(PhyEnumeration status) {
+        if (g_droneCurrentChannel[m_id] == BROADCAST_CHANNEL && g_p1CcaThresholdDbm > -900.0) {
+            if (status == IEEE_802_15_4_PHY_IDLE) {
+                double currentPsdDbm = m_device->GetPhy()->GetCurrentSignalPsd();
+                if (currentPsdDbm >= g_p1CcaThresholdDbm) {
+                    status = IEEE_802_15_4_PHY_BUSY;
+                }
+            }
+        }
+        if (m_csma) {
+            m_csma->PlmeCcaConfirm(status);
+        }
     }
 
     void NotifyPhyTrxStateChange(Time time, PhyEnumeration oldState, PhyEnumeration newState) {
@@ -411,6 +427,7 @@ private:
     int m_p1ClaimedSlot;
     bool m_p1ConflictOccurred;
     std::set<int> m_p1OccupiedSlotsThisEpoch;
+    Ptr<LrWpanCsmaCa> m_csma;
 
     void SwitchChannelAndPower(uint8_t ch, int8_t txPowerDbm) {
         g_droneCurrentChannel[m_id] = ch;
@@ -1494,6 +1511,7 @@ int main(int argc, char *argv[]) {
     CommandLine cmd;
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
     cmd.AddValue("p1TxPower", "Phase 1 TX Power in dBm (e.g., 0, 1, 3)", g_p1TxPower);
+    cmd.AddValue("p1CcaThresholdDbm", "Phase 1 CSMA CCA Energy Detection Threshold in dBm (-106.58 to -80.0, default -96.58)", g_p1CcaThresholdDbm);
     cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);
     cmd.AddValue("simTime", "Total simulation duration in seconds (default 10.0)", g_simTime);
     cmd.AddValue("enableP1Sidelink", "Enable Sidelink-inspired Semi-Persistent Scheduling for Phase 1 (default false)", g_enableP1Sidelink);

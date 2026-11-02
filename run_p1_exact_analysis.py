@@ -85,7 +85,7 @@ process.wait()
 print("=========================================================================\n")
 
 # 3. Copy output artifacts back to PROJECT_DIR if run in separate NS3_DIR
-for fname in ["p1_exact_drop_reasons.csv", "p1_ground_truth_report.txt"]:
+for fname in ["p1_exact_drop_reasons.csv", "p1_ground_truth_report.txt", "metrics.txt"]:
     src_f = os.path.join(NS3_DIR, fname)
     dst_f = os.path.join(PROJECT_DIR, fname)
     if os.path.exists(src_f) and os.path.abspath(src_f) != os.path.abspath(dst_f):

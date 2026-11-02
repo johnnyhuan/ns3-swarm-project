@@ -911,7 +911,8 @@ LrWpanPhy::PlmeSetTRXStateRequest(PhyEnumeration state)
             m_trxStatePending = IEEE_802_15_4_PHY_TX_ON;
 
             // Delay for turnaround time (BUSY_RX|RX_ON ---> TX_ON)
-            Time setTime = Seconds((double)lrwpan::aTurnaroundTime / GetDataOrSymbolRate(false));
+            // Tuned to BLE 5.4: 40 us fast PLL turnaround time (down from 192 us in 802.15.4)
+            Time setTime = MicroSeconds(40);
             m_setTRXState = Simulator::Schedule(setTime, &LrWpanPhy::EndSetTRXState, this);
             return;
         }
@@ -978,7 +979,8 @@ LrWpanPhy::PlmeSetTRXStateRequest(PhyEnumeration state)
             //       even when the transmitter is not busy? (6.9.1)
             m_trxStatePending = IEEE_802_15_4_PHY_RX_ON;
 
-            Time setTime = Seconds((double)lrwpan::aTurnaroundTime / GetDataOrSymbolRate(false));
+            // Turnaround delay: Tuned to BLE 5.4 fast PLL turnaround (40 us)
+            Time setTime = MicroSeconds(40);
             m_setTRXState = Simulator::Schedule(setTime, &LrWpanPhy::EndSetTRXState, this);
             return;
         }

@@ -332,6 +332,10 @@ public:
                     g_p1RxDropEvent[{epoch, sender, m_id}] = REASON_PREAMBLE_COLLISION_BUSY_RX;
                     std::cout << "[P1_PREAMBLE_COLLISION] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
                               << " | Antenna busy receiving Drone " << (int)g_droneReceivingUid[m_id] << std::endl;
+                } else if (g_dronePhyState[m_id] == IEEE_802_15_4_PHY_TRX_OFF) {
+                    g_p1RxDropEvent[{epoch, sender, m_id}] = REASON_RADIO_TURNAROUND_BUSY;
+                    std::cout << "[P1_RADIO_OFF] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
+                              << " | Transceiver in TRX_OFF state" << std::endl;
                 } else {
                     g_p1RxDropEvent[{epoch, sender, m_id}] = REASON_PREAMBLE_LOW_SINR;
                     std::cout << "[P1_PREAMBLE_LOW_SINR] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
@@ -438,6 +442,7 @@ private:
         
         m_device->GetMac()->GetPhy()->PlmeSetAttributeRequest(phyCurrentChannel, attrs);
         m_device->GetMac()->GetPhy()->PlmeSetAttributeRequest(phyTransmitPower, attrs);
+        m_device->GetMac()->GetPhy()->PlmeSetTRXStateRequest(IEEE_802_15_4_PHY_RX_ON);
     }
 
     void SendPacket(uint32_t size, Ptr<Packet> p, uint8_t msduHandle) {
@@ -481,7 +486,7 @@ private:
         if (!g_enableP1Sidelink) {
             Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
             double maxDelayUs = std::max(1000.0, g_phase1DurationUs - 2000.0);
-            double randomDelayUs = uv->GetValue(0, maxDelayUs);
+            double randomDelayUs = uv->GetValue(100.0, maxDelayUs);
             Simulator::Schedule(MicroSeconds(randomDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
         } else {
             // Sidelink S-SPS mode for Phase 1
@@ -511,7 +516,7 @@ private:
             Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
             double maxJitterUs = std::min(100.0, g_p1SlotUs * 0.1);
             double jitterUs = uv->GetValue(0, maxJitterUs);
-            double txDelayUs = slotStartUs + jitterUs;
+            double txDelayUs = 50.0 + slotStartUs + jitterUs;
 
             Simulator::Schedule(MicroSeconds(txDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
         }
@@ -900,7 +905,7 @@ private:
                             auto oMetaIt = g_p1PacketsMeta.find(oUid);
                             if (oMetaIt != g_p1PacketsMeta.end()) {
                                 double diff = std::abs(oMetaIt->second.txStartTime - sTxTime);
-                                if (diff < 0.27) { // Concurrent transmission on Broadcast Channel 11 (2 Mbps payload: ~268us air time)
+                                if (diff < 0.25) { // Concurrent transmission on Broadcast Channel 11 (2 Mbps: ~244us air time)
                                     Ptr<MobilityModel> otherMob = NodeList::GetNode(other)->GetObject<MobilityModel>();
                                     double otherDist = rMob->GetDistanceFrom(otherMob);
                                     double otherPrxDbm = g_p1TxPower - 46.6777 - 30.0 * std::log10(std::max(0.1, otherDist));

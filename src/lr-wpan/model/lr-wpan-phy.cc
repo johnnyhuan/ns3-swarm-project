@@ -1057,7 +1057,7 @@ LrWpanPhy::PlmeSetAttributeRequest(PhyPibAttributeIdentifier id, Ptr<PhyPibAttri
             // Cancel a pending transceiver state change.
             // Switch off the transceiver.
             // TODO: Is switching off the transceiver the right choice?
-            m_trxState = IEEE_802_15_4_PHY_TRX_OFF;
+            ChangeTrxState(IEEE_802_15_4_PHY_TRX_OFF);
             if (m_trxStatePending != IEEE_802_15_4_PHY_IDLE)
             {
                 m_trxStatePending = IEEE_802_15_4_PHY_IDLE;
@@ -1226,7 +1226,7 @@ LrWpanPhy::PlmeSetAttributeRequest(PhyPibAttributeIdentifier id, Ptr<PhyPibAttri
             // Cancel a pending transceiver state change.
             // Switch off the transceiver.
             // TODO: Is switching off the transceiver the right choice?
-            m_trxState = IEEE_802_15_4_PHY_TRX_OFF;
+            ChangeTrxState(IEEE_802_15_4_PHY_TRX_OFF);
             if (m_trxStatePending != IEEE_802_15_4_PHY_IDLE)
             {
                 m_trxStatePending = IEEE_802_15_4_PHY_IDLE;

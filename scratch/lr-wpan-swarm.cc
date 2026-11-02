@@ -44,7 +44,7 @@ const double DATA_SLOT_US = 2500.0;
 
 // Sidelink S-SPS (Semi-Persistent Scheduling) for Phase 1
 bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
-double g_p1SlotUs = 800.0;       // Phase 1 Sidelink slot duration in microseconds (default 800 us)
+double g_p1SlotUs = 1000.0;      // Phase 1 Sidelink slot duration in microseconds (default 1000 us)
 
 const uint8_t BROADCAST_CHANNEL = 11;
 
@@ -477,7 +477,7 @@ private:
             // Perform CSMA inside the slot: slotStartUs + micro-jitter for intra-slot CSMA/CCA tie-breaking
             double slotStartUs = m_p1ClaimedSlot * g_p1SlotUs;
             Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
-            double maxJitterUs = std::min(60.0, g_p1SlotUs * 0.1);
+            double maxJitterUs = std::min(100.0, g_p1SlotUs * 0.1);
             double jitterUs = uv->GetValue(0, maxJitterUs);
             double txDelayUs = slotStartUs + jitterUs;
 
@@ -1456,7 +1456,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);
     cmd.AddValue("simTime", "Total simulation duration in seconds (default 10.0)", g_simTime);
     cmd.AddValue("enableP1Sidelink", "Enable Sidelink-inspired Semi-Persistent Scheduling for Phase 1 (default false)", g_enableP1Sidelink);
-    cmd.AddValue("p1SlotUs", "Phase 1 Sidelink slot duration in microseconds (default 800.0)", g_p1SlotUs);
+    cmd.AddValue("p1SlotUs", "Phase 1 Sidelink slot duration in microseconds (default 1000.0)", g_p1SlotUs);
     cmd.AddValue("p1AvoidDist", "RX Deafness defense distance in meters", g_p1AvoidDist);
     cmd.AddValue("p1AvoidRssi", "Defense RSSI threshold in dBm (-106 to -90)", g_p1AvoidRssi);
     cmd.AddValue("enableDefense", "Enable spatial slot defense (default true)", g_enableDefense);

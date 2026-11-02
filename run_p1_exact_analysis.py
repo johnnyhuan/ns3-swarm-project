@@ -15,7 +15,7 @@ node_speed = float(sys.argv[2]) if len(sys.argv) > 2 else 10.0
 p1_duration = float(sys.argv[3]) if len(sys.argv) > 3 else 25.0
 p1_power = int(sys.argv[4]) if len(sys.argv) > 4 else 0
 enable_sidelink = (sys.argv[5].lower() in ["true", "1", "yes"]) if len(sys.argv) > 5 else True
-p1_slot_us = float(sys.argv[6]) if len(sys.argv) > 6 else 800.0
+p1_slot_us = float(sys.argv[6]) if len(sys.argv) > 6 else 1000.0
 sim_time = float(sys.argv[7]) if len(sys.argv) > 7 else 10.0
 
 print(f"• Swarm Scale    : {num_nodes} UAVs")

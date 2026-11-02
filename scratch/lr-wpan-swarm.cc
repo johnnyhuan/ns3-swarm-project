@@ -44,7 +44,7 @@ const double DATA_SLOT_US = 2500.0;
 
 // Sidelink S-SPS (Semi-Persistent Scheduling) for Phase 1
 bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
-double g_p1SlotUs = 600.0;       // Phase 1 Sidelink slot duration in microseconds (default 600 us)
+double g_p1SlotUs = 800.0;       // Phase 1 Sidelink slot duration in microseconds (default 800 us)
 
 const uint8_t BROADCAST_CHANNEL = 11;
 
@@ -216,7 +216,7 @@ static std::map<uint32_t, std::map<uint8_t, std::map<int, uint8_t>>> g_p2SlotTar
 
 class SwarmSchedulerApp : public Application {
 public:
-    SwarmSchedulerApp() : m_epoch(0), m_myClaimedSlot(0), m_myClaimedChannel(0), m_topologyMatchCount(0), m_topologyCheckCount(0), m_epochStartTime(0), m_p1ClaimedSlot(-1), m_p1ConflictOccurred(false) {}
+    SwarmSchedulerApp() : m_epoch(0), m_myClaimedSlot(0), m_myClaimedChannel(0), m_topologyMatchCount(0), m_topologyCheckCount(0), m_epochStartTime(0), m_p1ClaimedSlot(-1), m_p1ConflictOccurred(false), m_p1ReselCounter(0) {}
 
     void Setup(Ptr<LrWpanNetDevice> dev, uint8_t id) {
         m_device = dev;
@@ -395,6 +395,7 @@ private:
     // Phase 1 Sidelink S-SPS variables
     int m_p1ClaimedSlot;
     bool m_p1ConflictOccurred;
+    int m_p1ReselCounter;
     std::set<int> m_p1OccupiedSlotsThisEpoch;
 
     void SwitchChannelAndPower(uint8_t ch, int8_t txPowerDbm) {
@@ -456,8 +457,11 @@ private:
             double availP1Us = std::max(1000.0, g_phase1DurationUs - 2000.0);
             int numP1Slots = std::max(1, (int)(availP1Us / g_p1SlotUs));
 
-            // Reselect slot if first epoch or if collision was detected in previous epoch
-            if (m_p1ClaimedSlot < 0 || m_p1ConflictOccurred || m_p1ClaimedSlot >= numP1Slots) {
+            // Decrement reselection counter to adapt to UAV mobility
+            m_p1ReselCounter--;
+
+            // Reselect slot if first epoch, conflict detected, slot out of bounds, or reselection counter expired
+            if (m_p1ClaimedSlot < 0 || m_p1ConflictOccurred || m_p1ClaimedSlot >= numP1Slots || m_p1ReselCounter <= 0) {
                 std::vector<int> candidates;
                 for (int s = 0; s < numP1Slots; s++) {
                     if (m_p1OccupiedSlotsThisEpoch.find(s) == m_p1OccupiedSlotsThisEpoch.end()) {
@@ -471,14 +475,15 @@ private:
                 int idx = uv->GetInteger(0, candidates.size() - 1);
                 m_p1ClaimedSlot = candidates[idx];
                 m_p1ConflictOccurred = false;
+                // Reselect counter: hold slot for ~15 to 30 cycles (approx 0.75s ~ 1.5s), adapting to mobility!
+                m_p1ReselCounter = uv->GetInteger(15, 30);
             }
             m_p1OccupiedSlotsThisEpoch.clear();
 
-            // Semi-persistent slot position fixed!
-            // Start of slot + micro-jitter for intra-slot CSMA/CCA tie-breaking
+            // Perform CSMA inside the slot: slotStartUs + micro-jitter for intra-slot CSMA/CCA tie-breaking
             double slotStartUs = m_p1ClaimedSlot * g_p1SlotUs;
             Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
-            double maxJitterUs = std::min(50.0, g_p1SlotUs * 0.1);
+            double maxJitterUs = std::min(60.0, g_p1SlotUs * 0.1);
             double jitterUs = uv->GetValue(0, maxJitterUs);
             double txDelayUs = slotStartUs + jitterUs;
 
@@ -710,6 +715,7 @@ private:
                 
                 if (g_enableP1Sidelink) {
                     m_p1ConflictOccurred = true;
+                    m_p1ReselCounter = 0;
                     std::cout << "[P1_SIDELINK_CONFLICT] Time: " << now << "ms, Drone: " << myId 
                               << " lost slot " << m_p1ClaimedSlot << " (sensed busy). Slower node yielding!" << std::endl;
                     
@@ -730,6 +736,7 @@ private:
                         int idx = uv->GetInteger(0, laterFreeSlots.size() - 1);
                         m_p1ClaimedSlot = laterFreeSlots[idx];
                         m_p1ConflictOccurred = false;
+                        m_p1ReselCounter = uv->GetInteger(15, 30);
                         
                         double nextTxUs = m_p1ClaimedSlot * g_p1SlotUs + uv->GetValue(0, 50.0);
                         double delayUs = nextTxUs - timeInP1Us;
@@ -1457,7 +1464,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);
     cmd.AddValue("simTime", "Total simulation duration in seconds (default 10.0)", g_simTime);
     cmd.AddValue("enableP1Sidelink", "Enable Sidelink-inspired Semi-Persistent Scheduling for Phase 1 (default false)", g_enableP1Sidelink);
-    cmd.AddValue("p1SlotUs", "Phase 1 Sidelink slot duration in microseconds (default 600.0)", g_p1SlotUs);
+    cmd.AddValue("p1SlotUs", "Phase 1 Sidelink slot duration in microseconds (default 800.0)", g_p1SlotUs);
     cmd.AddValue("p1AvoidDist", "RX Deafness defense distance in meters", g_p1AvoidDist);
     cmd.AddValue("p1AvoidRssi", "Defense RSSI threshold in dBm (-106 to -90)", g_p1AvoidRssi);
     cmd.AddValue("enableDefense", "Enable spatial slot defense (default true)", g_enableDefense);

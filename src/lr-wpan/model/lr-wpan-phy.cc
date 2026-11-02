@@ -58,7 +58,7 @@ constexpr std::array<PhyDataAndSymbolRates, 10> dataSymbolRates{{
     {250.0, 62.5}, // IEEE_802_15_4_780MHZ_OQPSK
     {100.0, 25.0}, // IEEE_802_15_4_868MHZ_OQPSK
     {250.0, 62.5}, // IEEE_802_15_4_915MHZ_OQPSK
-    {2000.0, 2000.0}, // IEEE_802_15_4_2_4GHZ_OQPSK tuned to BLE 5.4 2M PHY (2000 kbps, 2000 ksym/s)
+    {2000.0, 62.5}, // IEEE_802_15_4_2_4GHZ_OQPSK: 2 Mbps bit rate, standard 62.5 ksym/s for stable CSMA CCA
     {0, 0},        // IEEE_802_15_4_INVALID_PHY_OPTION
 }};
 

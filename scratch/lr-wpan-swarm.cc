@@ -900,7 +900,7 @@ private:
                             auto oMetaIt = g_p1PacketsMeta.find(oUid);
                             if (oMetaIt != g_p1PacketsMeta.end()) {
                                 double diff = std::abs(oMetaIt->second.txStartTime - sTxTime);
-                                if (diff < 0.085) { // Concurrent transmission on Broadcast Channel 11 (2 Mbps: ~82us air time)
+                                if (diff < 0.27) { // Concurrent transmission on Broadcast Channel 11 (2 Mbps payload: ~268us air time)
                                     Ptr<MobilityModel> otherMob = NodeList::GetNode(other)->GetObject<MobilityModel>();
                                     double otherDist = rMob->GetDistanceFrom(otherMob);
                                     double otherPrxDbm = g_p1TxPower - 46.6777 - 30.0 * std::log10(std::max(0.1, otherDist));

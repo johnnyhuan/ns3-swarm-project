@@ -722,7 +722,10 @@ LrWpanPhy::PlmeCcaRequest()
     if (m_trxState == IEEE_802_15_4_PHY_RX_ON || m_trxState == IEEE_802_15_4_PHY_BUSY_RX)
     {
         m_ccaPeakPower = 0.0;
-        Time ccaTime = Seconds(8.0 / GetDataOrSymbolRate(false));
+        // BLE 5.4 LE 2M: ETSI EN 300 328 LBT standard requires >= 18~20 us observation time (40 symbols @ 2 Msym/s).
+        // 802.15.4 standard: 8 symbols @ 62.5 ksym/s = 128 us.
+        double ccaSymbols = (GetDataOrSymbolRate(false) > 500000.0) ? 40.0 : 8.0;
+        Time ccaTime = Seconds(ccaSymbols / GetDataOrSymbolRate(false));
         m_ccaRequest = Simulator::Schedule(ccaTime, &LrWpanPhy::EndCca, this);
     }
     else
@@ -1922,6 +1925,16 @@ LrWpanPhy::SetPostReceptionErrorModel(const Ptr<ErrorModel> em)
 {
     NS_LOG_FUNCTION(this << em);
     m_postReceptionErrorModel = em;
+}
+
+double
+LrWpanPhy::GetCcaPeakPowerDbm() const
+{
+    if (m_ccaPeakPower <= 0.0)
+    {
+        return -120.0;
+    }
+    return (10 * log10(1000 * m_ccaPeakPower));
 }
 
 } // namespace lrwpan

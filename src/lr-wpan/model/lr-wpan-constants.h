@@ -94,9 +94,12 @@ constexpr uint32_t aMaxLostBeacons{4};
 constexpr uint32_t aMaxSIFSFrameSize{18};
 
 /**
- * Number of symbols per CSMA/CA time unit, default 20 symbols.
+ * Number of symbols per CSMA/CA time unit.
+ * Tuned to BLE 5.4 LE 2M: 400 symbols @ 2 Msym/s = 200 us backoff slot unit.
+ * Ensures backoff slot (200 us) > Turnaround (40 us) + CCA (20 us) + frame air time (84 us),
+ * completely eliminating transceiver turnaround blindness and serializing contention across 23 ms.
  */
-constexpr uint32_t aUnitBackoffPeriod{20};
+constexpr uint32_t aUnitBackoffPeriod{400};
 
 /**
  * The maximum number of octets added by the MAC sublayer to the MAC payload o a a beacon frame.

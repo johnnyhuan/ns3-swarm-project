@@ -272,8 +272,10 @@ public:
     void CustomPlmeCcaConfirm(PhyEnumeration status) {
         if (g_droneCurrentChannel[m_id] == BROADCAST_CHANNEL && g_p1CcaThresholdDbm > -900.0) {
             if (status == IEEE_802_15_4_PHY_IDLE) {
+                double peakPsdDbm = m_device->GetPhy()->GetCcaPeakPowerDbm();
                 double currentPsdDbm = m_device->GetPhy()->GetCurrentSignalPsd();
-                if (currentPsdDbm >= g_p1CcaThresholdDbm) {
+                double sensedDbm = std::max(peakPsdDbm, currentPsdDbm);
+                if (sensedDbm >= g_p1CcaThresholdDbm) {
                     status = IEEE_802_15_4_PHY_BUSY;
                 }
             }
@@ -773,9 +775,9 @@ private:
                 } else {
                     // 如果還在 Phase 1 的有效時間內 (保留最後 2ms 緩衝)，則安排重新決策
                     if (now < m_epochStartTime + g_p1DurationMs - 2.0) {
-                        // BLE 5.4 高速重試：等待 50 ~ 200 微秒，錯開重試時間
+                        // BLE 5.4 高速重試：等待 0.2 ~ 0.8 毫秒，錯開重試時間
                         Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
-                        double retryDelay = uv->GetValue(0.05, 0.2);
+                        double retryDelay = uv->GetValue(0.2, 0.8);
                         Simulator::Schedule(MilliSeconds(retryDelay), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
                     }
                 }
@@ -900,7 +902,7 @@ private:
                             auto oMetaIt = g_p1PacketsMeta.find(oUid);
                             if (oMetaIt != g_p1PacketsMeta.end()) {
                                 double diff = std::abs(oMetaIt->second.txStartTime - sTxTime);
-                                if (diff < 0.06) { // Concurrent transmission on Broadcast Channel 11 (BLE 5.4 2M ~52us air time)
+                                if (diff < 0.084) { // Concurrent transmission on Broadcast Channel 11 (BLE 5.4 2M ~84us air time)
                                     Ptr<MobilityModel> otherMob = NodeList::GetNode(other)->GetObject<MobilityModel>();
                                     double otherDist = rMob->GetDistanceFrom(otherMob);
                                     double otherPrxDbm = g_p1TxPower - 46.6777 - 30.0 * std::log10(std::max(0.1, otherDist));

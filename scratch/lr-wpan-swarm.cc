@@ -485,12 +485,12 @@ private:
         
         if (!g_enableP1Sidelink) {
             Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
-            double maxDelayUs = std::max(1000.0, g_phase1DurationUs - 2000.0);
+            double maxDelayUs = std::max(500.0, g_phase1DurationUs - 500.0);
             double randomDelayUs = uv->GetValue(100.0, maxDelayUs);
             Simulator::Schedule(MicroSeconds(randomDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
         } else {
             // Sidelink S-SPS mode for Phase 1
-            double availP1Us = std::max(1000.0, g_phase1DurationUs - 2000.0);
+            double availP1Us = std::max(500.0, g_phase1DurationUs - 500.0);
             int numP1Slots = std::max(1, (int)(availP1Us / g_p1SlotUs));
 
             // Reselect slot ONLY if first epoch, conflict detected by CSMA, or slot out of bounds
@@ -750,7 +750,7 @@ private:
                               << " lost slot " << m_p1ClaimedSlot << " (sensed busy). Slower node yielding!" << std::endl;
                     
                     // Attempt immediate migration to a later free slot in current epoch
-                    double availP1Us = std::max(1000.0, g_phase1DurationUs - 2000.0);
+                    double availP1Us = std::max(500.0, g_phase1DurationUs - 500.0);
                     int numP1Slots = std::max(1, (int)(availP1Us / g_p1SlotUs));
                     double timeInP1Us = (now - m_epochStartTime) * 1000.0;
                     int currentSlot = (int)(timeInP1Us / g_p1SlotUs);
@@ -776,8 +776,8 @@ private:
                         }
                     }
                 } else {
-                    // 如果還在 Phase 1 的有效時間內 (保留最後 2ms 緩衝)，則安排重新決策
-                    if (now < m_epochStartTime + g_p1DurationMs - 2.0) {
+                    // 如果還在 Phase 1 的有效時間內 (保留最後 0.5ms 緩衝)，則安排重新決策
+                    if (now < m_epochStartTime + g_p1DurationMs - 0.5) {
                         // 隨機等待 0.1 ~ 0.5 毫秒，讓對方的情報傳達過來，也錯開重試時間
                         Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
                         double retryDelay = uv->GetValue(0.1, 0.5);

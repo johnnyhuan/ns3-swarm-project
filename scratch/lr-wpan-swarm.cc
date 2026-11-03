@@ -93,6 +93,7 @@ static int g_p1TxAttempts = 0;
 static int g_p1TxAbort = 0;
 static int g_p1TxSuccess = 0;
 static int g_p1RxSuccess = 0;
+static int g_totalCaptureEvents = 0;
 
 // --- Phase 1 Ground Truth Physical Drop Tracking ---
 enum P1DropCategory {
@@ -264,6 +265,7 @@ public:
         phy->TraceConnectWithoutContext("PhyRxBegin", MakeCallback(&SwarmSchedulerApp::NotifyPhyRxBegin, this));
         phy->TraceConnectWithoutContext("PhyRxEnd", MakeCallback(&SwarmSchedulerApp::NotifyPhyRxEnd, this));
         phy->TraceConnectWithoutContext("PhyRxDrop", MakeCallback(&SwarmSchedulerApp::NotifyPhyRxDrop, this));
+        phy->TraceConnectWithoutContext("PhyRxCapture", MakeCallback(&SwarmSchedulerApp::NotifyPhyRxCapture, this));
         phy->TraceConnectWithoutContext("PhyTxBegin", MakeCallback(&SwarmSchedulerApp::NotifyPhyTxBegin, this));
 
         Simulator::Schedule(Seconds(g_simTime - 0.001), &SwarmSchedulerApp::PrintMetrics, this);
@@ -365,6 +367,22 @@ public:
                 }
             }
         }
+    }
+
+    void NotifyPhyRxCapture(Ptr<const Packet> capP, Ptr<const Packet> preP) {
+        g_totalCaptureEvents++;
+        uint64_t capUid = capP->GetUid();
+        uint64_t preUid = preP->GetUid();
+        double now = Simulator::Now().GetMilliSeconds();
+        uint8_t capSender = 255;
+        uint8_t preSender = 255;
+        auto itCap = g_p1PacketsMeta.find(capUid);
+        if (itCap != g_p1PacketsMeta.end()) capSender = itCap->second.senderId;
+        auto itPre = g_p1PacketsMeta.find(preUid);
+        if (itPre != g_p1PacketsMeta.end()) preSender = itPre->second.senderId;
+        std::cout << "[P1_CAPTURE] Time: " << now << "ms, Rx: " << (int)m_id
+                  << " CAPTURED Tx: " << (int)capSender << " (Uid: " << capUid << ")"
+                  << ", PREEMPTED Tx: " << (int)preSender << " (Uid: " << preUid << ")" << std::endl;
     }
 
     void NotifyPhyTxBegin(Ptr<const Packet> p) {
@@ -1308,6 +1326,7 @@ void PrintGroundTruthReport() {
         }
     }
     ss << "📡 PHYSICAL RF SIGNAL PROOFS (Averages & Evidence):\n";
+    ss << "  • Total Power Capture Events Triggered : " << g_totalCaptureEvents << " (rescued packets from closer neighbors)\n";
     if (cntSucc > 0) {
         ss << "  • Delivered Links Mean SINR           : " << std::fixed << std::setprecision(1) << (sumSinrSucc / cntSucc) << " dB (IEEE Threshold: > -5.0 dB)\n";
     }
@@ -1461,6 +1480,7 @@ void PrintPhase2GroundTruthReport() {
         }
     }
     ss << "📡 PHYSICAL RF SIGNAL PROOFS (Averages & Evidence):\n";
+    ss << "  • Total Power Capture Events Triggered : " << g_totalCaptureEvents << " (rescued packets from closer neighbors)\n";
     if (cntSucc > 0) {
         ss << "  • Delivered Links Mean SINR           : " << std::fixed << std::setprecision(1) << (sumSinrSucc / cntSucc) << " dB (IEEE Threshold: > -5.0 dB)\n";
     }

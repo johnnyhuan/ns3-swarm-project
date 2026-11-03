@@ -351,6 +351,30 @@ class LrWpanPhy : public SpectrumPhy
     double GetRxSensitivity();
 
     /**
+     * Set if frame capture effect is enabled.
+     * @param enable true to enable capture effect
+     */
+    void SetCaptureEnabled(bool enable);
+
+    /**
+     * Check if frame capture effect is enabled.
+     * @return true if capture effect is enabled
+     */
+    bool IsCaptureEnabled() const;
+
+    /**
+     * Set power capture margin in dB.
+     * @param marginDbm capture margin in dB
+     */
+    void SetCaptureMargin(double marginDbm);
+
+    /**
+     * Get power capture margin in dB.
+     * @return capture margin in dB
+     */
+    double GetCaptureMargin() const;
+
+    /**
      * Notify the SpectrumPhy instance of an incoming waveform.
      *
      * @param params the SpectrumSignalParameters associated with the incoming waveform
@@ -563,6 +587,15 @@ class LrWpanPhy : public SpectrumPhy
                                         PhyEnumeration oldState,
                                         PhyEnumeration newState);
 
+    /**
+     * \brief Callback signature for packet capture event.
+     *
+     * \param capturedPacket The newly arrived packet that captured the radio.
+     * \param preemptedPacket The weaker ongoing packet that was preempted.
+     */
+    typedef void (*RxCaptureTracedCallback)(Ptr<const Packet> capturedPacket,
+                                            Ptr<const Packet> preemptedPacket);
+
   private:
     /**
      * The second is true if the first is flagged as error/invalid.
@@ -749,6 +782,14 @@ class LrWpanPhy : public SpectrumPhy
      * @see class CallBackTraceSource
      */
     TracedCallback<Ptr<const Packet>> m_phyRxDropTrace;
+
+    /**
+     * The trace source fired when a stronger packet captures the receiver,
+     * preempting an ongoing weaker packet reception.
+     *
+     * @see class CallBackTraceSource
+     */
+    TracedCallback<Ptr<const Packet>, Ptr<const Packet>> m_phyRxCaptureTrace;
 
     /**
      * The trace source fired when the phy layer changes the transceiver state.
@@ -979,6 +1020,17 @@ class LrWpanPhy : public SpectrumPhy
      * Error model for receive packet events
      */
     Ptr<ErrorModel> m_postReceptionErrorModel;
+
+    /**
+     * Flag indicating if frame capture effect is enabled.
+     */
+    bool m_enableCapture;
+
+    /**
+     * Power capture margin in dB. A newly arrived packet with power at least this
+     * margin above the currently received packet will preempt and capture the receiver.
+     */
+    double m_captureMarginDbm;
 };
 
 } // namespace lrwpan

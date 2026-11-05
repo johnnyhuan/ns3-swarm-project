@@ -8,6 +8,7 @@
 #include <sstream>
 #include <vector>
 #include <algorithm>
+#include <cmath>
 #include <iomanip>
 #include <map>
 #include <set>
@@ -44,7 +45,7 @@ const double DATA_SLOT_US = 2500.0;
 
 // Sidelink S-SPS (Semi-Persistent Scheduling) for Phase 1
 bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
-double g_p1SlotUs = 1000.0;      // Phase 1 Sidelink slot duration in microseconds (default 1000 us)
+double g_p1SlotUs = 500.0;       // Phase 1 Sidelink slot duration in microseconds (default 500 us -> 20 slots in 10ms)
 double g_p1CcaThresholdDbm = -96.58; // Phase 1 CSMA CCA Energy Detection Threshold in dBm (default: -96.58, standard 802.15.4)
 
 const uint8_t BROADCAST_CHANNEL = 11;
@@ -240,7 +241,7 @@ static std::map<uint32_t, std::map<uint8_t, std::map<int, uint8_t>>> g_p2SlotTar
 
 class SwarmSchedulerApp : public Application {
 public:
-    SwarmSchedulerApp() : m_epoch(0), m_myClaimedSlot(0), m_myClaimedChannel(0), m_topologyMatchCount(0), m_topologyCheckCount(0), m_epochStartTime(0), m_p1ClaimedSlot(-1), m_p1ConflictOccurred(false) {}
+    SwarmSchedulerApp() : m_epoch(0), m_myClaimedSlot(0), m_myClaimedChannel(0), m_topologyMatchCount(0), m_topologyCheckCount(0), m_epochStartTime(0), m_p1ClaimedSlot(-1), m_p1ReselCounter(0), m_p1ConflictOccurred(false) {}
 
     void Setup(Ptr<LrWpanNetDevice> dev, uint8_t id) {
         m_device = dev;
@@ -279,7 +280,10 @@ public:
     }
 
     void CustomPlmeCcaConfirm(PhyEnumeration status) {
-        if (g_droneCurrentChannel[m_id] == BROADCAST_CHANNEL && g_p1CcaThresholdDbm > -900.0) {
+        if (g_enableP1Sidelink && g_droneCurrentChannel[m_id] == BROADCAST_CHANNEL) {
+            // Sidelink S-SPS mode: Transmit directly in own slot without CSMA CCA backoff or abort!
+            status = IEEE_802_15_4_PHY_IDLE;
+        } else if (g_droneCurrentChannel[m_id] == BROADCAST_CHANNEL && g_p1CcaThresholdDbm > -900.0) {
             if (status == IEEE_802_15_4_PHY_IDLE) {
                 double currentPsdDbm = m_device->GetPhy()->GetCurrentSignalPsd();
                 if (currentPsdDbm >= g_p1CcaThresholdDbm) {
@@ -302,9 +306,18 @@ public:
 
         if (g_enableP1Sidelink && g_droneCurrentChannel[m_id] == BROADCAST_CHANNEL) {
             double timeInP1Us = (Simulator::Now().GetMilliSeconds() - m_epochStartTime) * 1000.0;
-            if (timeInP1Us >= 0 && timeInP1Us < g_phase1DurationUs) {
-                int slotIdx = (int)(timeInP1Us / g_p1SlotUs);
+            int numP1Slots = std::max(1, (int)((g_phase1DurationUs - 450.0) / g_p1SlotUs) + 1);
+            int slotIdx = (int)(timeInP1Us / g_p1SlotUs);
+            if (slotIdx >= 0 && slotIdx < numP1Slots) {
                 m_p1OccupiedSlotsThisEpoch.insert(slotIdx);
+                if ((int)m_slotSensedEnergy.size() != numP1Slots) {
+                    m_slotSensedEnergy.assign(numP1Slots, 0.0);
+                    m_slotPacketCount.assign(numP1Slots, 0);
+                }
+                m_slotPacketCount[slotIdx]++;
+                double currentPsdDbm = m_device->GetPhy()->GetCurrentSignalPsd();
+                double powerMw = std::pow(10.0, currentPsdDbm / 10.0);
+                m_slotSensedEnergy[slotIdx] += powerMw;
             }
         }
 
@@ -454,8 +467,11 @@ private:
 
     // Phase 1 Sidelink S-SPS variables
     int m_p1ClaimedSlot;
+    int m_p1ReselCounter;
     bool m_p1ConflictOccurred;
     std::set<int> m_p1OccupiedSlotsThisEpoch;
+    std::vector<double> m_slotSensedEnergy;
+    std::vector<int> m_slotPacketCount;
     Ptr<LrWpanCsmaCa> m_csma;
 
     void SwitchChannelAndPower(uint8_t ch, int8_t txPowerDbm) {
@@ -515,33 +531,57 @@ private:
             Simulator::Schedule(MicroSeconds(randomDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
         } else {
             // Sidelink S-SPS mode for Phase 1
-            double availP1Us = std::max(500.0, g_phase1DurationUs - 500.0);
-            int numP1Slots = std::max(1, (int)(availP1Us / g_p1SlotUs));
+            int numP1Slots = std::max(1, (int)((g_phase1DurationUs - 450.0) / g_p1SlotUs) + 1);
 
-            // Reselect slot ONLY if first epoch, conflict detected by CSMA, or slot out of bounds
-            if (m_p1ClaimedSlot < 0 || m_p1ConflictOccurred || m_p1ClaimedSlot >= numP1Slots) {
-                std::vector<int> candidates;
+            // Ensure slot statistics vectors are properly sized
+            if ((int)m_slotSensedEnergy.size() != numP1Slots) {
+                m_slotSensedEnergy.assign(numP1Slots, 0.0);
+                m_slotPacketCount.assign(numP1Slots, 0);
+            }
+
+            Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
+
+            // Initial slot selection or reselection counter expired
+            if (m_p1ClaimedSlot < 0 || m_p1ClaimedSlot >= numP1Slots) {
+                // First time: pick any slot randomly
+                m_p1ClaimedSlot = uv->GetInteger(0, numP1Slots - 1);
+                // Draw initial reselection counter: uniform [5, 15] cycles
+                m_p1ReselCounter = uv->GetInteger(5, 15);
+            } else if (m_p1ReselCounter <= 0) {
+                // Reselection period reached: pick from the other slots with lowest sensed signal strength/energy
+                std::vector<std::pair<double, int>> candidateSlots;
                 for (int s = 0; s < numP1Slots; s++) {
-                    if (m_p1OccupiedSlotsThisEpoch.find(s) == m_p1OccupiedSlotsThisEpoch.end()) {
-                        candidates.push_back(s);
-                    }
+                    if (s == m_p1ClaimedSlot) continue; // select from other slots
+                    candidateSlots.push_back({m_slotSensedEnergy[s], s});
                 }
-                if (candidates.empty()) {
-                    for (int s = 0; s < numP1Slots; s++) candidates.push_back(s);
+                
+                if (!candidateSlots.empty()) {
+                    std::sort(candidateSlots.begin(), candidateSlots.end());
+                    // Candidate pool: lowest 25% of energy slots (at least 1)
+                    int poolSize = std::max(1, (int)(candidateSlots.size() * 0.25));
+                    if (poolSize > (int)candidateSlots.size()) poolSize = candidateSlots.size();
+                    int chosenIdx = uv->GetInteger(0, poolSize - 1);
+                    m_p1ClaimedSlot = candidateSlots[chosenIdx].second;
                 }
-                Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
-                int idx = uv->GetInteger(0, candidates.size() - 1);
-                m_p1ClaimedSlot = candidates[idx];
-                m_p1ConflictOccurred = false;
+                
+                // Draw new reselection counter: uniform [5, 15] cycles
+                m_p1ReselCounter = uv->GetInteger(5, 15);
+
+                // Decay sensed energy history for the next observation window
+                for (int s = 0; s < numP1Slots; s++) {
+                    m_slotSensedEnergy[s] *= 0.5;
+                    m_slotPacketCount[s] = (int)(m_slotPacketCount[s] * 0.5);
+                }
             }
             m_p1OccupiedSlotsThisEpoch.clear();
 
-            // Perform CSMA inside the slot: slotStartUs + micro-jitter for intra-slot CSMA/CCA tie-breaking
-            double slotStartUs = m_p1ClaimedSlot * g_p1SlotUs;
-            Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
-            double maxJitterUs = std::min(100.0, g_p1SlotUs * 0.1);
-            double jitterUs = uv->GetValue(0, maxJitterUs);
-            double txDelayUs = 50.0 + slotStartUs + jitterUs;
+            // Decrement reselection counter for this cycle
+            m_p1ReselCounter--;
+
+            // Micro-jitter inside the claimed slot (0 to 15 us) for physical-layer tie-breaking
+            double maxJitterUs = std::min(15.0, g_p1SlotUs * 0.05);
+            double jitterUs = uv->GetValue(0.0, maxJitterUs);
+            double txDelayUs = m_p1ClaimedSlot * g_p1SlotUs + jitterUs;
 
             Simulator::Schedule(MicroSeconds(txDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
         }
@@ -1277,6 +1317,11 @@ void PrintGroundTruthReport() {
     ss << "\n========================================================================================\n";
     ss << "       🔬 PHASE 1 PHYSICAL & MAC GROUND TRUTH ANALYSIS (Top-K within 50m) 🔬           \n";
     ss << "========================================================================================\n";
+    ss << "MAC Scheme                                        : " << (g_enableP1Sidelink ? "3GPP Sidelink Mode 4 S-SPS (No CSMA)" : "Continuous Random Delay + CSMA-CA") << "\n";
+    if (g_enableP1Sidelink) {
+        int numP1Slots = std::max(1, (int)((g_phase1DurationUs - 450.0) / g_p1SlotUs) + 1);
+        ss << "Sidelink Configuration                            : Slot " << g_p1SlotUs << " us (" << numP1Slots << " slots in " << g_p1DurationMs << "ms)\n";
+    }
     ss << "Total Expected P1 Neighbor Links (Epochs x Top-K) : " << g_p1TotalTargetLinks << "\n";
     double succPct = (g_p1TotalTargetLinks > 0) ? (100.0 * g_p1ReasonCounts[REASON_SUCCESS] / g_p1TotalTargetLinks) : 0;
     int totalFails = g_p1TotalTargetLinks - g_p1ReasonCounts[REASON_SUCCESS];
@@ -1564,7 +1609,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);
     cmd.AddValue("simTime", "Total simulation duration in seconds (default 10.0)", g_simTime);
     cmd.AddValue("enableP1Sidelink", "Enable Sidelink-inspired Semi-Persistent Scheduling for Phase 1 (default false)", g_enableP1Sidelink);
-    cmd.AddValue("p1SlotUs", "Phase 1 Sidelink slot duration in microseconds (default 1000.0)", g_p1SlotUs);
+    cmd.AddValue("p1SlotUs", "Phase 1 Sidelink slot duration in microseconds (default 500.0)", g_p1SlotUs);
     cmd.AddValue("p1AvoidDist", "RX Deafness defense distance in meters", g_p1AvoidDist);
     cmd.AddValue("p1AvoidRssi", "Defense RSSI threshold in dBm (-106 to -90)", g_p1AvoidRssi);
     cmd.AddValue("enableDefense", "Enable spatial slot defense (default true)", g_enableDefense);

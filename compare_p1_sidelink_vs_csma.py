@@ -79,6 +79,11 @@ def run_simulation(enable_sidelink, slot_us):
     proc = subprocess.run(cmd, cwd=NS3_DIR, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     out = proc.stdout
 
+    if proc.returncode != 0:
+        print(f"\n❌ Execution failed (exit code {proc.returncode})!")
+        print(out)
+        sys.exit(1)
+
     # Read generated p1 report
     p1_rpt = os.path.join(NS3_DIR, "p1_ground_truth_report.txt")
     p1_text = ""

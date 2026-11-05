@@ -400,7 +400,7 @@ LrWpanPhy::StartRx(Ptr<SpectrumSignalParameters> spectrumRxParams)
 
     if (m_trxState == IEEE_802_15_4_PHY_RX_ON)
     {
-        bool isTrackingPreamble = (m_currentPreamblePacket != nullptr && m_endPreambleEvent.IsRunning());
+        bool isTrackingPreamble = (m_currentPreamblePacket != nullptr && m_endPreambleEvent.IsPending());
         if (!isTrackingPreamble)
         {
             // First signal detected while idle in RX_ON: start tracking this packet's preamble
@@ -1575,7 +1575,7 @@ LrWpanPhy::ChangeTrxState(PhyEnumeration newState)
     if (newState != PhyEnumeration::IEEE_802_15_4_PHY_RX_ON &&
         newState != PhyEnumeration::IEEE_802_15_4_PHY_BUSY_RX)
     {
-        if (m_endPreambleEvent.IsRunning())
+        if (m_endPreambleEvent.IsPending())
         {
             m_endPreambleEvent.Cancel();
         }

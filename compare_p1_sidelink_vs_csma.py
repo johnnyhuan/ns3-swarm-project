@@ -59,6 +59,15 @@ for rel_path in sync_files:
 def run_simulation(enable_sidelink, slot_us):
     mode_name = f"Sidelink S-SPS (Slot={slot_us}us, No CSMA)" if enable_sidelink else "Continuous Delay + CSMA-CA (Baseline)"
     print(f"\n🚀 Running: {mode_name} ...")
+
+    # Clean old report files before run
+    for fname in ["p1_ground_truth_report.txt", "p2_ground_truth_report.txt", "run.log"]:
+        fpath = os.path.join(NS3_DIR, fname)
+        if os.path.exists(fpath):
+            try:
+                os.remove(fpath)
+            except Exception:
+                pass
     
     sidelink_flag = f"--enableP1Sidelink=true --p1SlotUs={slot_us}" if enable_sidelink else "--enableP1Sidelink=false"
     cmd = [
@@ -69,22 +78,32 @@ def run_simulation(enable_sidelink, slot_us):
     
     proc = subprocess.run(cmd, cwd=NS3_DIR, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     out = proc.stdout
-    
-    # Also check run.log or reports generated
-    run_log_path = os.path.join(NS3_DIR, "run.log")
-    full_output = out
-    if os.path.exists(run_log_path):
-        with open(run_log_path, "r", encoding="utf-8", errors="ignore") as f:
-            full_output += "\n" + f.read()
 
-    p2_rpt_path = os.path.join(NS3_DIR, "p2_ground_truth_report.txt")
-    if os.path.exists(p2_rpt_path):
-        with open(p2_rpt_path, "r", encoding="utf-8", errors="ignore") as f:
-            full_output += "\n" + f.read()
-            
-    return parse_metrics(full_output)
+    # Read generated p1 report
+    p1_rpt = os.path.join(NS3_DIR, "p1_ground_truth_report.txt")
+    p1_text = ""
+    if os.path.exists(p1_rpt):
+        with open(p1_rpt, "r", encoding="utf-8", errors="ignore") as f:
+            p1_text = f.read()
 
-def parse_metrics(output):
+    # Read generated p2 report
+    p2_rpt = os.path.join(NS3_DIR, "p2_ground_truth_report.txt")
+    p2_text = ""
+    if os.path.exists(p2_rpt):
+        with open(p2_rpt, "r", encoding="utf-8", errors="ignore") as f:
+            p2_text = f.read()
+
+    # Read run.log
+    run_log = os.path.join(NS3_DIR, "run.log")
+    log_text = ""
+    if os.path.exists(run_log):
+        with open(run_log, "r", encoding="utf-8", errors="ignore") as f:
+            log_text = f.read()
+
+    combined_stdout = out + "\n" + log_text
+    return parse_metrics(p1_text, p2_text, combined_stdout)
+
+def parse_metrics(p1_text, p2_text, stdout_text):
     data = {
         "p1_links": 0,
         "p1_success": 0,
@@ -102,55 +121,52 @@ def parse_metrics(output):
         "mean_aoi": 0.0
     }
     
-    # P1 Links
-    m = re.search(r"Total Expected P1 Neighbor Links.*:\s*(\d+)", output)
+    # Priority: Parse Phase 1 metrics from p1_text
+    src_p1 = p1_text if p1_text else stdout_text
+    
+    m = re.search(r"Total Expected P1 Neighbor Links.*:\s*(\d+)", src_p1)
     if m: data["p1_links"] = int(m.group(1))
     
-    # P1 Success
-    m = re.search(r"Successfully Received \(Delivered\)\s*:\s*(\d+)\s*\(([\d\.]+)%\)", output)
+    m = re.search(r"Successfully Received \(Delivered\)\s*:\s*(\d+)\s*\(([\d\.]+)%\)", src_p1)
     if m:
         data["p1_success"] = int(m.group(1))
         data["p1_prr"] = float(m.group(2))
         
-    m = re.search(r"Failed Link Receptions \(Dropped/Missed\)\s*:\s*(\d+)", output)
+    m = re.search(r"Failed Link Receptions \(Dropped/Missed\)\s*:\s*(\d+)", src_p1)
     if m: data["p1_fails"] = int(m.group(1))
     
-    # Specific failure causes
-    m = re.search(r"SENDER_CSMA_ABORT\s*:\s*(\d+)", output)
+    m = re.search(r"SENDER_CSMA_ABORT\s*:\s*(\d+)", src_p1)
     if m: data["csma_abort"] = int(m.group(1))
 
-    m = re.search(r"RECEIVER_TX_DEAFNESS\s*:\s*(\d+)", output)
+    m = re.search(r"RX_DEAFNESS_BUSY_TX\s*:\s*(\d+)", src_p1)
     if m: data["rx_deafness"] = int(m.group(1))
 
-    m = re.search(r"PREAMBLE_COLLISION_BUSY_RX\s*:\s*(\d+)", output)
+    m = re.search(r"PREAMBLE_COLLISION_BUSY_RX\s*:\s*(\d+)", src_p1)
     if m: data["preamble_coll"] = int(m.group(1))
 
-    m = re.search(r"PREAMBLE_LOW_SINR\s*:\s*(\d+)", output)
+    m = re.search(r"PREAMBLE_LOW_SINR\s*:\s*(\d+)", src_p1)
     if m: data["low_sinr"] = int(m.group(1))
 
-    m = re.search(r"RADIO_TURNAROUND_BUSY\s*:\s*(\d+)", output)
+    m = re.search(r"RADIO_TURNAROUND_BUSY\s*:\s*(\d+)", src_p1)
     if m: data["turnaround"] = int(m.group(1))
 
-    m = re.search(r"PAYLOAD_INTERFERENCE_CORRUPTION\s*:\s*(\d+)", output)
+    m = re.search(r"PAYLOAD_INTERFERENCE_CORRUPTION\s*:\s*(\d+)", src_p1)
     if m: data["payload_drop"] = int(m.group(1))
 
-    # Power Capture Events
-    m = re.search(r"Total Power Capture Events Triggered\s*:\s*(\d+)", output)
+    m = re.search(r"Total Power Capture Events Triggered\s*:\s*(\d+)", src_p1)
     if m: data["captures"] = int(m.group(1))
 
-    # P2 PRR
-    m = re.search(r"Phase 2 Scheduled Link Delivery Success\s*:\s*(\d+)\s*/\s*(\d+)\s*\(([\d\.]+)%\)", output)
-    if not m:
-        m = re.search(r"Phase 2.*Successfully Received.*:\s*(\d+)\s*\(([\d\.]+)%\)", output)
+    # Priority: Parse Phase 2 metrics from p2_text
+    src_p2 = p2_text if p2_text else stdout_text
+    m = re.search(r"Successfully Received \(Delivered\)\s*:\s*(\d+)\s*\(([\d\.]+)%\)", src_p2)
     if m:
-        data["p2_prr"] = float(m.group(3) if len(m.groups()) >= 3 else m.group(2))
+        data["p2_prr"] = float(m.group(2))
 
-    # Mean IAT
-    m = re.search(r"Phase 1 Top-5 Mean Discovery Interval \(IAT\)\s*:\s*([\d\.]+)\s*ms", output)
+    # Parse IAT & AoI from stdout/run.log
+    m = re.search(r"Avg Discovery Msg IAT \(Top-K\)\s*:\s*([\d\.]+)\s*ms", stdout_text)
     if m: data["mean_iat"] = float(m.group(1))
 
-    # Mean AoI
-    m = re.search(r"Phase 2 Top-5 Mean Age of Information \(AoI\)\s*:\s*([\d\.]+)\s*ms", output)
+    m = re.search(r"Mean Beacon Packet AoI \(Top-K\)\s*:\s*([\d\.]+)\s*ms", stdout_text)
     if m: data["mean_aoi"] = float(m.group(1))
 
     return data
@@ -173,7 +189,6 @@ def fmt_row(name, val_a, val_b, is_pct=False, invert_better=False):
     diff = val_b - val_a
     diff_s = f"{diff:+.1f}%" if is_pct else f"{diff:+d}"
     
-    # Better indicator
     if abs(diff) < 1e-4:
         tag = "="
     elif (diff > 0 and not invert_better) or (diff < 0 and invert_better):

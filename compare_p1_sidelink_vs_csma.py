@@ -17,7 +17,7 @@ print("=========================================================================
 
 # Command-line arguments
 p1_duration = float(sys.argv[1]) if len(sys.argv) > 1 else 10.0
-sim_time = float(sys.argv[2]) if len(sys.argv) > 2 else 10.0
+sim_time = float(sys.argv[2]) if len(sys.argv) > 2 else 1.0
 p1_slot_us = float(sys.argv[3]) if len(sys.argv) > 3 else 500.0
 num_nodes = int(sys.argv[4]) if len(sys.argv) > 4 else 75
 space_size = float(sys.argv[5]) if len(sys.argv) > 5 else 200.0
@@ -73,7 +73,9 @@ def run_simulation(enable_sidelink, slot_us):
     cmd = [
         "./ns3", "run",
         f"scratch/lr-wpan-swarm --numNodes={num_nodes} --p1Duration={p1_duration} "
-        f"--simTime={sim_time} --spaceSize={space_size} --spaceZ={space_z} {sidelink_flag} --autoPush=false"
+        f"--simTime={sim_time} --spaceSize={space_size} --spaceZ={space_z} "
+        f"--p1TxPower=0 --p2TxPower=-2 --p1CcaThresholdDbm=-96.58 --nodeSpeed=10.0 "
+        f"{sidelink_flag} --autoPush=false"
     ]
     
     proc = subprocess.run(cmd, cwd=NS3_DIR, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)

@@ -1031,16 +1031,6 @@ class LrWpanPhy : public SpectrumPhy
      * margin above the currently received packet will preempt and capture the receiver.
      */
     double m_captureMarginDbm;
-
-    /**
-     * Currently tracked packet during preamble reception.
-     */
-    Ptr<LrWpanSpectrumSignalParameters> m_currentPreamblePacket;
-
-    /**
-     * Scheduler event for currently running preamble reception.
-     */
-    EventId m_endPreambleEvent;
 };
 
 } // namespace lrwpan

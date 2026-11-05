@@ -215,9 +215,7 @@ LrWpanPhy::LrWpanPhy()
     : m_edRequest(),
       m_setTRXState(),
       m_enableCapture(true),
-      m_captureMarginDbm(3.0),
-      m_currentPreamblePacket(nullptr),
-      m_endPreambleEvent()
+      m_captureMarginDbm(3.0)
 {
     m_trxState = IEEE_802_15_4_PHY_TRX_OFF;
     m_trxStatePending = IEEE_802_15_4_PHY_IDLE;
@@ -400,75 +398,15 @@ LrWpanPhy::StartRx(Ptr<SpectrumSignalParameters> spectrumRxParams)
 
     if (m_trxState == IEEE_802_15_4_PHY_RX_ON)
     {
-        bool isTrackingPreamble = (m_currentPreamblePacket != nullptr && m_endPreambleEvent.IsPending());
-        if (!isTrackingPreamble)
-        {
-            // First signal detected while idle in RX_ON: start tracking this packet's preamble
-            NS_LOG_INFO("Lr-wpan signal detected, processing preamble for a duration of "
-                        << lrWpanRxParams->preambleDuration.GetSeconds() << " seconds");
+        // The reception of the lr-wpan preamble start here
+        NS_LOG_INFO("Lr-wpan signal detected, processing preamble for a duration of "
+                    << lrWpanRxParams->preambleDuration.GetSeconds() << " seconds");
 
-            m_currentPreamblePacket = lrWpanRxParams;
-            m_endPreambleEvent = Simulator::Schedule(lrWpanRxParams->preambleDuration,
-                                                     &LrWpanPhy::EndPreamble,
-                                                     this,
-                                                     lrWpanRxParams);
-            return;
-        }
-        else
-        {
-            // Another signal arrived while already tracking a preamble!
-            // Compare power of new signal vs currently tracked preamble signal (Preamble Capture)
-            bool canCapture = false;
-            if (m_enableCapture && m_currentPreamblePacket)
-            {
-                double pCurr = LrWpanSpectrumValueHelper::TotalAvgPower(
-                    m_currentPreamblePacket->psd, m_phyPIBAttributes.phyCurrentChannel);
-                double pNew = LrWpanSpectrumValueHelper::TotalAvgPower(
-                    lrWpanRxParams->psd, m_phyPIBAttributes.phyCurrentChannel);
-
-                if (pCurr > 0.0 && pNew > 0.0)
-                {
-                    double diffDbm = 10.0 * log10(pNew / pCurr);
-                    if (diffDbm >= m_captureMarginDbm)
-                    {
-                        canCapture = true;
-                    }
-                }
-            }
-
-            if (canCapture)
-            {
-                Ptr<Packet> currPacket = m_currentPreamblePacket->packetBurst->GetPackets().front();
-                Ptr<Packet> newPacket = lrWpanRxParams->packetBurst->GetPackets().front();
-                NS_LOG_INFO(this << " Preamble Capture in StartRx: preempting weaker ongoing preamble "
-                                 << currPacket->GetUid() << " for stronger packet "
-                                 << newPacket->GetUid());
-
-                // Fire capture trace
-                m_phyRxCaptureTrace(newPacket, currPacket);
-
-                // Cancel previous weaker preamble event & drop weaker packet
-                m_endPreambleEvent.Cancel();
-                m_phyRxDropTrace(currPacket);
-
-                // Lock onto the stronger new preamble!
-                m_currentPreamblePacket = lrWpanRxParams;
-                m_endPreambleEvent = Simulator::Schedule(lrWpanRxParams->preambleDuration,
-                                                         &LrWpanPhy::EndPreamble,
-                                                         this,
-                                                         lrWpanRxParams);
-                return;
-            }
-            else
-            {
-                // New packet is weaker or cannot capture the currently tracked preamble.
-                // Drop new packet as interference and continue tracking current preamble!
-                Ptr<Packet> p = lrWpanRxParams->packetBurst->GetPackets().front();
-                m_phyRxDropTrace(p);
-                Simulator::Schedule(spectrumRxParams->duration, &LrWpanPhy::EndRx, this, spectrumRxParams);
-                return;
-            }
-        }
+        Simulator::Schedule(lrWpanRxParams->preambleDuration,
+                            &LrWpanPhy::EndPreamble,
+                            this,
+                            lrWpanRxParams);
+        return;
     }
 
     if (m_trxState == IEEE_802_15_4_PHY_BUSY_RX)
@@ -510,11 +448,10 @@ LrWpanPhy::StartRx(Ptr<SpectrumSignalParameters> spectrumRxParams)
             // Re-arm receiver to RX_ON to synchronize onto the stronger packet's preamble
             ChangeTrxState(IEEE_802_15_4_PHY_RX_ON);
 
-            m_currentPreamblePacket = lrWpanRxParams;
-            m_endPreambleEvent = Simulator::Schedule(lrWpanRxParams->preambleDuration,
-                                                     &LrWpanPhy::EndPreamble,
-                                                     this,
-                                                     lrWpanRxParams);
+            Simulator::Schedule(lrWpanRxParams->preambleDuration,
+                                &LrWpanPhy::EndPreamble,
+                                this,
+                                lrWpanRxParams);
             return;
         }
         else
@@ -545,16 +482,6 @@ LrWpanPhy::EndPreamble(Ptr<LrWpanSpectrumSignalParameters> lrWpanRxParams)
 
     Ptr<Packet> p = (lrWpanRxParams->packetBurst->GetPackets()).front();
     NS_ASSERT(p);
-
-    if (m_currentPreamblePacket != nullptr && m_currentPreamblePacket != lrWpanRxParams)
-    {
-        // This preamble was preempted by a stronger packet during preamble capture
-        return;
-    }
-    if (m_currentPreamblePacket == lrWpanRxParams)
-    {
-        m_currentPreamblePacket = nullptr;
-    }
 
     // Prevent PHY from receiving another packet while switching the transceiver state.
     if (m_trxState == IEEE_802_15_4_PHY_RX_ON && !m_setTRXState.IsPending())
@@ -1571,16 +1498,6 @@ LrWpanPhy::ChangeTrxState(PhyEnumeration newState)
 
     m_trxStateLogger(Simulator::Now(), m_trxState, newState);
     m_trxState = newState;
-
-    if (newState != PhyEnumeration::IEEE_802_15_4_PHY_RX_ON &&
-        newState != PhyEnumeration::IEEE_802_15_4_PHY_BUSY_RX)
-    {
-        if (m_endPreambleEvent.IsPending())
-        {
-            m_endPreambleEvent.Cancel();
-        }
-        m_currentPreamblePacket = nullptr;
-    }
 
     if (newState == PhyEnumeration::IEEE_802_15_4_PHY_RX_ON &&
         m_trxStatePending == PhyEnumeration::IEEE_802_15_4_PHY_TRX_OFF)

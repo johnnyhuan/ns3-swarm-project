@@ -12,14 +12,17 @@ print("=========================================================================
 # Configuration parameters
 num_nodes = int(sys.argv[1]) if len(sys.argv) > 1 else 75
 node_speed = float(sys.argv[2]) if len(sys.argv) > 2 else 10.0
-p1_duration = float(sys.argv[3]) if len(sys.argv) > 3 else 25.0
+p1_duration = float(sys.argv[3]) if len(sys.argv) > 3 else 10.0
 p1_power = int(sys.argv[4]) if len(sys.argv) > 4 else 0
-enable_sidelink = (sys.argv[5].lower() in ["true", "1", "yes"]) if len(sys.argv) > 5 else True
+enable_sidelink = (sys.argv[5].lower() in ["true", "1", "yes"]) if len(sys.argv) > 5 else False
 p1_slot_us = float(sys.argv[6]) if len(sys.argv) > 6 else 1000.0
-sim_time = float(sys.argv[7]) if len(sys.argv) > 7 else 10.0
+sim_time = float(sys.argv[7]) if len(sys.argv) > 7 else 1.0
 p1_cca_thresh = float(sys.argv[8]) if len(sys.argv) > 8 else -96.58
+space_size = float(sys.argv[9]) if len(sys.argv) > 9 else 200.0
+space_z = float(sys.argv[10]) if len(sys.argv) > 10 else 80.0
 
 print(f"• Swarm Scale    : {num_nodes} UAVs")
+print(f"• Airspace Size  : {space_size:.0f}m x {space_size:.0f}m x {space_z:.0f}m")
 print(f"• Flight Speed   : {node_speed} m/s (3D Random Waypoint)")
 print(f"• Phase 1 Window : {p1_duration} ms")
 print(f"• Phase 1 Power  : {p1_power:+d} dBm")
@@ -64,7 +67,7 @@ cmd = [
     "./ns3", "run",
     f"scratch/lr-wpan-swarm --numNodes={num_nodes} --nodeSpeed={node_speed} "
     f"--p1Duration={p1_duration} --p1TxPower={p1_power} --p2TxPower=-2 --simTime={sim_time} "
-    f"--p1CcaThresholdDbm={p1_cca_thresh} {sidelink_flag}"
+    f"--p1CcaThresholdDbm={p1_cca_thresh} --spaceSize={space_size} --spaceZ={space_z} {sidelink_flag}"
 ]
 
 print(f"=> Executing in {NS3_DIR}:\n   {' '.join(cmd)}\n")

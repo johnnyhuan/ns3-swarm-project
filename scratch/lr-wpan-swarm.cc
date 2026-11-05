@@ -95,6 +95,13 @@ static int g_p1TxSuccess = 0;
 static int g_p1RxSuccess = 0;
 static int g_totalCaptureEvents = 0;
 
+// 空間拓撲與 50m 鄰居密度統計
+static double g_spaceSize = 200.0;
+static double g_spaceZ = 80.0;
+static double g_sumNeighborsIn50m = 0.0;
+static int g_countNeighborsIn50m = 0;
+static int g_dronesWithGe5Neighbors = 0;
+
 // --- Phase 1 Ground Truth Physical Drop Tracking ---
 enum P1DropCategory {
     REASON_SUCCESS = 0,
@@ -887,6 +894,14 @@ private:
                     dists.push_back({(uint8_t)s, d});
                 }
             }
+
+            // Record true 50m neighbor density
+            g_sumNeighborsIn50m += dists.size();
+            g_countNeighborsIn50m++;
+            if (dists.size() >= 5) {
+                g_dronesWithGe5Neighbors++;
+            }
+
             std::sort(dists.begin(), dists.end(), [](const auto& a, const auto& b) {
                 return a.second < b.second;
             });
@@ -1048,6 +1063,7 @@ private:
                     dists.push_back({(uint8_t)s, d});
                 }
             }
+
             std::sort(dists.begin(), dists.end(), [](const auto& a, const auto& b) {
                 return a.second < b.second;
             });
@@ -1325,7 +1341,12 @@ void PrintGroundTruthReport() {
             cntLowSinr++;
         }
     }
-    ss << "📡 PHYSICAL RF SIGNAL PROOFS (Averages & Evidence):\n";
+    double meanNeighbors = (g_countNeighborsIn50m > 0) ? (g_sumNeighborsIn50m / g_countNeighborsIn50m) : 0.0;
+    double pctGe5 = (g_countNeighborsIn50m > 0) ? (100.0 * g_dronesWithGe5Neighbors / g_countNeighborsIn50m) : 0.0;
+    ss << "📡 PHYSICAL RF SIGNAL PROOFS & SWARM DENSITY (Averages & Evidence):\n";
+    ss << "  • Airspace Dimensions & Topology      : " << g_spaceSize << "m x " << g_spaceSize << "m x " << g_spaceZ << "m\n";
+    ss << "  • Mean 50m Neighbors per UAV (Density): " << std::fixed << std::setprecision(2) << meanNeighbors << " UAVs\n";
+    ss << "  • UAVs with >= 5 Neighbors in 50m     : " << std::fixed << std::setprecision(1) << pctGe5 << "%\n";
     ss << "  • Total Power Capture Events Triggered : " << g_totalCaptureEvents << " (rescued packets from closer neighbors)\n";
     if (cntSucc > 0) {
         ss << "  • Delivered Links Mean SINR           : " << std::fixed << std::setprecision(1) << (sumSinrSucc / cntSucc) << " dB (IEEE Threshold: > -5.0 dB)\n";
@@ -1479,7 +1500,12 @@ void PrintPhase2GroundTruthReport() {
             cntLowSinr++;
         }
     }
-    ss << "📡 PHYSICAL RF SIGNAL PROOFS (Averages & Evidence):\n";
+    double meanNeighbors = (g_countNeighborsIn50m > 0) ? (g_sumNeighborsIn50m / g_countNeighborsIn50m) : 0.0;
+    double pctGe5 = (g_countNeighborsIn50m > 0) ? (100.0 * g_dronesWithGe5Neighbors / g_countNeighborsIn50m) : 0.0;
+    ss << "📡 PHYSICAL RF SIGNAL PROOFS & SWARM DENSITY (Averages & Evidence):\n";
+    ss << "  • Airspace Dimensions & Topology      : " << g_spaceSize << "m x " << g_spaceSize << "m x " << g_spaceZ << "m\n";
+    ss << "  • Mean 50m Neighbors per UAV (Density): " << std::fixed << std::setprecision(2) << meanNeighbors << " UAVs\n";
+    ss << "  • UAVs with >= 5 Neighbors in 50m     : " << std::fixed << std::setprecision(1) << pctGe5 << "%\n";
     ss << "  • Total Power Capture Events Triggered : " << g_totalCaptureEvents << " (rescued packets from closer neighbors)\n";
     if (cntSucc > 0) {
         ss << "  • Delivered Links Mean SINR           : " << std::fixed << std::setprecision(1) << (sumSinrSucc / cntSucc) << " dB (IEEE Threshold: > -5.0 dB)\n";
@@ -1527,8 +1553,6 @@ int main(int argc, char *argv[]) {
         std::cout.rdbuf(g_runLogFile.rdbuf());
     }
 
-    double spaceSize = 300.0;
-    double spaceZ = 100.0;
     int numNodes = 75;
     double nodeSpeed = 10.0; // UAV mobility speed in m/s (default: 10 m/s ~ 36 km/h, 0 for static hover)
     bool autoPush = false;
@@ -1548,8 +1572,8 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("numSlots", "Number of Phase 2 data slots (e.g., 5 to 20)", g_numDataSlots);
     cmd.AddValue("numNodes", "Number of UAV nodes in swarm (e.g., 50, 100)", numNodes);
     cmd.AddValue("nodeSpeed", "Speed of UAVs in m/s (default 10.0 m/s, 0 for static hover)", nodeSpeed);
-    cmd.AddValue("spaceSize", "Side length of 3D box (X and Y) in meters", spaceSize);
-    cmd.AddValue("spaceZ", "Height of 3D box in meters", spaceZ);
+    cmd.AddValue("spaceSize", "Side length of 3D box (X and Y) in meters", g_spaceSize);
+    cmd.AddValue("spaceZ", "Height of 3D box in meters", g_spaceZ);
     cmd.AddValue("autoPush", "Auto git push results", autoPush);
     cmd.Parse(argc, argv);
 
@@ -1576,21 +1600,21 @@ int main(int argc, char *argv[]) {
 
     MobilityHelper mobility;
     
-    // 3D Random Box Topology (spaceSize x spaceSize x spaceZ)
+    // 3D Random Box Topology (g_spaceSize x g_spaceSize x g_spaceZ)
     Ptr<RandomBoxPositionAllocator> alloc = CreateObject<RandomBoxPositionAllocator>();
     Ptr<UniformRandomVariable> xVar = CreateObject<UniformRandomVariable>();
     xVar->SetAttribute("Min", DoubleValue(0.0));
-    xVar->SetAttribute("Max", DoubleValue(spaceSize));
+    xVar->SetAttribute("Max", DoubleValue(g_spaceSize));
     alloc->SetX(xVar);
     
     Ptr<UniformRandomVariable> yVar = CreateObject<UniformRandomVariable>();
     yVar->SetAttribute("Min", DoubleValue(0.0));
-    yVar->SetAttribute("Max", DoubleValue(spaceSize));
+    yVar->SetAttribute("Max", DoubleValue(g_spaceSize));
     alloc->SetY(yVar);
     
     Ptr<UniformRandomVariable> zVar = CreateObject<UniformRandomVariable>();
     zVar->SetAttribute("Min", DoubleValue(10.0));
-    zVar->SetAttribute("Max", DoubleValue(10.0 + spaceZ)); // height difference
+    zVar->SetAttribute("Max", DoubleValue(10.0 + g_spaceZ)); // height difference
     alloc->SetZ(zVar);
     
     mobility.SetPositionAllocator(alloc);

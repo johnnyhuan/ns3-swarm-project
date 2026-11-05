@@ -1,0 +1,19 @@
+
+=================================================
+       GLOBAL NETWORK METRICS (0.0s ~ 1.0s)       
+    (Dynamic Real-Time Top-5 Neighbors Average)   
+=================================================
+Discovery Message Reception Ratio: 72.1%
+Beacon Packet Reception Ratio   : 72.9%
+Avg Discovery Msg IAT (Top-K)   : 42.3 ms
+Max Discovery Msg IAT (Top-K)   : 279.0 ms
+Mean Beacon Packet AoI (Top-K)  : 14.3 ms
+Max Beacon Packet AoI (Top-K)   : 250.5 ms
+-------------------------------------------------
+=== PHASE 2 CONTENTION & DEAFNESS METRICS ===
+Total Scheduled Top-K Neighbor Beacons: 7615
+TX Deafness (Same slot as TX)         : 120 (1.6%)
+RX Deafness (Slot conflict)           : 476 (6.3%)
+Resource Collision (Same S+C)         : 225 (3.0%)
+=================================================
+

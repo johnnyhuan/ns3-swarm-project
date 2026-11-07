@@ -235,6 +235,7 @@ static std::map<uint32_t, std::map<uint8_t, std::set<uint8_t>>> g_p2ReceivedInEp
 static std::map<uint32_t, std::map<uint8_t, bool>> g_p2TxAbortInEpoch;
 static std::map<uint32_t, std::map<uint8_t, uint8_t>> g_droneClaimedSlot;
 static std::map<uint32_t, std::map<uint8_t, uint8_t>> g_droneClaimedChannel;
+static std::map<uint32_t, std::map<uint8_t, int>> g_p1DroneClaimedSlot;
 static std::map<uint32_t, std::map<uint8_t, std::set<uint8_t>>> g_p2DiscoveredInP1;
 static std::map<uint32_t, std::map<uint8_t, std::map<int, ScheduleSlot::Action>>> g_p2SlotAction;
 static std::map<uint32_t, std::map<uint8_t, std::map<int, uint8_t>>> g_p2SlotTarget;
@@ -436,6 +437,19 @@ public:
     
     void StopApplication() override {}
 
+    void AddCapturedNeighbor(uint8_t senderId, int8_t rssi, uint32_t epoch, uint8_t claimedSlot, uint8_t claimedCh) {
+        bool exists = false;
+        for (const auto& n : m_monitorList) {
+            if (n.id == senderId) {
+                exists = true;
+                break;
+            }
+        }
+        if (!exists) {
+            m_monitorList.push_back({senderId, rssi, epoch, claimedSlot, claimedCh});
+        }
+    }
+
 private:
     Ptr<LrWpanNetDevice> m_device;
     uint8_t m_id;
@@ -577,6 +591,9 @@ private:
 
             // Decrement reselection counter for this cycle
             m_p1ReselCounter--;
+
+            // Record claimed slot in global registry for Phase 1 Sidelink
+            g_p1DroneClaimedSlot[m_epoch][m_id] = m_p1ClaimedSlot;
 
             // Micro-jitter inside the claimed slot (0 to 15 us) for physical-layer tie-breaking
             double maxJitterUs = std::min(15.0, g_p1SlotUs * 0.05);
@@ -921,7 +938,124 @@ private:
         }
     }
 
+    void ProcessSidelinkSlottedCapture(uint32_t epoch) {
+        if (!g_enableP1Sidelink) return;
+
+        uint32_t numNodes = NodeList::GetNNodes();
+        int numP1Slots = std::max(1, (int)((g_phase1DurationUs - 450.0) / g_p1SlotUs) + 1);
+
+        // Group transmitters by their claimed slot in this epoch
+        std::map<int, std::vector<uint8_t>> transmittersInSlot;
+        auto itEp = g_p1DroneClaimedSlot.find(epoch);
+        if (itEp != g_p1DroneClaimedSlot.end()) {
+            for (const auto& kv : itEp->second) {
+                uint8_t droneId = kv.first;
+                int slot = kv.second;
+                if (slot >= 0 && slot < numP1Slots) {
+                    transmittersInSlot[slot].push_back(droneId);
+                }
+            }
+        }
+
+        double noiseLinear = std::pow(10.0, (-106.58 - 30.0) / 10.0);
+
+        // For every receiver R and every slot s
+        for (uint32_t r = 0; r < numNodes; r++) {
+            Ptr<MobilityModel> rMob = NodeList::GetNode(r)->GetObject<MobilityModel>();
+            if (!rMob) continue;
+            Ptr<SwarmSchedulerApp> rApp = DynamicCast<SwarmSchedulerApp>(NodeList::GetNode(r)->GetApplication(0));
+
+            for (const auto& kv : transmittersInSlot) {
+                const auto& senders = kv.second;
+                if (senders.empty()) continue;
+
+                // Check if receiver R was transmitting in this slot (Half-Duplex)
+                bool rTransmittingInSlot = false;
+                for (uint8_t sId : senders) {
+                    if (sId == r) {
+                        rTransmittingInSlot = true;
+                        break;
+                    }
+                }
+                if (rTransmittingInSlot) {
+                    continue; // R cannot receive any packet in this slot
+                }
+
+                // Find closest transmitter to R among all senders in this slot
+                uint8_t bestSender = 255;
+                double minDist = 1e9;
+                double bestPrxLinear = 0.0;
+                double bestPrxDbm = -999.0;
+
+                std::vector<std::pair<uint8_t, double>> senderPowers;
+                for (uint8_t sId : senders) {
+                    if (sId == r) continue;
+                    Ptr<MobilityModel> sMob = NodeList::GetNode(sId)->GetObject<MobilityModel>();
+                    if (!sMob) continue;
+                    double d = rMob->GetDistanceFrom(sMob);
+                    double prxDbm = g_p1TxPower - 46.6777 - 30.0 * std::log10(std::max(0.1, d));
+                    double prxLinear = std::pow(10.0, (prxDbm - 30.0) / 10.0);
+                    senderPowers.push_back({sId, prxLinear});
+
+                    if (d < minDist) {
+                        minDist = d;
+                        bestSender = sId;
+                        bestPrxLinear = prxLinear;
+                        bestPrxDbm = prxDbm;
+                    }
+                }
+
+                if (bestSender == 255) continue;
+
+                // Calculate interference from all OTHER senders in the same slot
+                double interfLinear = 0.0;
+                for (const auto& sp : senderPowers) {
+                    if (sp.first != bestSender) {
+                        interfLinear += sp.second;
+                    }
+                }
+
+                // SINR calculation
+                double sinr = bestPrxLinear / (interfLinear + noiseLinear);
+                double sinrDb = 10.0 * std::log10(sinr);
+
+                // Capture threshold: standard IEEE 802.15.4 demodulation threshold (-5.0 dB)
+                if (sinrDb >= -5.0) {
+                    // Receiver R captures bestSender!
+                    bool alreadyHeard = (g_p1ReceivedInEpoch[epoch][r].count(bestSender) > 0);
+                    if (!alreadyHeard) {
+                        g_p1ReceivedInEpoch[epoch][r].insert(bestSender);
+                        g_p2DiscoveredInP1[epoch][r].insert(bestSender);
+                        g_totalCaptureEvents++;
+
+                        uint8_t claimedSlot = 0;
+                        uint8_t claimedCh = 0;
+                        auto itSlot = g_droneClaimedSlot.find(epoch);
+                        if (itSlot != g_droneClaimedSlot.end()) {
+                            auto itS = itSlot->second.find(bestSender);
+                            if (itS != itSlot->second.end()) claimedSlot = itS->second;
+                        }
+                        auto itCh = g_droneClaimedChannel.find(epoch);
+                        if (itCh != g_droneClaimedChannel.end()) {
+                            auto itC = itCh->second.find(bestSender);
+                            if (itC != itCh->second.end()) claimedCh = itC->second;
+                        }
+
+                        int8_t rssi = (int8_t)std::round(bestPrxDbm);
+
+                        if (rApp) {
+                            rApp->AddCapturedNeighbor(bestSender, rssi, epoch, claimedSlot, claimedCh);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     void EvaluatePhase1Epoch(uint32_t epoch) {
+        if (g_enableP1Sidelink) {
+            ProcessSidelinkSlottedCapture(epoch);
+        }
         uint32_t numNodes = NodeList::GetNNodes();
         for (uint32_t r = 0; r < numNodes; r++) {
             Ptr<MobilityModel> rMob = NodeList::GetNode(r)->GetObject<MobilityModel>();

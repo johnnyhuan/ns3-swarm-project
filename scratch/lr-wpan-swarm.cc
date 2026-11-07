@@ -47,6 +47,7 @@ const double DATA_SLOT_US = 2500.0;
 bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
 double g_p1SlotUs = 100.0;       // Phase 1 Sidelink slot duration in microseconds (default 100 us -> 98 slots in 10ms)
 double g_p1CcaThresholdDbm = -96.58; // Phase 1 CSMA CCA Energy Detection Threshold in dBm (default: -96.58, standard 802.15.4)
+bool g_verboseLog = false;       // Verbose per-packet log switch (default: false for high-speed simulation at scale)
 
 const uint8_t BROADCAST_CHANNEL = 11;
 
@@ -242,7 +243,7 @@ static std::map<uint32_t, std::map<uint16_t, std::map<int, uint16_t>>> g_p2SlotT
 
 class SwarmSchedulerApp : public Application {
 public:
-    SwarmSchedulerApp() : m_epoch(0), m_myClaimedSlot(0), m_myClaimedChannel(0), m_topologyMatchCount(0), m_topologyCheckCount(0), m_epochStartTime(0), m_p1ClaimedSlot(-1), m_p1ReselCounter(0), m_p1ConflictOccurred(false) {}
+    SwarmSchedulerApp() : m_epoch(0), m_myClaimedSlot(0), m_myClaimedChannel(0), m_topologyMatchCount(0), m_topologyCheckCount(0), m_epochStartTime(0), m_p1ClaimedSlot(-1), m_p1ReselCounter(0), m_p1ConflictOccurred(false), m_p1RetryCount(0) {}
 
     void Setup(Ptr<LrWpanNetDevice> dev, uint16_t id) {
         m_device = dev;
@@ -343,48 +344,48 @@ public:
         uint64_t uid = p->GetUid();
         auto it = g_p1PacketsMeta.find(uid);
         if (it != g_p1PacketsMeta.end()) {
-            uint8_t sender = it->second.senderId;
+            uint16_t sender = it->second.senderId;
             uint32_t epoch = it->second.epoch;
             double now = Simulator::Now().GetMilliSeconds();
             if (g_droneReceivingUid[m_id] == uid) {
                 g_p1RxDropEvent[{epoch, sender, m_id}] = REASON_PAYLOAD_INTERFERENCE_CORRUPTION;
                 g_droneReceivingUid[m_id] = 0;
-                std::cout << "[P1_PAYLOAD_DROP] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid << std::endl;
+                if (g_verboseLog) std::cout << "[P1_PAYLOAD_DROP] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid << "\n";
             } else {
                 if (g_dronePhyState[m_id] == IEEE_802_15_4_PHY_BUSY_RX) {
                     g_p1RxDropEvent[{epoch, sender, m_id}] = REASON_PREAMBLE_COLLISION_BUSY_RX;
-                    std::cout << "[P1_PREAMBLE_COLLISION] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
-                              << " | Antenna busy receiving Drone " << (int)g_droneReceivingUid[m_id] << std::endl;
+                    if (g_verboseLog) std::cout << "[P1_PREAMBLE_COLLISION] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
+                              << " | Antenna busy receiving Drone " << (int)g_droneReceivingUid[m_id] << "\n";
                 } else if (g_dronePhyState[m_id] == IEEE_802_15_4_PHY_TRX_OFF) {
                     g_p1RxDropEvent[{epoch, sender, m_id}] = REASON_RADIO_TURNAROUND_BUSY;
-                    std::cout << "[P1_RADIO_OFF] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
-                              << " | Transceiver in TRX_OFF state" << std::endl;
+                    if (g_verboseLog) std::cout << "[P1_RADIO_OFF] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
+                              << " | Transceiver in TRX_OFF state" << "\n";
                 } else {
                     g_p1RxDropEvent[{epoch, sender, m_id}] = REASON_PREAMBLE_LOW_SINR;
-                    std::cout << "[P1_PREAMBLE_LOW_SINR] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
-                              << " | Preamble SINR <= -5 dB threshold" << std::endl;
+                    if (g_verboseLog) std::cout << "[P1_PREAMBLE_LOW_SINR] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
+                              << " | Preamble SINR <= -5 dB threshold" << "\n";
                 }
             }
         }
 
         auto it2 = g_p2PacketsMeta.find(uid);
         if (it2 != g_p2PacketsMeta.end()) {
-            uint8_t sender = it2->second.senderId;
+            uint16_t sender = it2->second.senderId;
             uint32_t epoch = it2->second.epoch;
             double now = Simulator::Now().GetMilliSeconds();
             if (g_droneReceivingUid[m_id] == uid) {
                 g_p2RxDropEvent[{epoch, sender, m_id}] = P2_REASON_PAYLOAD_INTERFERENCE_DROP;
                 g_droneReceivingUid[m_id] = 0;
-                std::cout << "[P2_PAYLOAD_DROP] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid << std::endl;
+                if (g_verboseLog) std::cout << "[P2_PAYLOAD_DROP] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid << "\n";
             } else {
                 if (g_dronePhyState[m_id] == IEEE_802_15_4_PHY_BUSY_RX) {
                     g_p2RxDropEvent[{epoch, sender, m_id}] = P2_REASON_PREAMBLE_COLLISION_BUSY_RX;
-                    std::cout << "[P2_PREAMBLE_COLLISION] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
-                              << " | Antenna already busy receiving Drone " << (int)g_droneReceivingUid[m_id] << std::endl;
+                    if (g_verboseLog) std::cout << "[P2_PREAMBLE_COLLISION] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
+                              << " | Antenna already busy receiving Drone " << (int)g_droneReceivingUid[m_id] << "\n";
                 } else {
                     g_p2RxDropEvent[{epoch, sender, m_id}] = P2_REASON_PREAMBLE_LOW_SINR;
-                    std::cout << "[P2_PREAMBLE_LOW_SINR] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
-                              << " | Preamble SINR <= -5 dB threshold" << std::endl;
+                    if (g_verboseLog) std::cout << "[P2_PREAMBLE_LOW_SINR] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
+                              << " | Preamble SINR <= -5 dB threshold" << "\n";
                 }
             }
         }
@@ -395,15 +396,17 @@ public:
         uint64_t capUid = capP->GetUid();
         uint64_t preUid = preP->GetUid();
         double now = Simulator::Now().GetMilliSeconds();
-        uint8_t capSender = 255;
-        uint8_t preSender = 255;
+        uint16_t capSender = 65535;
+        uint16_t preSender = 65535;
         auto itCap = g_p1PacketsMeta.find(capUid);
         if (itCap != g_p1PacketsMeta.end()) capSender = itCap->second.senderId;
         auto itPre = g_p1PacketsMeta.find(preUid);
         if (itPre != g_p1PacketsMeta.end()) preSender = itPre->second.senderId;
-        std::cout << "[P1_CAPTURE] Time: " << now << "ms, Rx: " << (int)m_id
-                  << " CAPTURED Tx: " << (int)capSender << " (Uid: " << capUid << ")"
-                  << ", PREEMPTED Tx: " << (int)preSender << " (Uid: " << preUid << ")" << std::endl;
+        if (g_verboseLog) {
+            std::cout << "[P1_CAPTURE] Time: " << now << "ms, Rx: " << (int)m_id
+                      << " CAPTURED Tx: " << (int)capSender << " (Uid: " << capUid << ")"
+                      << ", PREEMPTED Tx: " << (int)preSender << " (Uid: " << preUid << ")" << "\n";
+        }
     }
 
     void NotifyPhyTxBegin(Ptr<const Packet> p) {
@@ -483,6 +486,7 @@ private:
     int m_p1ClaimedSlot;
     int m_p1ReselCounter;
     bool m_p1ConflictOccurred;
+    int m_p1RetryCount;
     std::set<int> m_p1OccupiedSlotsThisEpoch;
     std::vector<double> m_slotSensedEnergy;
     std::vector<int> m_slotPacketCount;
@@ -514,6 +518,7 @@ private:
     void ScheduleCycle() {
         m_epoch++;
         m_monitorList.clear();
+        m_p1RetryCount = 0;
 
         double now = Simulator::Now().GetMilliSeconds();
         
@@ -615,7 +620,7 @@ private:
         g_p1TxAttempts++;
         uint32_t myId = m_device->GetNode()->GetId();
         double now = Simulator::Now().GetMilliSeconds();
-        std::cout << "[P1_ATTEMPT] Time: " << now << "ms, Drone: " << myId << std::endl;
+        if (g_verboseLog) std::cout << "[P1_ATTEMPT] Time: " << now << "ms, Drone: " << myId << "\n";
 
         if (g_numDataChannels <= 0 || g_numDataSlots <= 0) {
             m_myClaimedSlot = 0;
@@ -798,7 +803,7 @@ private:
             SwitchChannelAndPower(s.channel, g_p2TxPower);
             uint32_t myId = m_device->GetNode()->GetId();
             double now = Simulator::Now().GetMilliSeconds();
-            std::cout << "[P2_ATTEMPT] Time: " << now << "ms, Drone: " << myId << ", Slot: " << slotIndex << ", Channel: " << (int)s.channel << std::endl;
+            if (g_verboseLog) std::cout << "[P2_ATTEMPT] Time: " << now << "ms, Drone: " << myId << ", Slot: " << slotIndex << ", Channel: " << (int)s.channel << "\n";
             Ptr<Packet> p = Create<Packet>(DATA_PACKET_SIZE);
             uint64_t uid = p->GetUid();
 
@@ -824,12 +829,14 @@ private:
         if (params.m_msduHandle == 1) {
             if (params.m_status == MacStatus::CHANNEL_ACCESS_FAILURE) {
                 g_p1TxAbort++;
-                std::cout << "[P1_ABORT] Time: " << now << "ms, Drone: " << myId << std::endl;
+                if (g_verboseLog) std::cout << "[P1_ABORT] Time: " << now << "ms, Drone: " << myId << "\n";
                 
                 if (g_enableP1Sidelink) {
                     m_p1ConflictOccurred = true;
-                    std::cout << "[P1_SIDELINK_CONFLICT] Time: " << now << "ms, Drone: " << myId 
-                              << " lost slot " << m_p1ClaimedSlot << " (sensed busy). Slower node yielding!" << std::endl;
+                    if (g_verboseLog) {
+                        std::cout << "[P1_SIDELINK_CONFLICT] Time: " << now << "ms, Drone: " << myId 
+                                  << " lost slot " << m_p1ClaimedSlot << " (sensed busy). Slower node yielding!\n";
+                    }
                     
                     // Attempt immediate migration to a later free slot in current epoch
                     double availP1Us = std::max(500.0, g_phase1DurationUs - 500.0);
@@ -852,14 +859,17 @@ private:
                         double nextTxUs = m_p1ClaimedSlot * g_p1SlotUs + uv->GetValue(0, 50.0);
                         double delayUs = nextTxUs - timeInP1Us;
                         if (delayUs > 50.0) {
-                            std::cout << "[P1_SIDELINK_MIGRATE] Drone " << myId << " migrating to later slot " 
-                                      << m_p1ClaimedSlot << " in current epoch!" << std::endl;
+                            if (g_verboseLog) {
+                                std::cout << "[P1_SIDELINK_MIGRATE] Drone " << myId << " migrating to later slot " 
+                                          << m_p1ClaimedSlot << " in current epoch!\n";
+                            }
                             Simulator::Schedule(MicroSeconds(delayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
                         }
                     }
                 } else {
-                    // 如果還在 Phase 1 的有效時間內 (保留最後 0.5ms 緩衝)，則安排重新決策
-                    if (now < m_epochStartTime + g_p1DurationMs - 0.5) {
+                    // 如果還在 Phase 1 的有效時間內 (保留最後 0.5ms 緩衝)，且重試次數未超過上限，則安排重新決策
+                    if (m_p1RetryCount < 1 && now < m_epochStartTime + g_p1DurationMs - 0.5) {
+                        m_p1RetryCount++;
                         // 隨機等待 0.1 ~ 0.5 毫秒，讓對方的情報傳達過來，也錯開重試時間
                         Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
                         double retryDelay = uv->GetValue(0.1, 0.5);
@@ -872,14 +882,14 @@ private:
                 if (g_enableP1Sidelink) {
                     m_p1ConflictOccurred = false; // Successfully retained
                 }
-                std::cout << "[P1_SUCCESS] Time: " << now << "ms, Drone: " << myId << std::endl;
+                if (g_verboseLog) std::cout << "[P1_SUCCESS] Time: " << now << "ms, Drone: " << myId << "\n";
             }
         } else if (params.m_msduHandle == 2) {
             if (params.m_status == MacStatus::CHANNEL_ACCESS_FAILURE) {
                 g_p2TxAbortInEpoch[m_epoch][myId] = true;
-                std::cout << "[P2_ABORT] Time: " << now << "ms, Drone: " << myId << std::endl;
+                if (g_verboseLog) std::cout << "[P2_ABORT] Time: " << now << "ms, Drone: " << myId << "\n";
             } else if (params.m_status == MacStatus::SUCCESS) {
-                std::cout << "[P2_SUCCESS] Time: " << now << "ms, Drone: " << myId << std::endl;
+                if (g_verboseLog) std::cout << "[P2_SUCCESS] Time: " << now << "ms, Drone: " << myId << "\n";
             }
         }
     }
@@ -905,7 +915,7 @@ private:
             uint16_t senderId = payload & 0x01FF;
             g_p1ReceivedInEpoch[m_epoch][myId].insert(senderId);
             g_p2DiscoveredInP1[m_epoch][myId].insert(senderId);
-            std::cout << "[P1_RX] Time: " << now << "ms, Receiver: " << myId << ", Sender: " << (int)senderId << ", RSSI: " << (int)rssi << std::endl;
+            if (g_verboseLog) std::cout << "[P1_RX] Time: " << now << "ms, Receiver: " << myId << ", Sender: " << (int)senderId << ", RSSI: " << (int)rssi << "\n";
             uint8_t claimedSlot = (payload >> 9) & 0x0F;
             uint8_t claimedChannel = (payload >> 13) & 0x07;
             
@@ -927,7 +937,7 @@ private:
             uint16_t srcId = (addrBuffer[0] << 8) | addrBuffer[1];
             g_p2ReceivedInEpoch[m_epoch][myId].insert(srcId);
             
-            std::cout << "[P2_RX] Time: " << now << "ms, Receiver: " << myId << ", Sender: " << (int)srcId << ", RSSI: " << (int)rssi << std::endl;
+            if (g_verboseLog) std::cout << "[P2_RX] Time: " << now << "ms, Receiver: " << myId << ", Sender: " << (int)srcId << ", RSSI: " << (int)rssi << "\n";
 
             m_beaconReceivedCount[srcId]++;
             g_totalDataPacketsReceived++;
@@ -959,11 +969,18 @@ private:
 
         double noiseLinear = std::pow(10.0, (-106.58 - 30.0) / 10.0);
 
+        std::vector<Ptr<MobilityModel>> mobs(numNodes);
+        std::vector<Ptr<SwarmSchedulerApp>> apps(numNodes);
+        for (uint32_t i = 0; i < numNodes; i++) {
+            mobs[i] = NodeList::GetNode(i)->GetObject<MobilityModel>();
+            apps[i] = DynamicCast<SwarmSchedulerApp>(NodeList::GetNode(i)->GetApplication(0));
+        }
+
         // For every receiver R and every slot s
         for (uint32_t r = 0; r < numNodes; r++) {
-            Ptr<MobilityModel> rMob = NodeList::GetNode(r)->GetObject<MobilityModel>();
+            Ptr<MobilityModel> rMob = mobs[r];
             if (!rMob) continue;
-            Ptr<SwarmSchedulerApp> rApp = DynamicCast<SwarmSchedulerApp>(NodeList::GetNode(r)->GetApplication(0));
+            Ptr<SwarmSchedulerApp> rApp = apps[r];
 
             for (const auto& kv : transmittersInSlot) {
                 const auto& senders = kv.second;
@@ -990,7 +1007,7 @@ private:
                 std::vector<std::pair<uint16_t, double>> senderPowers;
                 for (uint16_t sId : senders) {
                     if (sId == r) continue;
-                    Ptr<MobilityModel> sMob = NodeList::GetNode(sId)->GetObject<MobilityModel>();
+                    Ptr<MobilityModel> sMob = mobs[sId];
                     if (!sMob) continue;
                     double d = rMob->GetDistanceFrom(sMob);
                     double prxDbm = g_p1TxPower - 46.6777 - 30.0 * std::log10(std::max(0.1, d));
@@ -1057,12 +1074,28 @@ private:
             ProcessSidelinkSlottedCapture(epoch);
         }
         uint32_t numNodes = NodeList::GetNNodes();
+        std::vector<Ptr<MobilityModel>> mobs(numNodes);
+        std::vector<double> sTxTimes(numNodes, -1.0);
+        std::vector<uint64_t> sTxUids(numNodes, 0);
+        for (uint32_t i = 0; i < numNodes; i++) {
+            mobs[i] = NodeList::GetNode(i)->GetObject<MobilityModel>();
+            auto uidsIt = g_p1TxUidsInEpoch.find({epoch, (uint16_t)i});
+            if (uidsIt != g_p1TxUidsInEpoch.end() && !uidsIt->second.empty()) {
+                uint64_t uid = uidsIt->second.back();
+                sTxUids[i] = uid;
+                auto metaIt = g_p1PacketsMeta.find(uid);
+                if (metaIt != g_p1PacketsMeta.end()) {
+                    sTxTimes[i] = metaIt->second.txStartTime;
+                }
+            }
+        }
+
         for (uint32_t r = 0; r < numNodes; r++) {
-            Ptr<MobilityModel> rMob = NodeList::GetNode(r)->GetObject<MobilityModel>();
+            Ptr<MobilityModel> rMob = mobs[r];
             std::vector<std::pair<uint16_t, double>> dists;
             for (uint32_t s = 0; s < numNodes; s++) {
                 if (s == r) continue;
-                Ptr<MobilityModel> sMob = NodeList::GetNode(s)->GetObject<MobilityModel>();
+                Ptr<MobilityModel> sMob = mobs[s];
                 double d = rMob->GetDistanceFrom(sMob);
                 if (d <= M_RADIUS_METERS) {
                     dists.push_back({(uint16_t)s, d});
@@ -1089,36 +1122,23 @@ private:
                 double sPrxDbm = g_p1TxPower - 46.6777 - 30.0 * std::log10(std::max(0.1, dist));
 
                 // Find sender's transmitted UID and transmission start time
-                uint64_t txUid = 0;
-                double sTxTime = 0.0;
-                auto uidsIt = g_p1TxUidsInEpoch.find({epoch, sender});
-                if (uidsIt != g_p1TxUidsInEpoch.end() && !uidsIt->second.empty()) {
-                    txUid = uidsIt->second.back();
-                    auto metaIt = g_p1PacketsMeta.find(txUid);
-                    if (metaIt != g_p1PacketsMeta.end()) {
-                        sTxTime = metaIt->second.txStartTime;
-                    }
-                }
+                uint64_t txUid = sTxUids[sender];
+                double sTxTime = sTxTimes[sender];
 
-                // Check other concurrent transmissions during sender's mini-beacon (~0.384 ms window)
+                // Check other concurrent transmissions during sender's mini-beacon (~0.25 ms window)
                 double interfLinear = 0.0;
                 int coChannelCount = 0;
                 if (txUid != 0) {
                     for (uint32_t other = 0; other < numNodes; other++) {
                         if (other == sender || other == r) continue;
-                        auto otherUidsIt = g_p1TxUidsInEpoch.find({epoch, (uint16_t)other});
-                        if (otherUidsIt != g_p1TxUidsInEpoch.end() && !otherUidsIt->second.empty()) {
-                            uint64_t oUid = otherUidsIt->second.back();
-                            auto oMetaIt = g_p1PacketsMeta.find(oUid);
-                            if (oMetaIt != g_p1PacketsMeta.end()) {
-                                double diff = std::abs(oMetaIt->second.txStartTime - sTxTime);
-                                if (diff < 0.25) { // Concurrent transmission on Broadcast Channel 11 (2 Mbps: ~244us air time)
-                                    Ptr<MobilityModel> otherMob = NodeList::GetNode(other)->GetObject<MobilityModel>();
-                                    double otherDist = rMob->GetDistanceFrom(otherMob);
-                                    double otherPrxDbm = g_p1TxPower - 46.6777 - 30.0 * std::log10(std::max(0.1, otherDist));
-                                    interfLinear += std::pow(10.0, (otherPrxDbm - 30.0) / 10.0);
-                                    coChannelCount++;
-                                }
+                        if (sTxTimes[other] >= 0.0) {
+                            double diff = std::abs(sTxTimes[other] - sTxTime);
+                            if (diff < 0.25) { // Concurrent transmission on Broadcast Channel 11 (2 Mbps: ~244us air time)
+                                Ptr<MobilityModel> otherMob = mobs[other];
+                                double otherDist = rMob->GetDistanceFrom(otherMob);
+                                double otherPrxDbm = g_p1TxPower - 46.6777 - 30.0 * std::log10(std::max(0.1, otherDist));
+                                interfLinear += std::pow(10.0, (otherPrxDbm - 30.0) / 10.0);
+                                coChannelCount++;
                             }
                         }
                     }
@@ -1226,12 +1246,42 @@ private:
 
     void EvaluatePhase2Epoch(uint32_t epoch) {
         uint32_t numNodes = NodeList::GetNNodes();
+        std::vector<Ptr<MobilityModel>> mobs(numNodes);
+        std::vector<uint8_t> nodeSlots(numNodes, 255);
+        std::vector<uint8_t> nodeChs(numNodes, 255);
+        std::vector<bool> nodeAborts(numNodes, false);
+        std::vector<uint64_t> p2TxUids(numNodes, 0);
+
+        auto itSlotsEp = g_droneClaimedSlot.find(epoch);
+        auto itChsEp = g_droneClaimedChannel.find(epoch);
+        auto itAbortsEp = g_p2TxAbortInEpoch.find(epoch);
+
+        for (uint32_t i = 0; i < numNodes; i++) {
+            mobs[i] = NodeList::GetNode(i)->GetObject<MobilityModel>();
+            if (itSlotsEp != g_droneClaimedSlot.end()) {
+                auto it = itSlotsEp->second.find(i);
+                if (it != itSlotsEp->second.end()) nodeSlots[i] = it->second;
+            }
+            if (itChsEp != g_droneClaimedChannel.end()) {
+                auto it = itChsEp->second.find(i);
+                if (it != itChsEp->second.end()) nodeChs[i] = it->second;
+            }
+            if (itAbortsEp != g_p2TxAbortInEpoch.end()) {
+                auto it = itAbortsEp->second.find(i);
+                if (it != itAbortsEp->second.end()) nodeAborts[i] = it->second;
+            }
+            auto uidsIt = g_p2TxUidsInEpoch.find({epoch, (uint16_t)i});
+            if (uidsIt != g_p2TxUidsInEpoch.end() && !uidsIt->second.empty()) {
+                p2TxUids[i] = uidsIt->second.back();
+            }
+        }
+
         for (uint32_t r = 0; r < numNodes; r++) {
-            Ptr<MobilityModel> rMob = NodeList::GetNode(r)->GetObject<MobilityModel>();
+            Ptr<MobilityModel> rMob = mobs[r];
             std::vector<std::pair<uint16_t, double>> dists;
             for (uint32_t s = 0; s < numNodes; s++) {
                 if (s == r) continue;
-                Ptr<MobilityModel> sMob = NodeList::GetNode(s)->GetObject<MobilityModel>();
+                Ptr<MobilityModel> sMob = mobs[s];
                 double d = rMob->GetDistanceFrom(sMob);
                 if (d <= M_RADIUS_METERS) {
                     dists.push_back({(uint16_t)s, d});
@@ -1251,14 +1301,14 @@ private:
                 double sPrxDbm = -48.6777 - 30.0 * std::log10(std::max(0.1, dist));
                 double interfLinear = 0.0;
                 int coChannelCount = 0;
-                uint8_t sSlot = g_droneClaimedSlot[epoch][sender];
-                uint8_t sCh = g_droneClaimedChannel[epoch][sender];
+                uint8_t sSlot = nodeSlots[sender];
+                uint8_t sCh = nodeChs[sender];
                 for (uint32_t other = 0; other < numNodes; other++) {
                     if (other == sender || other == r) continue;
-                    if (g_droneClaimedSlot[epoch][other] == sSlot &&
-                        g_droneClaimedChannel[epoch][other] == sCh &&
-                        !g_p2TxAbortInEpoch[epoch][other]) {
-                        Ptr<MobilityModel> otherMob = NodeList::GetNode(other)->GetObject<MobilityModel>();
+                    if (nodeSlots[other] == sSlot &&
+                        nodeChs[other] == sCh &&
+                        !nodeAborts[other]) {
+                        Ptr<MobilityModel> otherMob = mobs[other];
                         double otherDist = rMob->GetDistanceFrom(otherMob);
                         double otherPrxDbm = -48.6777 - 30.0 * std::log10(std::max(0.1, otherDist));
                         interfLinear += std::pow(10.0, (otherPrxDbm - 30.0) / 10.0);
@@ -1303,11 +1353,7 @@ private:
                     } else {
                         // Sender actually transmitted a packet into the air!
                         // Find sender's transmitted UID in this epoch
-                        uint64_t txUid = 0;
-                        auto uidsIt = g_p2TxUidsInEpoch.find({epoch, sender});
-                        if (uidsIt != g_p2TxUidsInEpoch.end() && !uidsIt->second.empty()) {
-                            txUid = uidsIt->second.back();
-                        }
+                        uint64_t txUid = p2TxUids[sender];
 
                         uint8_t sChannel = 0;
                         auto metaIt = g_p2PacketsMeta.find(txUid);
@@ -1726,17 +1772,12 @@ void PrintPhase2GroundTruthReport() {
 }
 
 int main(int argc, char *argv[]) {
-    g_runLogFile.open("run.log");
-    if (g_runLogFile.is_open()) {
-        g_originalCoutBuffer = std::cout.rdbuf();
-        std::cout.rdbuf(g_runLogFile.rdbuf());
-    }
-
     int numNodes = 75;
     double nodeSpeed = 10.0; // UAV mobility speed in m/s (default: 10 m/s ~ 36 km/h, 0 for static hover)
     bool autoPush = false;
 
     CommandLine cmd;
+    cmd.AddValue("verboseLog", "Enable verbose per-packet log to run.log (default: false)", g_verboseLog);
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
     cmd.AddValue("p1TxPower", "Phase 1 TX Power in dBm (e.g., 0, 1, 3)", g_p1TxPower);
     cmd.AddValue("p1CcaThresholdDbm", "Phase 1 CSMA CCA Energy Detection Threshold in dBm (-106.58 to -80.0, default -96.58)", g_p1CcaThresholdDbm);
@@ -1755,6 +1796,14 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("spaceZ", "Height of 3D box in meters", g_spaceZ);
     cmd.AddValue("autoPush", "Auto git push results", autoPush);
     cmd.Parse(argc, argv);
+
+    if (g_verboseLog) {
+        g_runLogFile.open("run.log");
+        if (g_runLogFile.is_open()) {
+            g_originalCoutBuffer = std::cout.rdbuf();
+            std::cout.rdbuf(g_runLogFile.rdbuf());
+        }
+    }
 
     if (g_numDataSlots > MAX_DATA_SLOTS) {
         std::cerr << "Warning: numSlots (" << g_numDataSlots << ") exceeds MAX_DATA_SLOTS (" << MAX_DATA_SLOTS << "), clamping to " << MAX_DATA_SLOTS << std::endl;
@@ -1875,13 +1924,13 @@ int main(int argc, char *argv[]) {
         g_runLogFile << g_singleDroneReport.str() << "\n";
         g_runLogFile << ss.str();
         g_runLogFile.close();
-        if (autoPush) {
-            int ret = system("git add run.log p1_exact_drop_reasons.csv p1_ground_truth_report.txt p2_exact_drop_reasons.csv p2_ground_truth_report.txt && git commit -m 'Auto upload Phase 1 & Phase 2 ground truth results' && git push origin main");
-            if (ret != 0) {
-                std::cerr << "Note: system git push returned non-zero (you can manually commit & push)." << std::endl;
-            } else {
-                std::cout << "Results successfully uploaded to GitHub!" << std::endl;
-            }
+    }
+    if (autoPush) {
+        int ret = system("git add run.log p1_exact_drop_reasons.csv p1_ground_truth_report.txt p2_exact_drop_reasons.csv p2_ground_truth_report.txt && git commit -m 'Auto upload Phase 1 & Phase 2 ground truth results' && git push origin main");
+        if (ret != 0) {
+            std::cerr << "Note: system git push returned non-zero (you can manually commit & push)." << std::endl;
+        } else {
+            std::cout << "Results successfully uploaded to GitHub!" << std::endl;
         }
     }
 

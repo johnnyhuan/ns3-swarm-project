@@ -75,11 +75,15 @@ def run_simulation(nodes, enable_sidelink):
         f"scratch/lr-wpan-swarm --numNodes={nodes} --p1Duration={p1_duration} "
         f"--simTime={sim_time} --spaceSize={space_size} --spaceZ={space_z} "
         f"--enableP1Sidelink={'true' if enable_sidelink else 'false'} "
-        f"--p1SlotUs={p1_slot_us} --autoPush=false"
+        f"--p1SlotUs={p1_slot_us} --verboseLog=false --autoPush=false"
     ]
     
-    proc = subprocess.run(cmd, cwd=NS3_DIR, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    out = proc.stdout
+    try:
+        proc = subprocess.run(cmd, cwd=NS3_DIR, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=240)
+        out = proc.stdout
+    except subprocess.TimeoutExpired:
+        print(f"\n[TIMEOUT] Simulation timed out after 240s for {nodes} UAVs! Killing process...", flush=True)
+        out = ""
 
     # Read generated p1 report
     p1_rpt = os.path.join(NS3_DIR, "p1_ground_truth_report.txt")

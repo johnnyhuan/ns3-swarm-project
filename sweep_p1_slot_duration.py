@@ -47,8 +47,8 @@ space_size = float(sys.argv[4]) if len(sys.argv) > 4 else 200.0
 space_z = float(sys.argv[5]) if len(sys.argv) > 5 else 80.0
 
 # Slot durations to test in microseconds
-# Sweeping from ultra-low micro-slots (10us) up to standard clean bound (250us)
-slot_durations = [10.0, 20.0, 30.0, 50.0, 75.0, 100.0, 125.0, 150.0, 200.0, 250.0]
+# Dense high-resolution sweep between 70us and 105us to find the exact optimum / physical limit
+slot_durations = [70.0, 75.0, 77.5, 80.0, 82.5, 85.0, 87.5, 90.0, 92.5, 95.0, 97.5, 100.0, 105.0]
 
 print(f"• Swarm Scale         : {num_nodes} UAVs in {space_size:.0f}m x {space_size:.0f}m x {space_z:.0f}m")
 print(f"• Phase 1 Window      : {p1_duration} ms")
@@ -86,6 +86,14 @@ def run_point(slot_us):
             log_text = f.read()
 
     combined = p1_text + "\n" + out + "\n" + log_text
+
+    if not p1_text or proc.returncode != 0:
+        print(f"\n[NS3 DIAGNOSTIC for {slot_us:.1f}µs] ExitCode: {proc.returncode}")
+        err_lines = [l for l in out.splitlines() if any(k in l.lower() for k in ["assert", "error", "fault", "abort", "terminate", "msg"])]
+        if err_lines:
+            print("  ==> " + "\n  ==> ".join(err_lines[-5:]))
+        elif out:
+            print("  ==> " + "\n  ==> ".join(out.splitlines()[-5:]))
 
     slots_avail = int((p1_duration * 1000.0 - 250.0) / slot_us) + 1
     density = num_nodes / max(1, slots_avail)
@@ -140,51 +148,45 @@ def run_point(slot_us):
 results = []
 for s_us in slot_durations:
     slots_cnt = int((p1_duration * 1000.0 - 250.0) / s_us) + 1
-    print(f"▶️ Testing Slot Duration = {s_us:.0f} µs ({slots_cnt} slots, ~{num_nodes/slots_cnt:.2f} UAVs/slot) ...", end="", flush=True)
+    print(f"▶️ Testing Slot Duration = {s_us:.1f} µs ({slots_cnt} slots, ~{num_nodes/slots_cnt:.2f} UAVs/slot) ...", end="", flush=True)
     res = run_point(s_us)
     results.append(res)
     print(f"  ==> PRR: {res['prr']:.1f}% | Deafness: {res['rx_deafness']} | Coll: {res['preamble_coll']} | Captures: {res['captures']}")
 
 print("\n" + "=" * 105)
-print("📊 SIDELINK SLOT DURATION SWEEP: PHYSICAL CAPACITY & PERFORMANCE SPECTRUM")
+print("📊 SIDELINK SLOT DURATION SWEEP: HIGH-RESOLUTION 75µs - 105µs BOUNDARY ANALYSIS")
 print("=" * 105)
 print(f"{'Slot (µs)':<10} | {'Slots':<6} | {'UAVs/Slot':<10} | {'P1 PRR':<10} | {'Deafness':<10} | {'Collision':<10} | {'Low SINR':<10} | {'Captures':<10} | {'Physical State / Phenomenon':<22}")
 print("-" * 105)
 
 for r in results:
-    if r['slot_us'] <= 50.0:
-        phys_note = "🚀 Ultra Micro-Slots"
-    elif r['slot_us'] <= 125.0:
-        phys_note = "⚡ High Density (<1/slot)"
-    elif r['slot_us'] < 244.0:
-        phys_note = "✨ Sub-Packet Staggering"
-    elif abs(r['slot_us'] - 250.0) < 1.0:
-        phys_note = "⭐ Clean Physical Bound"
-    elif r['slot_us'] <= 400.0:
-        phys_note = "✅ Clean Spatial Separation"
+    if r['slot_us'] < 75.0:
+        phys_note = "⚡ Sub-75µs Boundary"
+    elif r['slot_us'] <= 85.0:
+        phys_note = "🚀 Optimal Micro-Slot Region"
+    elif r['slot_us'] <= 100.0:
+        phys_note = "🔥 Peak S-SPS Spatial Reuse"
     else:
-        phys_note = "🛑 Overcrowded (>3.5/slot)"
+        phys_note = "✅ Baseline Micro-Slot"
     
-    print(f"{r['slot_us']:<10.0f} | {r['slots_avail']:<6} | {r['density']:<10.2f} | {r['prr']:<9.1f}% | {r['rx_deafness']:<10} | {r['preamble_coll']:<10} | {r['low_sinr']:<10} | {r['captures']:<10} | {phys_note:<22}")
+    print(f"{r['slot_us']:<10.1f} | {r['slots_avail']:<6} | {r['density']:<10.2f} | {r['prr']:<9.1f}% | {r['rx_deafness']:<10} | {r['preamble_coll']:<10} | {r['low_sinr']:<10} | {r['captures']:<10} | {phys_note:<22}")
 print("=" * 105)
 
 # Save text report
 summary_path = os.path.join(PROJECT_DIR, "exp_slot_sweep_results.txt")
 with open(summary_path, "w", encoding="utf-8") as f:
-    f.write("# Phase 1 Sidelink Slot Duration Sweep Summary\n")
+    f.write("# Phase 1 Sidelink Slot Duration Sweep Summary (High-Resolution 70µs - 105µs)\n")
     f.write(f"- Swarm Scale: {num_nodes} UAVs in {space_size}m x {space_size}m x {space_z}m\n")
     f.write(f"- Phase 1 Duration: {p1_duration} ms\n")
     f.write(f"- Packet Airtime Limit: 244 µs (192µs Header + 52µs Payload @ 2 Mbps)\n\n")
     f.write("| Slot (µs) | Slots Available | UAVs/Slot | P1 PRR (%) | RX Deafness | Preamble Coll | Low SINR | Captures | Physical Phenomenon |\n")
     f.write("| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n")
     for r in results:
-        if r['slot_us'] <= 50.0: note = "Ultra Micro-Slots"
-        elif r['slot_us'] <= 125.0: note = "High Density (<1/slot)"
-        elif r['slot_us'] < 244.0: note = "Sub-Packet Staggering"
-        elif abs(r['slot_us'] - 250.0) < 1.0: note = "Clean Physical Bound"
-        elif r['slot_us'] <= 400.0: note = "Clean Spatial Separation"
-        else: note = "Overcrowded (>3.5/slot)"
-        f.write(f"| {r['slot_us']:.0f} | {r['slots_avail']} | {r['density']:.2f} | {r['prr']:.1f}% | {r['rx_deafness']} | {r['preamble_coll']} | {r['low_sinr']} | {r['captures']} | {note} |\n")
+        if r['slot_us'] < 75.0: note = "Sub-75µs Boundary"
+        elif r['slot_us'] <= 85.0: note = "Optimal Micro-Slot Region"
+        elif r['slot_us'] <= 100.0: note = "Peak S-SPS Spatial Reuse"
+        else: note = "Baseline Micro-Slot"
+        f.write(f"| {r['slot_us']:.1f} | {r['slots_avail']} | {r['density']:.2f} | {r['prr']:.1f}% | {r['rx_deafness']} | {r['preamble_coll']} | {r['low_sinr']} | {r['captures']} | {note} |\n")
 
 print(f"\n📄 Results saved to: {summary_path}")
 

@@ -123,6 +123,9 @@ def parse_metrics(p1_text, p2_text, stdout_text):
         "turnaround": 0,
         "payload_drop": 0,
         "captures": 0,
+        "steady_links": 0,
+        "steady_success": 0,
+        "steady_prr": 0.0,
         "p2_prr": 0.0,
         "mean_iat": 0.0,
         "mean_aoi": 0.0
@@ -162,6 +165,15 @@ def parse_metrics(p1_text, p2_text, stdout_text):
 
     m = re.search(r"Total Power Capture Events Triggered\s*:\s*(\d+)", src_p1)
     if m: data["captures"] = int(m.group(1))
+
+    # Parse Steady-State Phase 1 metrics
+    m = re.search(r"Steady-State P1 Target Links.*:\s*(\d+)", src_p1)
+    if m:
+        data["steady_links"] = int(m.group(1))
+        m_succ = re.search(r"Steady-State P1 Target Links[\s\S]*?Successfully Received \(Delivered\)\s*:\s*(\d+)\s*\(([\d\.]+)%\)", src_p1)
+        if m_succ:
+            data["steady_success"] = int(m_succ.group(1))
+            data["steady_prr"] = float(m_succ.group(2))
 
     # Priority: Parse Phase 2 metrics from p2_text
     src_p2 = p2_text if p2_text else stdout_text
@@ -204,7 +216,9 @@ def fmt_row(name, val_a, val_b, is_pct=False, invert_better=False):
         tag = ""
     return f"{name:<38} | {s_a:<22} | {s_b:<22} | {diff_s:<7} {tag}"
 
-print(fmt_row("Phase 1 Delivery PRR", res_csma["p1_prr"], res_sidelink["p1_prr"], is_pct=True))
+print(fmt_row("Phase 1 Delivery PRR (Overall)", res_csma["p1_prr"], res_sidelink["p1_prr"], is_pct=True))
+if res_csma["steady_links"] > 0 or res_sidelink["steady_links"] > 0:
+    print(fmt_row("Phase 1 Steady-State PRR (Last 2s)", res_csma["steady_prr"], res_sidelink["steady_prr"], is_pct=True))
 print(fmt_row("Delivered Links", res_csma["p1_success"], res_sidelink["p1_success"]))
 print(fmt_row("Total Failed Links", res_csma["p1_fails"], res_sidelink["p1_fails"], invert_better=True))
 print("-" * 92)
@@ -235,7 +249,9 @@ with open(md_report_path, "w", encoding="utf-8") as f:
     f.write(f"- **Phase 1 Duration**: {p1_duration} ms | **Slot Width**: {p1_slot_us} µs\n\n")
     f.write(f"| Metric / Root Cause | CSMA-CA (Baseline) | 3GPP Sidelink S-SPS | Difference |\n")
     f.write(f"| :--- | :--- | :--- | :--- |\n")
-    f.write(f"| **Phase 1 PRR** | **{res_csma['p1_prr']:.1f}%** | **{res_sidelink['p1_prr']:.1f}%** | **{res_sidelink['p1_prr'] - res_csma['p1_prr']:+.1f}%** |\n")
+    f.write(f"| **Phase 1 PRR (Overall 0~{sim_time:.0f}s)** | **{res_csma['p1_prr']:.1f}%** | **{res_sidelink['p1_prr']:.1f}%** | **{res_sidelink['p1_prr'] - res_csma['p1_prr']:+.1f}%** |\n")
+    if res_csma["steady_links"] > 0 or res_sidelink["steady_links"] > 0:
+        f.write(f"| **Phase 1 Steady-State PRR (Last 2s)** | **{res_csma['steady_prr']:.1f}%** | **{res_sidelink['steady_prr']:.1f}%** | **{res_sidelink['steady_prr'] - res_csma['steady_prr']:+.1f}%** |\n")
     f.write(f"| Delivered Links | {res_csma['p1_success']} | {res_sidelink['p1_success']} | {res_sidelink['p1_success'] - res_csma['p1_success']:+d} |\n")
     f.write(f"| Total Dropped Links | {res_csma['p1_fails']} | {res_sidelink['p1_fails']} | {res_sidelink['p1_fails'] - res_csma['p1_fails']:+d} |\n")
     f.write(f"| CSMA Aborts | {res_csma['csma_abort']} | {res_sidelink['csma_abort']} | {res_sidelink['csma_abort'] - res_csma['csma_abort']:+d} |\n")

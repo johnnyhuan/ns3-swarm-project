@@ -1,0 +1,16 @@
+# UAV Swarm Density Benchmark: 3GPP Sidelink S-SPS vs CSMA-CA
+- Airspace Dimensions : 200.0m x 200.0m x 80.0m
+- Phase 1 Window      : 10.0 ms
+- Sidelink Micro-Slot : 100.0 µs (98 available slots)
+- Simulation Duration : 1.0 s per run
+
+| Swarm Scale (UAVs) | CSMA-CA PRR (%) | Sidelink S-SPS PRR (%) | Δ Gain (%) | CSMA Deafness | SPS Deafness | CSMA Collisions | SPS Collisions | SPS Captures | Evaluation |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 30 | 92.1% | 93.2% | +1.1% | 14 | 40 | 149 | 110 | 9916 | Comparable |
+| 50 | 90.7% | 92.4% | +1.7% | 48 | 132 | 365 | 185 | 27301 | Comparable |
+| 75 | 91.1% | 93.2% | +2.1% | 86 | 157 | 504 | 372 | 46339 | Comparable |
+| 100 | 91.0% | 93.7% | +2.7% | 116 | 201 | 683 | 418 | 81077 | Comparable |
+| 125 | 88.3% | 91.7% | +3.4% | 204 | 361 | 1083 | 731 | 102685 | Sidelink Dominant |
+| 150 | 87.7% | 92.4% | +4.7% | 269 | 316 | 1272 | 860 | 137912 | Sidelink Dominant |
+| 175 | 84.4% | 91.2% | +6.8% | 369 | 400 | 1754 | 1153 | 171196 | Sidelink Dominant |
+| 200 | 84.6% | 92.1% | +7.5% | 433 | 488 | 2052 | 1078 | 206341 | Sidelink Dominant |

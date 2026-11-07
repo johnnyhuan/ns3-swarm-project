@@ -47,8 +47,8 @@ space_size = float(sys.argv[4]) if len(sys.argv) > 4 else 200.0
 space_z = float(sys.argv[5]) if len(sys.argv) > 5 else 80.0
 
 # Slot durations to test in microseconds
-# Note: Physical packet airtime is ~244 us (192us header + 52us payload @ 2 Mbps)
-slot_durations = [150.0, 200.0, 240.0, 250.0, 300.0, 400.0, 500.0, 750.0, 1000.0]
+# Sweeping from ultra-low micro-slots (10us) up to standard clean bound (250us)
+slot_durations = [10.0, 20.0, 30.0, 50.0, 75.0, 100.0, 125.0, 150.0, 200.0, 250.0]
 
 print(f"• Swarm Scale         : {num_nodes} UAVs in {space_size:.0f}m x {space_size:.0f}m x {space_z:.0f}m")
 print(f"• Phase 1 Window      : {p1_duration} ms")
@@ -87,7 +87,7 @@ def run_point(slot_us):
 
     combined = p1_text + "\n" + out + "\n" + log_text
 
-    slots_avail = int((p1_duration * 1000.0 - 200.0) / slot_us) + 1
+    slots_avail = int((p1_duration * 1000.0 - 250.0) / slot_us) + 1
     density = num_nodes / max(1, slots_avail)
 
     data = {
@@ -139,7 +139,7 @@ def run_point(slot_us):
 
 results = []
 for s_us in slot_durations:
-    slots_cnt = int((p1_duration * 1000.0 - 200.0) / s_us) + 1
+    slots_cnt = int((p1_duration * 1000.0 - 250.0) / s_us) + 1
     print(f"▶️ Testing Slot Duration = {s_us:.0f} µs ({slots_cnt} slots, ~{num_nodes/slots_cnt:.2f} UAVs/slot) ...", end="", flush=True)
     res = run_point(s_us)
     results.append(res)
@@ -152,10 +152,14 @@ print(f"{'Slot (µs)':<10} | {'Slots':<6} | {'UAVs/Slot':<10} | {'P1 PRR':<10} |
 print("-" * 105)
 
 for r in results:
-    if r['slot_us'] < 244.0:
-        phys_note = "⚠️ Packet Spillage (<244µs)"
+    if r['slot_us'] <= 50.0:
+        phys_note = "🚀 Ultra Micro-Slots"
+    elif r['slot_us'] <= 125.0:
+        phys_note = "⚡ High Density (<1/slot)"
+    elif r['slot_us'] < 244.0:
+        phys_note = "✨ Sub-Packet Staggering"
     elif abs(r['slot_us'] - 250.0) < 1.0:
-        phys_note = "⭐ Optimal Physical Bound"
+        phys_note = "⭐ Clean Physical Bound"
     elif r['slot_us'] <= 400.0:
         phys_note = "✅ Clean Spatial Separation"
     else:
@@ -174,7 +178,12 @@ with open(summary_path, "w", encoding="utf-8") as f:
     f.write("| Slot (µs) | Slots Available | UAVs/Slot | P1 PRR (%) | RX Deafness | Preamble Coll | Low SINR | Captures | Physical Phenomenon |\n")
     f.write("| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n")
     for r in results:
-        note = "Packet Spillage (<244µs)" if r['slot_us'] < 244.0 else ("Optimal Physical Bound" if abs(r['slot_us'] - 250.0) < 1.0 else ("Clean Spatial Separation" if r['slot_us'] <= 400.0 else "Overcrowded"))
+        if r['slot_us'] <= 50.0: note = "Ultra Micro-Slots"
+        elif r['slot_us'] <= 125.0: note = "High Density (<1/slot)"
+        elif r['slot_us'] < 244.0: note = "Sub-Packet Staggering"
+        elif abs(r['slot_us'] - 250.0) < 1.0: note = "Clean Physical Bound"
+        elif r['slot_us'] <= 400.0: note = "Clean Spatial Separation"
+        else: note = "Overcrowded (>3.5/slot)"
         f.write(f"| {r['slot_us']:.0f} | {r['slots_avail']} | {r['density']:.2f} | {r['prr']:.1f}% | {r['rx_deafness']} | {r['preamble_coll']} | {r['low_sinr']} | {r['captures']} | {note} |\n")
 
 print(f"\n📄 Results saved to: {summary_path}")

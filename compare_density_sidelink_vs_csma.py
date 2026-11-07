@@ -26,8 +26,8 @@ p1_duration = float(sys.argv[3]) if len(sys.argv) > 3 else 10.0
 space_size = float(sys.argv[4]) if len(sys.argv) > 4 else 200.0
 space_z = float(sys.argv[5]) if len(sys.argv) > 5 else 80.0
 
-# Density sweep: 30 to 200 UAVs
-node_counts = [30, 50, 75, 100, 125, 150, 175, 200]
+# Density sweep: 30 to 500 UAVs
+node_counts = [30, 50, 75, 100, 150, 200, 250, 300, 350, 400, 450, 500]
 
 print(f"• UAV Swarm Scale Points : {node_counts} UAVs")
 print(f"• Airspace Dimensions    : {space_size:.0f}m x {space_size:.0f}m x {space_z:.0f}m")
@@ -260,6 +260,52 @@ try:
     plt.savefig(plot_fail_path, dpi=300, bbox_inches='tight')
     plt.close()
     print(f"📈 Failure Modes Plot saved to: {plot_fail_path}")
+
+    # Graph 3: Complete Comprehensive 4-Panel Research Dashboard
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+    
+    # 1. PRR vs Density
+    axes[0, 0].plot(x_nodes, y_sps, marker='o', linewidth=2.5, markersize=7, color='#2980b9', label='3GPP Sidelink S-SPS (100 µs)')
+    axes[0, 0].plot(x_nodes, y_csma, marker='s', linewidth=2.5, markersize=7, color='#e67e22', linestyle='--', label='Continuous CSMA-CA')
+    axes[0, 0].set_title('(a) Phase 1 Delivery PRR vs Swarm Density (30-500 UAVs)', fontsize=12, fontweight='bold')
+    axes[0, 0].set_xlabel('Swarm Scale (UAVs)', fontweight='bold')
+    axes[0, 0].set_ylabel('Delivery PRR (%)', fontweight='bold')
+    axes[0, 0].grid(True, linestyle='--', alpha=0.6)
+    axes[0, 0].legend(fontsize=10)
+
+    # 2. PRR Δ Gain
+    y_gains = [r['diff'] for r in results]
+    colors = ['#27ae60' if g >= 0 else '#c0392b' for g in y_gains]
+    axes[0, 1].bar([str(n) for n in x_nodes], y_gains, color=colors, alpha=0.85, edgecolor='black')
+    axes[0, 1].set_title('(b) Sidelink S-SPS PRR Advantage (Δ Gain %)', fontsize=12, fontweight='bold')
+    axes[0, 1].set_xlabel('Swarm Scale (UAVs)', fontweight='bold')
+    axes[0, 1].set_ylabel('PRR Gain over CSMA (%)', fontweight='bold')
+    axes[0, 1].axhline(0, color='gray', linestyle='--')
+    axes[0, 1].grid(True, linestyle='--', alpha=0.6)
+
+    # 3. Preamble Collisions
+    axes[1, 0].plot(x_nodes, [r['sps']['preamble_coll'] for r in results], marker='o', color='#2980b9', linewidth=2, label='S-SPS RX Collisions')
+    axes[1, 0].plot(x_nodes, [r['csma']['preamble_coll'] for r in results], marker='s', color='#e67e22', linestyle='--', linewidth=2, label='CSMA RX Collisions')
+    axes[1, 0].set_title('(c) Preamble Collision Suppression vs Density', fontsize=12, fontweight='bold')
+    axes[1, 0].set_xlabel('Swarm Scale (UAVs)', fontweight='bold')
+    axes[1, 0].set_ylabel('Severe RX Collisions', fontweight='bold')
+    axes[1, 0].grid(True, linestyle='--', alpha=0.6)
+    axes[1, 0].legend(fontsize=10)
+
+    # 4. Sidelink Power Captures
+    axes[1, 1].plot(x_nodes, [r['sps']['captures'] for r in results], marker='^', color='#8e44ad', linewidth=2.5, markersize=8, label='Power Capture Events')
+    axes[1, 1].set_title('(d) Spatial Closest-Capture Rescues vs Density', fontsize=12, fontweight='bold')
+    axes[1, 1].set_xlabel('Swarm Scale (UAVs)', fontweight='bold')
+    axes[1, 1].set_ylabel('Triggered Capture Events', fontweight='bold')
+    axes[1, 1].grid(True, linestyle='--', alpha=0.6)
+    axes[1, 1].legend(fontsize=10)
+
+    plt.suptitle('UAV Swarm Ultra-Large Scale Density Benchmark (30 to 500 UAVs)\nSidelink S-SPS (100µs Micro-Slot) vs Baseline CSMA-CA', fontsize=14, fontweight='bold', y=0.995)
+    plt.tight_layout()
+    dashboard_path = os.path.join(PROJECT_DIR, "exp_density_comprehensive_dashboard.png")
+    plt.savefig(dashboard_path, dpi=300, bbox_inches='tight')
+    plt.close()
+    print(f"📊 Comprehensive Dashboard saved to: {dashboard_path}")
 
 except Exception as e:
     print(f"Note: matplotlib plotting skipped ({e})")

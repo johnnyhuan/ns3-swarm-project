@@ -66,24 +66,24 @@ static int g_resourceCollisionCount = 0;
 static double g_dynSumDiscoveryIat = 0.0;
 static int g_dynCountDiscoveryIat = 0;
 static double g_dynMaxDiscoveryIat = 0.0;
-static std::map<std::pair<uint8_t, uint8_t>, double> g_lastDiscoveryRxTime;
+static std::map<std::pair<uint16_t, uint16_t>, double> g_lastDiscoveryRxTime;
 
 static double g_dynSumAoI = 0.0;
 static int g_dynCountAoI = 0;
 static double g_dynMaxAoI = 0.0;
-static std::map<std::pair<uint8_t, uint8_t>, double> g_lastBeaconRxGenTime;
+static std::map<std::pair<uint16_t, uint16_t>, double> g_lastBeaconRxGenTime;
 
 // Drone 0 real-time top-5 tracking for sample drone report
-static std::map<uint8_t, int> g_d0Top5Expected;
-static std::map<uint8_t, int> g_d0Top5DiscRx;
-static std::map<uint8_t, int> g_d0Top5BcnRx;
-static std::map<uint8_t, double> g_d0SumDiscIat;
-static std::map<uint8_t, int> g_d0CountDiscIat;
-static std::map<uint8_t, double> g_d0MaxDiscIat;
-static std::map<uint8_t, double> g_d0SumAoI;
-static std::map<uint8_t, int> g_d0CountAoI;
-static std::map<uint8_t, double> g_d0MaxAoI;
-static std::map<uint8_t, double> g_d0LastDist;
+static std::map<uint16_t, int> g_d0Top5Expected;
+static std::map<uint16_t, int> g_d0Top5DiscRx;
+static std::map<uint16_t, int> g_d0Top5BcnRx;
+static std::map<uint16_t, double> g_d0SumDiscIat;
+static std::map<uint16_t, int> g_d0CountDiscIat;
+static std::map<uint16_t, double> g_d0MaxDiscIat;
+static std::map<uint16_t, double> g_d0SumAoI;
+static std::map<uint16_t, int> g_d0CountAoI;
+static std::map<uint16_t, double> g_d0MaxAoI;
+static std::map<uint16_t, double> g_d0LastDist;
 
 static int g_totalTopologyMatchCount = 0;
 static int g_totalTopologyCheckCount = 0;
@@ -126,15 +126,15 @@ static const char* P1ReasonStrings[] = {
 };
 
 struct P1PacketMeta {
-    uint8_t senderId;
+    uint16_t senderId;
     uint32_t epoch;
     double txStartTime;
 };
 
 struct P1LinkRecord {
     uint32_t epoch;
-    uint8_t receiver;
-    uint8_t sender;
+    uint16_t receiver;
+    uint16_t sender;
     double distance;
     P1DropCategory category;
     double prx_dbm;
@@ -143,21 +143,21 @@ struct P1LinkRecord {
     int coChannelCount;
 };
 
-static PhyEnumeration g_dronePhyState[512];
-static uint64_t g_droneReceivingUid[512];
+static PhyEnumeration g_dronePhyState[1024];
+static uint64_t g_droneReceivingUid[1024];
 static std::map<uint64_t, P1PacketMeta> g_p1PacketsMeta;
-static std::map<std::pair<uint32_t, uint8_t>, std::vector<uint64_t>> g_p1TxUidsInEpoch;
-static std::map<std::pair<uint64_t, uint8_t>, PhyEnumeration> g_rxStateAtTxStart;
-static std::map<std::tuple<uint32_t, uint8_t, uint8_t>, P1DropCategory> g_p1RxDropEvent;
-static std::map<uint32_t, std::map<uint8_t, std::set<uint8_t>>> g_p1ReceivedInEpoch;
-static std::map<uint32_t, std::map<uint8_t, int>> g_p1TxSuccessInEpoch;
+static std::map<std::pair<uint32_t, uint16_t>, std::vector<uint64_t>> g_p1TxUidsInEpoch;
+static std::map<std::pair<uint64_t, uint16_t>, PhyEnumeration> g_rxStateAtTxStart;
+static std::map<std::tuple<uint32_t, uint16_t, uint16_t>, P1DropCategory> g_p1RxDropEvent;
+static std::map<uint32_t, std::map<uint16_t, std::set<uint16_t>>> g_p1ReceivedInEpoch;
+static std::map<uint32_t, std::map<uint16_t, int>> g_p1TxSuccessInEpoch;
 
 static std::vector<P1LinkRecord> g_p1LinkRecords;
 static int g_p1ReasonCounts[NUM_P1_REASONS] = {0};
 static int g_p1TotalTargetLinks = 0;
 
 struct NeighborInfo {
-    uint8_t id;
+    uint16_t id;
     int8_t rssi;
     uint32_t epoch;
     uint8_t claimedSlot;
@@ -167,7 +167,7 @@ struct NeighborInfo {
 struct ScheduleSlot {
     enum Action { IDLE, TX, RX } action;
     uint8_t channel;
-    uint8_t targetId;
+    uint16_t targetId;
 };
 
 // --- Phase 2 Ground Truth Physical Drop Tracking ---
@@ -199,7 +199,7 @@ static const char* P2ReasonStrings[] = {
 };
 
 struct P2PacketMeta {
-    uint8_t senderId;
+    uint16_t senderId;
     uint32_t epoch;
     uint8_t slot;
     uint8_t channel;
@@ -208,8 +208,8 @@ struct P2PacketMeta {
 
 struct P2LinkRecord {
     uint32_t epoch;
-    uint8_t receiver;
-    uint8_t sender;
+    uint16_t receiver;
+    uint16_t sender;
     double distance;
     P2DropCategory category;
     double prx_dbm;
@@ -222,29 +222,29 @@ static std::vector<P2LinkRecord> g_p2LinkRecords;
 static int g_p2ReasonCounts[NUM_P2_REASONS] = {0};
 static int g_p2TotalTargetLinks = 0;
 
-static uint8_t g_droneCurrentChannel[512];
+static uint8_t g_droneCurrentChannel[1024];
 static std::map<uint64_t, P2PacketMeta> g_p2PacketsMeta;
-static std::map<std::pair<uint32_t, uint8_t>, std::vector<uint64_t>> g_p2TxUidsInEpoch;
-static std::map<std::pair<uint64_t, uint8_t>, PhyEnumeration> g_p2RxStateAtTxStart;
-static std::map<std::pair<uint64_t, uint8_t>, uint8_t> g_p2RxChannelAtTxStart;
-static std::map<std::tuple<uint32_t, uint8_t, uint8_t>, P2DropCategory> g_p2RxDropEvent;
-static std::map<std::tuple<uint32_t, uint8_t, uint8_t>, bool> g_p2RxBeginEvent;
-static std::map<std::tuple<uint32_t, uint8_t, uint8_t>, double> g_p2RxEndSinr;
+static std::map<std::pair<uint32_t, uint16_t>, std::vector<uint64_t>> g_p2TxUidsInEpoch;
+static std::map<std::pair<uint64_t, uint16_t>, PhyEnumeration> g_p2RxStateAtTxStart;
+static std::map<std::pair<uint64_t, uint16_t>, uint8_t> g_p2RxChannelAtTxStart;
+static std::map<std::tuple<uint32_t, uint16_t, uint16_t>, P2DropCategory> g_p2RxDropEvent;
+static std::map<std::tuple<uint32_t, uint16_t, uint16_t>, bool> g_p2RxBeginEvent;
+static std::map<std::tuple<uint32_t, uint16_t, uint16_t>, double> g_p2RxEndSinr;
 
-static std::map<uint32_t, std::map<uint8_t, std::set<uint8_t>>> g_p2ReceivedInEpoch;
-static std::map<uint32_t, std::map<uint8_t, bool>> g_p2TxAbortInEpoch;
-static std::map<uint32_t, std::map<uint8_t, uint8_t>> g_droneClaimedSlot;
-static std::map<uint32_t, std::map<uint8_t, uint8_t>> g_droneClaimedChannel;
-static std::map<uint32_t, std::map<uint8_t, int>> g_p1DroneClaimedSlot;
-static std::map<uint32_t, std::map<uint8_t, std::set<uint8_t>>> g_p2DiscoveredInP1;
-static std::map<uint32_t, std::map<uint8_t, std::map<int, ScheduleSlot::Action>>> g_p2SlotAction;
-static std::map<uint32_t, std::map<uint8_t, std::map<int, uint8_t>>> g_p2SlotTarget;
+static std::map<uint32_t, std::map<uint16_t, std::set<uint16_t>>> g_p2ReceivedInEpoch;
+static std::map<uint32_t, std::map<uint16_t, bool>> g_p2TxAbortInEpoch;
+static std::map<uint32_t, std::map<uint16_t, uint8_t>> g_droneClaimedSlot;
+static std::map<uint32_t, std::map<uint16_t, uint8_t>> g_droneClaimedChannel;
+static std::map<uint32_t, std::map<uint16_t, int>> g_p1DroneClaimedSlot;
+static std::map<uint32_t, std::map<uint16_t, std::set<uint16_t>>> g_p2DiscoveredInP1;
+static std::map<uint32_t, std::map<uint16_t, std::map<int, ScheduleSlot::Action>>> g_p2SlotAction;
+static std::map<uint32_t, std::map<uint16_t, std::map<int, uint16_t>>> g_p2SlotTarget;
 
 class SwarmSchedulerApp : public Application {
 public:
     SwarmSchedulerApp() : m_epoch(0), m_myClaimedSlot(0), m_myClaimedChannel(0), m_topologyMatchCount(0), m_topologyCheckCount(0), m_epochStartTime(0), m_p1ClaimedSlot(-1), m_p1ReselCounter(0), m_p1ConflictOccurred(false) {}
 
-    void Setup(Ptr<LrWpanNetDevice> dev, uint8_t id) {
+    void Setup(Ptr<LrWpanNetDevice> dev, uint16_t id) {
         m_device = dev;
         m_id = id;
         
@@ -414,7 +414,7 @@ public:
             uint32_t numNodes = NodeList::GetNNodes();
             for (uint32_t j = 0; j < numNodes; j++) {
                 if (j == m_id) continue;
-                g_rxStateAtTxStart[{uid, (uint8_t)j}] = g_dronePhyState[j];
+                g_rxStateAtTxStart[{uid, (uint16_t)j}] = g_dronePhyState[j];
             }
         }
 
@@ -424,8 +424,8 @@ public:
             uint32_t numNodes = NodeList::GetNNodes();
             for (uint32_t j = 0; j < numNodes; j++) {
                 if (j == m_id) continue;
-                g_p2RxStateAtTxStart[{uid, (uint8_t)j}] = g_dronePhyState[j];
-                g_p2RxChannelAtTxStart[{uid, (uint8_t)j}] = g_droneCurrentChannel[j];
+                g_p2RxStateAtTxStart[{uid, (uint16_t)j}] = g_dronePhyState[j];
+                g_p2RxChannelAtTxStart[{uid, (uint16_t)j}] = g_droneCurrentChannel[j];
             }
         }
     }
@@ -437,7 +437,7 @@ public:
     
     void StopApplication() override {}
 
-    void AddCapturedNeighbor(uint8_t senderId, int8_t rssi, uint32_t epoch, uint8_t claimedSlot, uint8_t claimedCh) {
+    void AddCapturedNeighbor(uint16_t senderId, int8_t rssi, uint32_t epoch, uint8_t claimedSlot, uint8_t claimedCh) {
         bool exists = false;
         for (const auto& n : m_monitorList) {
             if (n.id == senderId) {
@@ -452,7 +452,7 @@ public:
 
 private:
     Ptr<LrWpanNetDevice> m_device;
-    uint8_t m_id;
+    uint16_t m_id;
     uint32_t m_epoch;
     double m_epochStartTime;
     uint8_t m_myClaimedSlot;
@@ -461,21 +461,21 @@ private:
     ScheduleSlot m_schedule[MAX_DATA_SLOTS];
 
     // 數據統計變數
-    std::map<uint8_t, int> m_discoveryReceivedCount;
-    std::map<uint8_t, int> m_beaconReceivedCount;
+    std::map<uint16_t, int> m_discoveryReceivedCount;
+    std::map<uint16_t, int> m_beaconReceivedCount;
     
-    std::map<uint8_t, double> m_lastDiscoveryTime;
-    std::map<uint8_t, double> m_sumDiscoveryIat;
-    std::map<uint8_t, int> m_countDiscoveryIat;
-    std::map<uint8_t, double> m_maxDiscoveryIat;
+    std::map<uint16_t, double> m_lastDiscoveryTime;
+    std::map<uint16_t, double> m_sumDiscoveryIat;
+    std::map<uint16_t, int> m_countDiscoveryIat;
+    std::map<uint16_t, double> m_maxDiscoveryIat;
     
     // AoI 統計變數 (For 50B Beacon Packet)
-    std::map<uint8_t, double> m_lastGenerationTime;
-    std::map<uint8_t, double> m_sumAoI;
-    std::map<uint8_t, int> m_countAoI;
-    std::map<uint8_t, double> m_maxAoI;
+    std::map<uint16_t, double> m_lastGenerationTime;
+    std::map<uint16_t, double> m_sumAoI;
+    std::map<uint16_t, int> m_countAoI;
+    std::map<uint16_t, double> m_maxAoI;
     
-    std::vector<uint8_t> m_lastScheduledRx;
+    std::vector<uint16_t> m_lastScheduledRx;
     int m_topologyMatchCount;
     int m_topologyCheckCount;
 
@@ -622,7 +622,7 @@ private:
             m_myClaimedChannel = 0;
             g_droneClaimedSlot[m_epoch][m_id] = 0;
             g_droneClaimedChannel[m_epoch][m_id] = 0;
-            uint16_t payload = (m_id & 0xFF);
+            uint16_t payload = (m_id & 0x01FF);
             uint8_t buffer[2] = { (uint8_t)(payload & 0xFF), (uint8_t)((payload >> 8) & 0xFF) };
             Ptr<Packet> p = Create<Packet>(buffer, 2);
             uint64_t uid = p->GetUid();
@@ -682,8 +682,8 @@ private:
         g_droneClaimedSlot[m_epoch][m_id] = m_myClaimedSlot;
         g_droneClaimedChannel[m_epoch][m_id] = m_myClaimedChannel;
 
-        // 位元封裝 (Bit-packing): ID(8 bits: 0-255), Slot(5 bits: 0-31), Channel(3 bits: 0-7) -> Total 16 bits
-        uint16_t payload = (m_id & 0xFF) | ((m_myClaimedSlot & 0x1F) << 8) | ((m_myClaimedChannel & 0x07) << 13);
+        // 位元封裝 (Bit-packing): ID(9 bits: 0-511), Slot(4 bits: 0-15), Channel(3 bits: 0-7) -> Total 16 bits
+        uint16_t payload = (m_id & 0x01FF) | ((m_myClaimedSlot & 0x0F) << 9) | ((m_myClaimedChannel & 0x07) << 13);
         uint8_t buffer[2] = { (uint8_t)(payload & 0xFF), (uint8_t)((payload >> 8) & 0xFF) };
         Ptr<Packet> p = Create<Packet>(buffer, 2);
         uint64_t uid = p->GetUid();
@@ -809,7 +809,7 @@ private:
             meta.channel = s.channel;
             meta.txStartTime = now;
             g_p2PacketsMeta[uid] = meta;
-            g_p2TxUidsInEpoch[{m_epoch, (uint8_t)myId}].push_back(uid);
+            g_p2TxUidsInEpoch[{m_epoch, (uint16_t)myId}].push_back(uid);
 
             SendPacket(DATA_PACKET_SIZE, p, 2); // msduHandle = 2 (Data packet)
         } else if (s.action == ScheduleSlot::RX) {
@@ -902,11 +902,11 @@ private:
             p->CopyData(buffer, 2);
             uint16_t payload = buffer[0] | (buffer[1] << 8);
             
-            uint8_t senderId = payload & 0xFF;
+            uint16_t senderId = payload & 0x01FF;
             g_p1ReceivedInEpoch[m_epoch][myId].insert(senderId);
             g_p2DiscoveredInP1[m_epoch][myId].insert(senderId);
             std::cout << "[P1_RX] Time: " << now << "ms, Receiver: " << myId << ", Sender: " << (int)senderId << ", RSSI: " << (int)rssi << std::endl;
-            uint8_t claimedSlot = (payload >> 8) & 0x1F;
+            uint8_t claimedSlot = (payload >> 9) & 0x0F;
             uint8_t claimedChannel = (payload >> 13) & 0x07;
             
             m_monitorList.push_back({senderId, rssi, m_epoch, claimedSlot, claimedChannel});
@@ -924,7 +924,7 @@ private:
         } else if (p->GetSize() == DATA_PACKET_SIZE) {
             uint8_t addrBuffer[2];
             params.m_srcAddr.CopyTo(addrBuffer);
-            uint8_t srcId = addrBuffer[1];
+            uint16_t srcId = (addrBuffer[0] << 8) | addrBuffer[1];
             g_p2ReceivedInEpoch[m_epoch][myId].insert(srcId);
             
             std::cout << "[P2_RX] Time: " << now << "ms, Receiver: " << myId << ", Sender: " << (int)srcId << ", RSSI: " << (int)rssi << std::endl;
@@ -945,11 +945,11 @@ private:
         int numP1Slots = std::max(1, (int)((g_phase1DurationUs - 250.0) / g_p1SlotUs) + 1);
 
         // Group transmitters by their claimed slot in this epoch
-        std::map<int, std::vector<uint8_t>> transmittersInSlot;
+        std::map<int, std::vector<uint16_t>> transmittersInSlot;
         auto itEp = g_p1DroneClaimedSlot.find(epoch);
         if (itEp != g_p1DroneClaimedSlot.end()) {
             for (const auto& kv : itEp->second) {
-                uint8_t droneId = kv.first;
+                uint16_t droneId = kv.first;
                 int slot = kv.second;
                 if (slot >= 0 && slot < numP1Slots) {
                     transmittersInSlot[slot].push_back(droneId);
@@ -971,7 +971,7 @@ private:
 
                 // Check if receiver R was transmitting in this slot (Half-Duplex)
                 bool rTransmittingInSlot = false;
-                for (uint8_t sId : senders) {
+                for (uint16_t sId : senders) {
                     if (sId == r) {
                         rTransmittingInSlot = true;
                         break;
@@ -987,8 +987,8 @@ private:
                 double bestPrxLinear = 0.0;
                 double bestPrxDbm = -999.0;
 
-                std::vector<std::pair<uint8_t, double>> senderPowers;
-                for (uint8_t sId : senders) {
+                std::vector<std::pair<uint16_t, double>> senderPowers;
+                for (uint16_t sId : senders) {
                     if (sId == r) continue;
                     Ptr<MobilityModel> sMob = NodeList::GetNode(sId)->GetObject<MobilityModel>();
                     if (!sMob) continue;
@@ -1059,13 +1059,13 @@ private:
         uint32_t numNodes = NodeList::GetNNodes();
         for (uint32_t r = 0; r < numNodes; r++) {
             Ptr<MobilityModel> rMob = NodeList::GetNode(r)->GetObject<MobilityModel>();
-            std::vector<std::pair<uint8_t, double>> dists;
+            std::vector<std::pair<uint16_t, double>> dists;
             for (uint32_t s = 0; s < numNodes; s++) {
                 if (s == r) continue;
                 Ptr<MobilityModel> sMob = NodeList::GetNode(s)->GetObject<MobilityModel>();
                 double d = rMob->GetDistanceFrom(sMob);
                 if (d <= M_RADIUS_METERS) {
-                    dists.push_back({(uint8_t)s, d});
+                    dists.push_back({(uint16_t)s, d});
                 }
             }
 
@@ -1082,7 +1082,7 @@ private:
 
             int topK = std::min(K_CLOSEST, (int)dists.size());
             for (int i = 0; i < topK; i++) {
-                uint8_t sender = dists[i].first;
+                uint16_t sender = dists[i].first;
                 double dist = dists[i].second;
 
                 // Sender's TX power in Phase 1 is g_p1TxPower (default 0 dBm)
@@ -1106,7 +1106,7 @@ private:
                 if (txUid != 0) {
                     for (uint32_t other = 0; other < numNodes; other++) {
                         if (other == sender || other == r) continue;
-                        auto otherUidsIt = g_p1TxUidsInEpoch.find({epoch, (uint8_t)other});
+                        auto otherUidsIt = g_p1TxUidsInEpoch.find({epoch, (uint16_t)other});
                         if (otherUidsIt != g_p1TxUidsInEpoch.end() && !otherUidsIt->second.empty()) {
                             uint64_t oUid = otherUidsIt->second.back();
                             auto oMetaIt = g_p1PacketsMeta.find(oUid);
@@ -1131,7 +1131,7 @@ private:
                 bool heard = false;
                 auto itEp = g_p1ReceivedInEpoch.find(epoch);
                 if (itEp != g_p1ReceivedInEpoch.end()) {
-                    auto itRcv = itEp->second.find((uint8_t)r);
+                    auto itRcv = itEp->second.find((uint16_t)r);
                     if (itRcv != itEp->second.end()) {
                         heard = (itRcv->second.count(sender) > 0);
                     }
@@ -1141,7 +1141,7 @@ private:
                 if (heard) {
                     cat = REASON_SUCCESS;
                     double nowMs = Simulator::Now().GetMilliSeconds();
-                    auto lastIt = g_lastDiscoveryRxTime.find({(uint8_t)r, sender});
+                    auto lastIt = g_lastDiscoveryRxTime.find({(uint16_t)r, sender});
                     if (lastIt != g_lastDiscoveryRxTime.end()) {
                         double iat = nowMs - lastIt->second;
                         if (iat > 0) {
@@ -1156,7 +1156,7 @@ private:
                             }
                         }
                     }
-                    g_lastDiscoveryRxTime[{(uint8_t)r, sender}] = nowMs;
+                    g_lastDiscoveryRxTime[{(uint16_t)r, sender}] = nowMs;
                 } else {
                     int txSucc = 0;
                     auto itTxEp = g_p1TxSuccessInEpoch.find(epoch);
@@ -1171,7 +1171,7 @@ private:
                         cat = REASON_SENDER_CSMA_ABORT;
                     } else {
                         PhyEnumeration rStateAtTx = IEEE_802_15_4_PHY_TRX_OFF;
-                        auto stIt = g_rxStateAtTxStart.find({txUid, (uint8_t)r});
+                        auto stIt = g_rxStateAtTxStart.find({txUid, (uint16_t)r});
                         if (stIt != g_rxStateAtTxStart.end()) {
                             rStateAtTx = stIt->second;
                         }
@@ -1183,7 +1183,7 @@ private:
                         } else if (rStateAtTx == IEEE_802_15_4_PHY_TRX_OFF) {
                             cat = REASON_RADIO_TURNAROUND_BUSY;
                         } else {
-                            auto dropIt = g_p1RxDropEvent.find({epoch, sender, (uint8_t)r});
+                            auto dropIt = g_p1RxDropEvent.find({epoch, sender, (uint16_t)r});
                             if (dropIt != g_p1RxDropEvent.end()) {
                                 cat = dropIt->second;
                             } else {
@@ -1209,7 +1209,7 @@ private:
 
                 P1LinkRecord rec;
                 rec.epoch = epoch;
-                rec.receiver = (uint8_t)r;
+                rec.receiver = (uint16_t)r;
                 rec.sender = sender;
                 rec.distance = dist;
                 rec.category = cat;
@@ -1228,13 +1228,13 @@ private:
         uint32_t numNodes = NodeList::GetNNodes();
         for (uint32_t r = 0; r < numNodes; r++) {
             Ptr<MobilityModel> rMob = NodeList::GetNode(r)->GetObject<MobilityModel>();
-            std::vector<std::pair<uint8_t, double>> dists;
+            std::vector<std::pair<uint16_t, double>> dists;
             for (uint32_t s = 0; s < numNodes; s++) {
                 if (s == r) continue;
                 Ptr<MobilityModel> sMob = NodeList::GetNode(s)->GetObject<MobilityModel>();
                 double d = rMob->GetDistanceFrom(sMob);
                 if (d <= M_RADIUS_METERS) {
-                    dists.push_back({(uint8_t)s, d});
+                    dists.push_back({(uint16_t)s, d});
                 }
             }
 
@@ -1244,7 +1244,7 @@ private:
 
             int topK = std::min(K_CLOSEST, (int)dists.size());
             for (int i = 0; i < topK; i++) {
-                uint8_t sender = dists[i].first;
+                uint16_t sender = dists[i].first;
                 double dist = dists[i].second;
 
                 // Compute exact RF metrics for this link (Physics & Channel model)
@@ -1272,7 +1272,7 @@ private:
                 bool delivered = false;
                 auto itEp = g_p2ReceivedInEpoch.find(epoch);
                 if (itEp != g_p2ReceivedInEpoch.end()) {
-                    auto itRcv = itEp->second.find((uint8_t)r);
+                    auto itRcv = itEp->second.find((uint16_t)r);
                     if (itRcv != itEp->second.end()) {
                         delivered = (itRcv->second.count(sender) > 0);
                     }
@@ -1282,7 +1282,7 @@ private:
                 double nowMs = Simulator::Now().GetMilliSeconds();
                 if (delivered) {
                     cat = P2_REASON_SUCCESS;
-                    g_lastBeaconRxGenTime[{(uint8_t)r, sender}] = nowMs - 2.5;
+                    g_lastBeaconRxGenTime[{(uint16_t)r, sender}] = nowMs - 2.5;
                     if (r == 0) {
                         g_d0Top5BcnRx[sender]++;
                     }
@@ -1290,7 +1290,7 @@ private:
                     bool discoveredInP1 = false;
                     auto itP1Ep = g_p2DiscoveredInP1.find(epoch);
                     if (itP1Ep != g_p2DiscoveredInP1.end()) {
-                        auto itP1R = itP1Ep->second.find((uint8_t)r);
+                        auto itP1R = itP1Ep->second.find((uint16_t)r);
                         if (itP1R != itP1Ep->second.end()) {
                             discoveredInP1 = (itP1R->second.count(sender) > 0);
                         }
@@ -1318,11 +1318,11 @@ private:
                         // Inspect receiver r's radio at takeoff
                         PhyEnumeration rStateAtTx = IEEE_802_15_4_PHY_TRX_OFF;
                         uint8_t rChannelAtTx = 0;
-                        auto stIt = g_p2RxStateAtTxStart.find({txUid, (uint8_t)r});
+                        auto stIt = g_p2RxStateAtTxStart.find({txUid, (uint16_t)r});
                         if (stIt != g_p2RxStateAtTxStart.end()) {
                             rStateAtTx = stIt->second;
                         }
-                        auto chIt = g_p2RxChannelAtTxStart.find({txUid, (uint8_t)r});
+                        auto chIt = g_p2RxChannelAtTxStart.find({txUid, (uint16_t)r});
                         if (chIt != g_p2RxChannelAtTxStart.end()) {
                             rChannelAtTx = chIt->second;
                         }
@@ -1333,8 +1333,8 @@ private:
                         }
                         // 2. Was receiver r on a different channel?
                         else if (rChannelAtTx != sChannel) {
-                            if (g_p2SlotAction[epoch][(uint8_t)r][sSlot] == ScheduleSlot::RX &&
-                                g_p2SlotTarget[epoch][(uint8_t)r][sSlot] != sender) {
+                            if (g_p2SlotAction[epoch][(uint16_t)r][sSlot] == ScheduleSlot::RX &&
+                                g_p2SlotTarget[epoch][(uint16_t)r][sSlot] != sender) {
                                 cat = P2_REASON_RX_DEAFNESS_SLOT_CONFLICT;
                             } else {
                                 cat = P2_REASON_RECEIVER_CHANNEL_MISMATCH;
@@ -1343,7 +1343,7 @@ private:
                         // 3. r was on the SAME channel as s!
                         else {
                             // Check exact PHY drop event recorded for this packet at r
-                            auto dropIt = g_p2RxDropEvent.find({epoch, sender, (uint8_t)r});
+                            auto dropIt = g_p2RxDropEvent.find({epoch, sender, (uint16_t)r});
                             if (dropIt != g_p2RxDropEvent.end()) {
                                 cat = dropIt->second;
                             } else if (rStateAtTx == IEEE_802_15_4_PHY_BUSY_RX) {
@@ -1363,7 +1363,7 @@ private:
                     }
                 }
 
-                auto genIt = g_lastBeaconRxGenTime.find({(uint8_t)r, sender});
+                auto genIt = g_lastBeaconRxGenTime.find({(uint16_t)r, sender});
                 if (genIt != g_lastBeaconRxGenTime.end()) {
                     double aoi = nowMs - genIt->second;
                     if (aoi > 0) {
@@ -1381,7 +1381,7 @@ private:
 
                 P2LinkRecord rec;
                 rec.epoch = epoch;
-                rec.receiver = (uint8_t)r;
+                rec.receiver = (uint16_t)r;
                 rec.sender = sender;
                 rec.distance = dist;
                 rec.category = cat;
@@ -1409,12 +1409,12 @@ private:
             
             // Pick Drone 0's top neighbors at final moment
             Ptr<MobilityModel> myMob = m_device->GetNode()->GetObject<MobilityModel>();
-            std::vector<std::pair<uint8_t, double>> currDists;
+            std::vector<std::pair<uint16_t, double>> currDists;
             for (uint32_t i = 1; i < NodeList::GetNNodes(); i++) {
                 Ptr<MobilityModel> otherMob = NodeList::GetNode(i)->GetObject<MobilityModel>();
                 double dist = myMob->GetDistanceFrom(otherMob);
                 if (dist <= M_RADIUS_METERS) {
-                    currDists.push_back({(uint8_t)i, dist});
+                    currDists.push_back({(uint16_t)i, dist});
                 }
             }
             std::sort(currDists.begin(), currDists.end(), [](const auto& a, const auto& b) {
@@ -1423,7 +1423,7 @@ private:
 
             int expectedTop = std::min(K_CLOSEST, (int)currDists.size());
             for (int i = 0; i < expectedTop; i++) {
-                uint8_t target = currDists[i].first;
+                uint16_t target = currDists[i].first;
                 double dist = currDists[i].second;
                 
                 int expEpochs = g_d0Top5Expected[target];
@@ -1813,11 +1813,11 @@ int main(int argc, char *argv[]) {
         Ptr<LrWpanNetDevice> dev = DynamicCast<LrWpanNetDevice>(devices.Get(i));
         
         char extMacStr[32];
-        snprintf(extMacStr, sizeof(extMacStr), "00:00:00:00:00:00:00:%02x", i);
+        snprintf(extMacStr, sizeof(extMacStr), "00:00:00:00:00:00:%02x:%02x", (i >> 8) & 0xFF, i & 0xFF);
         dev->GetMac()->SetExtendedAddress(Mac64Address(extMacStr));
         
         char macStr[16];
-        snprintf(macStr, sizeof(macStr), "00:%02x", i);
+        snprintf(macStr, sizeof(macStr), "%02x:%02x", (i >> 8) & 0xFF, i & 0xFF);
         dev->GetMac()->SetShortAddress(Mac16Address(macStr));
 
         Ptr<SwarmSchedulerApp> app = CreateObject<SwarmSchedulerApp>();

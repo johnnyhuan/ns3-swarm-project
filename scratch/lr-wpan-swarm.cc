@@ -241,7 +241,7 @@ static std::map<uint32_t, std::map<uint16_t, std::map<int, uint16_t>>> g_p2SlotT
 
 class SwarmSchedulerApp : public Application {
 public:
-    SwarmSchedulerApp() : m_epoch(0), m_myClaimedSlot(0), m_myClaimedChannel(0), m_topologyMatchCount(0), m_topologyCheckCount(0), m_epochStartTime(0), m_p1ClaimedSlot(-1), m_p1ReselCounter(0), m_p1ConflictOccurred(false), m_p1RetryCount(0) {}
+    SwarmSchedulerApp() : m_epoch(0), m_myClaimedSlot(0), m_myClaimedChannel(0), m_topologyMatchCount(0), m_topologyCheckCount(0), m_epochStartTime(0), m_p1ClaimedSlot(-1), m_p1ReselCounter(0), m_p1ConflictOccurred(false) {}
 
     void Setup(Ptr<LrWpanNetDevice> dev, uint16_t id) {
         m_device = dev;
@@ -473,7 +473,6 @@ private:
     int m_p1ClaimedSlot;
     int m_p1ReselCounter;
     bool m_p1ConflictOccurred;
-    int m_p1RetryCount;
     std::set<int> m_p1OccupiedSlotsThisEpoch;
     std::vector<double> m_slotSensedEnergy;
     std::vector<int> m_slotPacketCount;
@@ -505,7 +504,6 @@ private:
     void ScheduleCycle() {
         m_epoch++;
         m_monitorList.clear();
-        m_p1RetryCount = 0;
 
         double now = Simulator::Now().GetMilliSeconds();
         
@@ -813,9 +811,8 @@ private:
                         }
                     }
                 } else {
-                    // 如果還在 Phase 1 的有效時間內 (保留最後 0.5ms 緩衝)，且重試次數未超過上限，則安排重新決策
-                    if (m_p1RetryCount < 1 && now < m_epochStartTime + g_p1DurationMs - 0.5) {
-                        m_p1RetryCount++;
+                    // 如果還在 Phase 1 的有效時間內 (保留最後 0.5ms 緩衝)，則安排重新決策
+                    if (now < m_epochStartTime + g_p1DurationMs - 0.5) {
                         // 隨機等待 0.1 ~ 0.5 毫秒，讓對方的情報傳達過來，也錯開重試時間
                         Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
                         double retryDelay = uv->GetValue(0.1, 0.5);

@@ -1,17 +1,20 @@
-# Phase 1 Sidelink Slot Duration Sweep Summary
+# Phase 1 Sidelink Slot Duration Sweep Summary (High-Resolution 70µs - 105µs)
 - Swarm Scale: 75 UAVs in 200.0m x 200.0m x 80.0m
 - Phase 1 Duration: 10.0 ms
 - Packet Airtime Limit: 244 µs (192µs Header + 52µs Payload @ 2 Mbps)
 
 | Slot (µs) | Slots Available | UAVs/Slot | P1 PRR (%) | RX Deafness | Preamble Coll | Low SINR | Captures | Physical Phenomenon |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| 10 | 976 | 0.08 | 0.0% | 0 | 0 | 0 | 0 | Ultra Micro-Slots |
-| 20 | 488 | 0.15 | 0.0% | 0 | 0 | 0 | 0 | Ultra Micro-Slots |
-| 30 | 326 | 0.23 | 0.0% | 0 | 0 | 0 | 0 | Ultra Micro-Slots |
-| 50 | 196 | 0.38 | 0.0% | 0 | 0 | 0 | 0 | Ultra Micro-Slots |
-| 75 | 131 | 0.57 | 0.0% | 0 | 0 | 0 | 0 | High Density (<1/slot) |
-| 100 | 98 | 0.77 | 93.2% | 157 | 372 | 150 | 46339 | High Density (<1/slot) |
-| 125 | 79 | 0.95 | 91.5% | 191 | 394 | 239 | 29208 | High Density (<1/slot) |
-| 150 | 66 | 1.14 | 88.4% | 251 | 558 | 275 | 34595 | Sub-Packet Staggering |
-| 200 | 49 | 1.53 | 85.2% | 319 | 778 | 298 | 29800 | Sub-Packet Staggering |
-| 250 | 40 | 1.88 | 80.1% | 435 | 976 | 492 | 13393 | Clean Physical Bound |
+| 70.0 | 140 | 0.54 | 0.0% | 0 | 0 | 0 | 0 | Sub-75µs Boundary |
+| 75.0 | 131 | 0.57 | 0.0% | 0 | 0 | 0 | 0 | Optimal Micro-Slot Region |
+| 77.5 | 126 | 0.60 | 0.0% | 0 | 0 | 0 | 0 | Optimal Micro-Slot Region |
+| 80.0 | 122 | 0.61 | 0.0% | 0 | 0 | 0 | 0 | Optimal Micro-Slot Region |
+| 82.5 | 119 | 0.63 | 0.0% | 0 | 0 | 0 | 0 | Optimal Micro-Slot Region |
+| 85.0 | 115 | 0.65 | 0.0% | 0 | 0 | 0 | 0 | Optimal Micro-Slot Region |
+| 87.5 | 112 | 0.67 | 92.4% | 168 | 458 | 136 | 47454 | Peak S-SPS Spatial Reuse |
+| 90.0 | 109 | 0.69 | 92.3% | 169 | 449 | 155 | 48458 | Peak S-SPS Spatial Reuse |
+| 92.5 | 106 | 0.71 | 93.4% | 151 | 358 | 146 | 48623 | Peak S-SPS Spatial Reuse |
+| 95.0 | 103 | 0.73 | 92.3% | 181 | 412 | 183 | 46695 | Peak S-SPS Spatial Reuse |
+| 97.5 | 101 | 0.74 | 92.2% | 176 | 396 | 206 | 45206 | Peak S-SPS Spatial Reuse |
+| 100.0 | 98 | 0.77 | 93.2% | 157 | 372 | 150 | 46339 | Peak S-SPS Spatial Reuse |
+| 105.0 | 93 | 0.81 | 93.1% | 137 | 380 | 172 | 44769 | Baseline Micro-Slot |

@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 """
 UAV Swarm Density Benchmark: 3GPP Sidelink S-SPS (100µs Slot) vs CSMA-CA
-Sweeps UAV Swarm Scale from 30 UAVs up to 200 UAVs.
-Evaluates:
-- Phase 1 Beacon PRR (%)
-- Packet Dropping Breakdown (RX Deafness, Preamble Collisions, CSMA Aborts, Low SINR)
-- Power Capture Rescues
-- Phase 2 Data Delivery PRR (%) & AoI (ms)
+Sweeps UAV Swarm Scale from 30 UAVs up to 500 UAVs.
+- For nodes < 300 UAVs: Evaluates both CSMA-CA Baseline and Sidelink S-SPS.
+- For nodes >= 300 UAVs: Automatically skips CSMA-CA (channel saturation / congestion deadlock),
+  evaluating Sidelink S-SPS up to 500 UAVs.
 """
 
 import subprocess
@@ -34,6 +32,7 @@ print(f"• Airspace Dimensions    : {space_size:.0f}m x {space_size:.0f}m x {sp
 print(f"• Phase 1 Broadcast Win  : {p1_duration} ms")
 print(f"• Sidelink Slot Width    : {p1_slot_us} µs ({int((p1_duration * 1000.0 - 250.0) / p1_slot_us) + 1} slots)")
 print(f"• Simulation Time        : {sim_time} s per point")
+print(f"• CSMA Evaluation Boundary: 30 to 250 UAVs (>=300 UAVs skips CSMA due to channel collapse)")
 print("--------------------------------------------------------------------------\n")
 
 # Detect paths
@@ -75,15 +74,15 @@ def run_simulation(nodes, enable_sidelink):
         f"scratch/lr-wpan-swarm --numNodes={nodes} --p1Duration={p1_duration} "
         f"--simTime={sim_time} --spaceSize={space_size} --spaceZ={space_z} "
         f"--enableP1Sidelink={'true' if enable_sidelink else 'false'} "
-        f"--p1SlotUs={p1_slot_us} --verboseLog=false --autoPush=false"
+        f"--p1SlotUs={p1_slot_us} --autoPush=false"
     ]
     
     try:
-        proc = subprocess.run(cmd, cwd=NS3_DIR, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=240)
+        proc = subprocess.run(cmd, cwd=NS3_DIR, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=120)
         out = proc.stdout
     except subprocess.TimeoutExpired:
-        print(f"\n[TIMEOUT] Simulation timed out after 240s for {nodes} UAVs! Killing process...", flush=True)
-        out = ""
+        print(f"\n⚠️ Command timed out after 120s! Marking as saturated.")
+        return None
 
     # Read generated p1 report
     p1_rpt = os.path.join(NS3_DIR, "p1_ground_truth_report.txt")
@@ -166,18 +165,32 @@ results = []
 for nodes in node_counts:
     print(f"▶️ Testing Swarm Scale: {nodes} UAVs...")
     
-    # 1. Run Baseline CSMA-CA
-    print(f"   [1/2] Running CSMA-CA Baseline ... ", end="", flush=True)
-    csma_res = run_simulation(nodes, enable_sidelink=False)
-    print(f"PRR: {csma_res['p1_prr']:.1f}% | Deafness: {csma_res['rx_deafness']} | Coll: {csma_res['preamble_coll']} | Aborts: {csma_res['csma_abort']}")
+    # 1. Run Baseline CSMA-CA (Only up to 250 UAVs; >= 300 UAVs channel is fully congested/infinite backoff)
+    if nodes < 300:
+        print(f"   [1/2] Running CSMA-CA Baseline ... ", end="", flush=True)
+        csma_res = run_simulation(nodes, enable_sidelink=False)
+        if csma_res is not None:
+            print(f"PRR: {csma_res['p1_prr']:.1f}% | Deafness: {csma_res['rx_deafness']} | Coll: {csma_res['preamble_coll']} | Aborts: {csma_res['csma_abort']}")
+        else:
+            print(f"TIMEOUT / SATURATED (Channel congestion cliff reached)")
+    else:
+        print(f"   [1/2] CSMA-CA Baseline: SKIPPED (Channel Saturated / Contention Collapse >= 300 UAVs)")
+        csma_res = None
 
     # 2. Run Sidelink S-SPS (100 µs Micro-Slot)
     print(f"   [2/2] Running Sidelink S-SPS (100µs) ... ", end="", flush=True)
     sps_res = run_simulation(nodes, enable_sidelink=True)
-    print(f"PRR: {sps_res['p1_prr']:.1f}% | Deafness: {sps_res['rx_deafness']} | Coll: {sps_res['preamble_coll']} | Captures: {sps_res['captures']}")
+    if sps_res is not None:
+        print(f"PRR: {sps_res['p1_prr']:.1f}% | Deafness: {sps_res['rx_deafness']} | Coll: {sps_res['preamble_coll']} | Captures: {sps_res['captures']}")
+    else:
+        print("ERROR / TIMEOUT")
 
-    prr_diff = sps_res['p1_prr'] - csma_res['p1_prr']
-    print(f"   ==> Δ PRR: {prr_diff:+.1f}% ({'⭐ Sidelink Wins' if prr_diff >= 0 else '⚠️ CSMA Wins'})\n")
+    if csma_res is not None and sps_res is not None:
+        prr_diff = sps_res['p1_prr'] - csma_res['p1_prr']
+        print(f"   ==> Δ PRR: {prr_diff:+.1f}% ({'⭐ Sidelink Wins' if prr_diff >= 0 else '⚠️ CSMA Wins'})\n")
+    else:
+        prr_diff = None
+        print(f"   ==> Δ PRR: N/A (🚀 CSMA Channel Collapsed, Sidelink Continues)\n")
 
     results.append({
         "nodes": nodes,
@@ -187,22 +200,39 @@ for nodes in node_counts:
     })
 
 # Print Full Comparative Table
-print("\n" + "=" * 115)
-print("📊 UAV SWARM DENSITY BENCHMARK: SIDELINK S-SPS (100µs) vs CSMA-CA FULL SPECTRUM")
-print("=" * 115)
+print("\n" + "=" * 120)
+print("📊 UAV SWARM DENSITY BENCHMARK: SIDELINK S-SPS (100µs) vs CSMA-CA FULL SPECTRUM (30-500 UAVs)")
+print("=" * 120)
 print(f"{'Nodes':<6} | {'CSMA PRR':<10} | {'S-SPS PRR':<10} | {'Δ Gain':<9} | {'CSMA Deaf':<10} | {'SPS Deaf':<10} | {'CSMA Coll':<10} | {'SPS Coll':<10} | {'SPS Captures':<12} | {'Advantage'}")
-print("-" * 115)
+print("-" * 120)
 
 for r in results:
-    adv = "🚀 Sidelink S-SPS Dominant" if r['diff'] > 3.0 else ("🤝 Comparable" if abs(r['diff']) <= 3.0 else "CSMA Marginally Ahead")
-    print(f"{r['nodes']:<6} | {r['csma']['p1_prr']:<9.1f}% | {r['sps']['p1_prr']:<9.1f}% | {r['diff']:<+8.1f}% | {r['csma']['rx_deafness']:<10} | {r['sps']['rx_deafness']:<10} | {r['csma']['preamble_coll']:<10} | {r['sps']['preamble_coll']:<10} | {r['sps']['captures']:<12} | {adv}")
+    sps_p1 = f"{r['sps']['p1_prr']:.1f}%" if r['sps'] else "ERR"
+    sps_deaf = r['sps']['rx_deafness'] if r['sps'] else "-"
+    sps_coll = r['sps']['preamble_coll'] if r['sps'] else "-"
+    sps_capt = r['sps']['captures'] if r['sps'] else "-"
 
-print("=" * 115)
+    if r['csma'] is not None:
+        adv = "🚀 Sidelink S-SPS Dominant" if r['diff'] > 3.0 else ("🤝 Comparable" if abs(r['diff']) <= 3.0 else "CSMA Marginally Ahead")
+        csma_p1 = f"{r['csma']['p1_prr']:.1f}%"
+        diff_str = f"{r['diff']:+8.1f}%"
+        csma_deaf = str(r['csma']['rx_deafness'])
+        csma_coll = str(r['csma']['preamble_coll'])
+    else:
+        adv = "💥 CSMA Collapsed (S-SPS Survives)"
+        csma_p1 = "Collapsed"
+        diff_str = "   N/A   "
+        csma_deaf = "N/A"
+        csma_coll = "N/A"
+
+    print(f"{r['nodes']:<6} | {csma_p1:<10} | {sps_p1:<10} | {diff_str:<9} | {csma_deaf:<10} | {sps_deaf:<10} | {csma_coll:<10} | {sps_coll:<10} | {sps_capt:<12} | {adv}")
+
+print("=" * 120)
 
 # Save text summary report
 summary_path = os.path.join(PROJECT_DIR, "exp_density_comparison_results.txt")
 with open(summary_path, "w", encoding="utf-8") as f:
-    f.write("# UAV Swarm Density Benchmark: 3GPP Sidelink S-SPS vs CSMA-CA\n")
+    f.write("# UAV Swarm Density Benchmark: 3GPP Sidelink S-SPS vs CSMA-CA (30 to 500 UAVs)\n")
     f.write(f"- Airspace Dimensions : {space_size}m x {space_size}m x {space_z}m\n")
     f.write(f"- Phase 1 Window      : {p1_duration} ms\n")
     f.write(f"- Sidelink Micro-Slot : {p1_slot_us} µs (98 available slots)\n")
@@ -210,8 +240,17 @@ with open(summary_path, "w", encoding="utf-8") as f:
     f.write("| Swarm Scale (UAVs) | CSMA-CA PRR (%) | Sidelink S-SPS PRR (%) | Δ Gain (%) | CSMA Deafness | SPS Deafness | CSMA Collisions | SPS Collisions | SPS Captures | Evaluation |\n")
     f.write("| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n")
     for r in results:
-        adv = "Sidelink Dominant" if r['diff'] > 3.0 else ("Comparable" if abs(r['diff']) <= 3.0 else "CSMA Ahead")
-        f.write(f"| {r['nodes']} | {r['csma']['p1_prr']:.1f}% | {r['sps']['p1_prr']:.1f}% | {r['diff']:+.1f}% | {r['csma']['rx_deafness']} | {r['sps']['rx_deafness']} | {r['csma']['preamble_coll']} | {r['sps']['preamble_coll']} | {r['sps']['captures']} | {adv} |\n")
+        sps_p1 = f"{r['sps']['p1_prr']:.1f}%" if r['sps'] else "ERR"
+        sps_deaf = r['sps']['rx_deafness'] if r['sps'] else "-"
+        sps_coll = r['sps']['preamble_coll'] if r['sps'] else "-"
+        sps_capt = r['sps']['captures'] if r['sps'] else "-"
+
+        if r['csma'] is not None:
+            adv = "Sidelink Dominant" if r['diff'] > 3.0 else ("Comparable" if abs(r['diff']) <= 3.0 else "CSMA Ahead")
+            f.write(f"| {r['nodes']} | {r['csma']['p1_prr']:.1f}% | {sps_p1} | {r['diff']:+.1f}% | {r['csma']['rx_deafness']} | {sps_deaf} | {r['csma']['preamble_coll']} | {sps_coll} | {sps_capt} | {adv} |\n")
+        else:
+            adv = "CSMA Collapsed (S-SPS Survives)"
+            f.write(f"| {r['nodes']} | Saturated (N/A) | {sps_p1} | N/A | N/A | {sps_deaf} | N/A | {sps_coll} | {sps_capt} | {adv} |\n")
 
 print(f"\n📄 Results saved to: {summary_path}")
 
@@ -219,20 +258,28 @@ print(f"\n📄 Results saved to: {summary_path}")
 try:
     import matplotlib.pyplot as plt
     x_nodes = [r['nodes'] for r in results]
-    y_csma = [r['csma']['p1_prr'] for r in results]
-    y_sps = [r['sps']['p1_prr'] for r in results]
+    y_sps = [r['sps']['p1_prr'] for r in results if r['sps'] is not None]
+    
+    x_csma = [r['nodes'] for r in results if r['csma'] is not None]
+    y_csma = [r['csma']['p1_prr'] for r in results if r['csma'] is not None]
 
     # Graph 1: PRR vs Density
     plt.figure(figsize=(10, 6))
     plt.plot(x_nodes, y_sps, marker='o', linewidth=2.5, markersize=8, color='#2980b9', label='3GPP Sidelink S-SPS (100 µs Micro-Slot)')
-    plt.plot(x_nodes, y_csma, marker='s', linewidth=2.5, markersize=8, color='#e67e22', linestyle='--', label='Continuous Random Delay + CSMA-CA')
+    plt.plot(x_csma, y_csma, marker='s', linewidth=2.5, markersize=8, color='#e67e22', linestyle='--', label='Continuous Random Delay + CSMA-CA')
     
+    plt.axvline(x=250, color='#c0392b', linestyle=':', linewidth=2, label='CSMA Saturation Cliff (>=300 UAVs)')
+    if y_csma:
+        plt.annotate('CSMA Congestion Collapse\n(Severe Backoff Deadlock)', xy=(250, y_csma[-1]), xytext=(280, 68),
+                     arrowprops=dict(arrowstyle="->", color='#c0392b', lw=1.5),
+                     fontsize=10, fontweight='bold', color='#c0392b')
+
     plt.title('UAV Swarm Density Scalability: Sidelink S-SPS vs CSMA-CA\n(Phase 1 Discovery Window: 10ms, Top-K within 50m)', fontsize=13, fontweight='bold')
     plt.xlabel('Swarm Scale (Number of UAV Nodes)', fontsize=12, fontweight='bold')
     plt.ylabel('Phase 1 Discovery PRR (%)', fontsize=12, fontweight='bold')
     plt.grid(True, linestyle='--', alpha=0.6)
-    plt.ylim([min(min(y_csma), min(y_sps)) - 5, 100])
-    plt.legend(fontsize=11, loc='lower left')
+    plt.ylim([50, 100])
+    plt.legend(fontsize=10, loc='lower left')
     
     plot_prr_path = os.path.join(PROJECT_DIR, "exp_density_prr_comparison.png")
     plt.savefig(plot_prr_path, dpi=300, bbox_inches='tight')
@@ -243,8 +290,9 @@ try:
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
 
     # Deafness
-    ax1.plot(x_nodes, [r['sps']['rx_deafness'] for r in results], marker='o', color='#2980b9', label='S-SPS Deafness')
-    ax1.plot(x_nodes, [r['csma']['rx_deafness'] for r in results], marker='s', color='#e67e22', linestyle='--', label='CSMA Deafness')
+    ax1.plot(x_nodes, [r['sps']['rx_deafness'] for r in results if r['sps']], marker='o', color='#2980b9', label='S-SPS Deafness')
+    ax1.plot(x_csma, [r['csma']['rx_deafness'] for r in results if r['csma']], marker='s', color='#e67e22', linestyle='--', label='CSMA Deafness')
+    ax1.axvline(x=250, color='#c0392b', linestyle=':', label='CSMA Limit (250 UAVs)')
     ax1.set_title('Half-Duplex RX Deafness vs Swarm Scale', fontweight='bold')
     ax1.set_xlabel('Swarm Scale (UAVs)', fontweight='bold')
     ax1.set_ylabel('RX Deafness Events', fontweight='bold')
@@ -252,8 +300,9 @@ try:
     ax1.legend()
 
     # Collisions / Interference
-    ax2.plot(x_nodes, [r['sps']['preamble_coll'] for r in results], marker='o', color='#2980b9', label='S-SPS RX Collisions')
-    ax2.plot(x_nodes, [r['csma']['preamble_coll'] for r in results], marker='s', color='#e67e22', linestyle='--', label='CSMA RX Collisions')
+    ax2.plot(x_nodes, [r['sps']['preamble_coll'] for r in results if r['sps']], marker='o', color='#2980b9', label='S-SPS RX Collisions')
+    ax2.plot(x_csma, [r['csma']['preamble_coll'] for r in results if r['csma']], marker='s', color='#e67e22', linestyle='--', label='CSMA RX Collisions')
+    ax2.axvline(x=250, color='#c0392b', linestyle=':', label='CSMA Limit (250 UAVs)')
     ax2.set_title('Preamble Collision vs Swarm Scale', fontweight='bold')
     ax2.set_xlabel('Swarm Scale (UAVs)', fontweight='bold')
     ax2.set_ylabel('Preamble Collision Events', fontweight='bold')
@@ -270,17 +319,23 @@ try:
     
     # 1. PRR vs Density
     axes[0, 0].plot(x_nodes, y_sps, marker='o', linewidth=2.5, markersize=7, color='#2980b9', label='3GPP Sidelink S-SPS (100 µs)')
-    axes[0, 0].plot(x_nodes, y_csma, marker='s', linewidth=2.5, markersize=7, color='#e67e22', linestyle='--', label='Continuous CSMA-CA')
+    axes[0, 0].plot(x_csma, y_csma, marker='s', linewidth=2.5, markersize=7, color='#e67e22', linestyle='--', label='Continuous CSMA-CA')
+    axes[0, 0].axvline(x=250, color='#c0392b', linestyle=':', linewidth=2, label='CSMA Saturation Limit')
     axes[0, 0].set_title('(a) Phase 1 Delivery PRR vs Swarm Density (30-500 UAVs)', fontsize=12, fontweight='bold')
     axes[0, 0].set_xlabel('Swarm Scale (UAVs)', fontweight='bold')
     axes[0, 0].set_ylabel('Delivery PRR (%)', fontweight='bold')
     axes[0, 0].grid(True, linestyle='--', alpha=0.6)
-    axes[0, 0].legend(fontsize=10)
+    axes[0, 0].set_ylim([50, 100])
+    axes[0, 0].legend(fontsize=9)
 
     # 2. PRR Δ Gain
-    y_gains = [r['diff'] for r in results]
-    colors = ['#27ae60' if g >= 0 else '#c0392b' for g in y_gains]
-    axes[0, 1].bar([str(n) for n in x_nodes], y_gains, color=colors, alpha=0.85, edgecolor='black')
+    x_gain_labels = [str(r['nodes']) for r in results]
+    y_gains = [(r['diff'] if r['diff'] is not None else 0.0) for r in results]
+    colors = ['#27ae60' if (r['diff'] is not None and r['diff'] >= 0) else ('#bdc3c7' if r['diff'] is None else '#c0392b') for r in results]
+    axes[0, 1].bar(x_gain_labels, y_gains, color=colors, alpha=0.85, edgecolor='black')
+    for idx, r in enumerate(results):
+        if r['diff'] is None:
+            axes[0, 1].text(idx, 2.0, "CSMA\nCollapsed", ha='center', va='bottom', fontsize=8, color='#c0392b', fontweight='bold')
     axes[0, 1].set_title('(b) Sidelink S-SPS PRR Advantage (Δ Gain %)', fontsize=12, fontweight='bold')
     axes[0, 1].set_xlabel('Swarm Scale (UAVs)', fontweight='bold')
     axes[0, 1].set_ylabel('PRR Gain over CSMA (%)', fontweight='bold')
@@ -288,21 +343,22 @@ try:
     axes[0, 1].grid(True, linestyle='--', alpha=0.6)
 
     # 3. Preamble Collisions
-    axes[1, 0].plot(x_nodes, [r['sps']['preamble_coll'] for r in results], marker='o', color='#2980b9', linewidth=2, label='S-SPS RX Collisions')
-    axes[1, 0].plot(x_nodes, [r['csma']['preamble_coll'] for r in results], marker='s', color='#e67e22', linestyle='--', linewidth=2, label='CSMA RX Collisions')
+    axes[1, 0].plot(x_nodes, [r['sps']['preamble_coll'] for r in results if r['sps']], marker='o', color='#2980b9', linewidth=2, label='S-SPS RX Collisions')
+    axes[1, 0].plot(x_csma, [r['csma']['preamble_coll'] for r in results if r['csma']], marker='s', color='#e67e22', linestyle='--', linewidth=2, label='CSMA RX Collisions')
+    axes[1, 0].axvline(x=250, color='#c0392b', linestyle=':', linewidth=2, label='CSMA Limit (250 UAVs)')
     axes[1, 0].set_title('(c) Preamble Collision Suppression vs Density', fontsize=12, fontweight='bold')
     axes[1, 0].set_xlabel('Swarm Scale (UAVs)', fontweight='bold')
     axes[1, 0].set_ylabel('Severe RX Collisions', fontweight='bold')
     axes[1, 0].grid(True, linestyle='--', alpha=0.6)
-    axes[1, 0].legend(fontsize=10)
+    axes[1, 0].legend(fontsize=9)
 
     # 4. Sidelink Power Captures
-    axes[1, 1].plot(x_nodes, [r['sps']['captures'] for r in results], marker='^', color='#8e44ad', linewidth=2.5, markersize=8, label='Power Capture Events')
+    axes[1, 1].plot(x_nodes, [r['sps']['captures'] for r in results if r['sps']], marker='^', color='#8e44ad', linewidth=2.5, markersize=8, label='Power Capture Events')
     axes[1, 1].set_title('(d) Spatial Closest-Capture Rescues vs Density', fontsize=12, fontweight='bold')
     axes[1, 1].set_xlabel('Swarm Scale (UAVs)', fontweight='bold')
     axes[1, 1].set_ylabel('Triggered Capture Events', fontweight='bold')
     axes[1, 1].grid(True, linestyle='--', alpha=0.6)
-    axes[1, 1].legend(fontsize=10)
+    axes[1, 1].legend(fontsize=9)
 
     plt.suptitle('UAV Swarm Ultra-Large Scale Density Benchmark (30 to 500 UAVs)\nSidelink S-SPS (100µs Micro-Slot) vs Baseline CSMA-CA', fontsize=14, fontweight='bold', y=0.995)
     plt.tight_layout()

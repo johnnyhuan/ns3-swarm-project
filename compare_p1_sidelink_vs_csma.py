@@ -18,7 +18,7 @@ print("=========================================================================
 # Command-line arguments
 p1_duration = float(sys.argv[1]) if len(sys.argv) > 1 else 10.0
 sim_time = float(sys.argv[2]) if len(sys.argv) > 2 else 1.0
-p1_slot_us = float(sys.argv[3]) if len(sys.argv) > 3 else 500.0
+p1_slot_us = float(sys.argv[3]) if len(sys.argv) > 3 else 100.0
 num_nodes = int(sys.argv[4]) if len(sys.argv) > 4 else 75
 space_size = float(sys.argv[5]) if len(sys.argv) > 5 else 200.0
 space_z = float(sys.argv[6]) if len(sys.argv) > 6 else 80.0

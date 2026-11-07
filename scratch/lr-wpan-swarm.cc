@@ -45,7 +45,7 @@ const double DATA_SLOT_US = 2500.0;
 
 // Sidelink S-SPS (Semi-Persistent Scheduling) for Phase 1
 bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
-double g_p1SlotUs = 500.0;       // Phase 1 Sidelink slot duration in microseconds (default 500 us -> 20 slots in 10ms)
+double g_p1SlotUs = 100.0;       // Phase 1 Sidelink slot duration in microseconds (default 100 us -> 98 slots in 10ms)
 double g_p1CcaThresholdDbm = -96.58; // Phase 1 CSMA CCA Energy Detection Threshold in dBm (default: -96.58, standard 802.15.4)
 
 const uint8_t BROADCAST_CHANNEL = 11;

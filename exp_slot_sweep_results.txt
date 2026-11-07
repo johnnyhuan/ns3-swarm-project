@@ -1,0 +1,16 @@
+# Phase 1 Sidelink Slot Duration Sweep Summary
+- Swarm Scale: 75 UAVs in 200.0m x 200.0m x 80.0m
+- Phase 1 Duration: 10.0 ms
+- Packet Airtime Limit: 244 µs (192µs Header + 52µs Payload @ 2 Mbps)
+
+| Slot (µs) | Slots Available | UAVs/Slot | P1 PRR (%) | RX Deafness | Preamble Coll | Low SINR | Captures | Physical Phenomenon |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 150 | 66 | 1.14 | 88.4% | 251 | 558 | 275 | 34595 | Packet Spillage (<244µs) |
+| 200 | 50 | 1.50 | 85.1% | 319 | 804 | 290 | 29762 | Packet Spillage (<244µs) |
+| 240 | 41 | 1.83 | 81.1% | 452 | 1074 | 301 | 26749 | Packet Spillage (<244µs) |
+| 250 | 40 | 1.88 | 80.1% | 435 | 976 | 492 | 13393 | Optimal Physical Bound |
+| 300 | 33 | 2.27 | 77.8% | 448 | 945 | 742 | 8788 | Clean Spatial Separation |
+| 400 | 25 | 3.00 | 73.2% | 548 | 1117 | 944 | 7095 | Clean Spatial Separation |
+| 500 | 20 | 3.75 | 66.4% | 689 | 1342 | 1373 | 5040 | Overcrowded |
+| 750 | 14 | 5.36 | 63.9% | 768 | 1207 | 1575 | 5741 | Overcrowded |
+| 1000 | 10 | 7.50 | 78.8% | 381 | 1047 | 725 | 4296 | Overcrowded |

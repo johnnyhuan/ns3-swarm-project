@@ -148,8 +148,8 @@ static PhyEnumeration g_dronePhyState[1024];
 static uint64_t g_droneReceivingUid[1024];
 static std::map<uint64_t, P1PacketMeta> g_p1PacketsMeta;
 static std::map<std::pair<uint32_t, uint16_t>, std::vector<uint64_t>> g_p1TxUidsInEpoch;
-static std::map<std::pair<uint64_t, uint16_t>, PhyEnumeration> g_rxStateAtTxStart;
-static std::map<std::tuple<uint32_t, uint16_t, uint16_t>, P1DropCategory> g_p1RxDropEvent;
+static PhyEnumeration g_p1RxStateAtTxStart[1024][1024];
+static uint8_t g_p1RxDropEvent[1024][1024];
 static std::map<uint32_t, std::map<uint16_t, std::set<uint16_t>>> g_p1ReceivedInEpoch;
 static std::map<uint32_t, std::map<uint16_t, int>> g_p1TxSuccessInEpoch;
 
@@ -226,11 +226,9 @@ static int g_p2TotalTargetLinks = 0;
 static uint8_t g_droneCurrentChannel[1024];
 static std::map<uint64_t, P2PacketMeta> g_p2PacketsMeta;
 static std::map<std::pair<uint32_t, uint16_t>, std::vector<uint64_t>> g_p2TxUidsInEpoch;
-static std::map<std::pair<uint64_t, uint16_t>, PhyEnumeration> g_p2RxStateAtTxStart;
-static std::map<std::pair<uint64_t, uint16_t>, uint8_t> g_p2RxChannelAtTxStart;
-static std::map<std::tuple<uint32_t, uint16_t, uint16_t>, P2DropCategory> g_p2RxDropEvent;
-static std::map<std::tuple<uint32_t, uint16_t, uint16_t>, bool> g_p2RxBeginEvent;
-static std::map<std::tuple<uint32_t, uint16_t, uint16_t>, double> g_p2RxEndSinr;
+static PhyEnumeration g_p2RxStateAtTxStart[1024][1024];
+static uint8_t g_p2RxChannelAtTxStart[1024][1024];
+static uint8_t g_p2RxDropEvent[1024][1024];
 
 static std::map<uint32_t, std::map<uint16_t, std::set<uint16_t>>> g_p2ReceivedInEpoch;
 static std::map<uint32_t, std::map<uint16_t, bool>> g_p2TxAbortInEpoch;
@@ -317,15 +315,8 @@ public:
                     m_slotPacketCount.assign(numP1Slots, 0);
                 }
                 m_slotPacketCount[slotIdx]++;
-                double currentPsdDbm = m_device->GetPhy()->GetCurrentSignalPsd();
-                double powerMw = std::pow(10.0, currentPsdDbm / 10.0);
-                m_slotSensedEnergy[slotIdx] += powerMw;
+                m_slotSensedEnergy[slotIdx] += 1.0;
             }
-        }
-
-        auto it2 = g_p2PacketsMeta.find(uid);
-        if (it2 != g_p2PacketsMeta.end()) {
-            g_p2RxBeginEvent[{it2->second.epoch, it2->second.senderId, m_id}] = true;
         }
     }
 
@@ -333,10 +324,6 @@ public:
         uint64_t uid = p->GetUid();
         if (g_droneReceivingUid[m_id] == uid) {
             g_droneReceivingUid[m_id] = 0;
-        }
-        auto it2 = g_p2PacketsMeta.find(uid);
-        if (it2 != g_p2PacketsMeta.end()) {
-            g_p2RxEndSinr[{it2->second.epoch, it2->second.senderId, m_id}] = sinr;
         }
     }
 
@@ -348,20 +335,20 @@ public:
             uint32_t epoch = it->second.epoch;
             double now = Simulator::Now().GetMilliSeconds();
             if (g_droneReceivingUid[m_id] == uid) {
-                g_p1RxDropEvent[{epoch, sender, m_id}] = REASON_PAYLOAD_INTERFERENCE_CORRUPTION;
+                g_p1RxDropEvent[sender][m_id] = REASON_PAYLOAD_INTERFERENCE_CORRUPTION;
                 g_droneReceivingUid[m_id] = 0;
                 if (g_verboseLog) std::cout << "[P1_PAYLOAD_DROP] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid << "\n";
             } else {
                 if (g_dronePhyState[m_id] == IEEE_802_15_4_PHY_BUSY_RX) {
-                    g_p1RxDropEvent[{epoch, sender, m_id}] = REASON_PREAMBLE_COLLISION_BUSY_RX;
+                    g_p1RxDropEvent[sender][m_id] = REASON_PREAMBLE_COLLISION_BUSY_RX;
                     if (g_verboseLog) std::cout << "[P1_PREAMBLE_COLLISION] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
                               << " | Antenna busy receiving Drone " << (int)g_droneReceivingUid[m_id] << "\n";
                 } else if (g_dronePhyState[m_id] == IEEE_802_15_4_PHY_TRX_OFF) {
-                    g_p1RxDropEvent[{epoch, sender, m_id}] = REASON_RADIO_TURNAROUND_BUSY;
+                    g_p1RxDropEvent[sender][m_id] = REASON_RADIO_TURNAROUND_BUSY;
                     if (g_verboseLog) std::cout << "[P1_RADIO_OFF] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
                               << " | Transceiver in TRX_OFF state" << "\n";
                 } else {
-                    g_p1RxDropEvent[{epoch, sender, m_id}] = REASON_PREAMBLE_LOW_SINR;
+                    g_p1RxDropEvent[sender][m_id] = REASON_PREAMBLE_LOW_SINR;
                     if (g_verboseLog) std::cout << "[P1_PREAMBLE_LOW_SINR] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
                               << " | Preamble SINR <= -5 dB threshold" << "\n";
                 }
@@ -374,16 +361,16 @@ public:
             uint32_t epoch = it2->second.epoch;
             double now = Simulator::Now().GetMilliSeconds();
             if (g_droneReceivingUid[m_id] == uid) {
-                g_p2RxDropEvent[{epoch, sender, m_id}] = P2_REASON_PAYLOAD_INTERFERENCE_DROP;
+                g_p2RxDropEvent[sender][m_id] = P2_REASON_PAYLOAD_INTERFERENCE_DROP;
                 g_droneReceivingUid[m_id] = 0;
                 if (g_verboseLog) std::cout << "[P2_PAYLOAD_DROP] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid << "\n";
             } else {
                 if (g_dronePhyState[m_id] == IEEE_802_15_4_PHY_BUSY_RX) {
-                    g_p2RxDropEvent[{epoch, sender, m_id}] = P2_REASON_PREAMBLE_COLLISION_BUSY_RX;
+                    g_p2RxDropEvent[sender][m_id] = P2_REASON_PREAMBLE_COLLISION_BUSY_RX;
                     if (g_verboseLog) std::cout << "[P2_PREAMBLE_COLLISION] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
                               << " | Antenna already busy receiving Drone " << (int)g_droneReceivingUid[m_id] << "\n";
                 } else {
-                    g_p2RxDropEvent[{epoch, sender, m_id}] = P2_REASON_PREAMBLE_LOW_SINR;
+                    g_p2RxDropEvent[sender][m_id] = P2_REASON_PREAMBLE_LOW_SINR;
                     if (g_verboseLog) std::cout << "[P2_PREAMBLE_LOW_SINR] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
                               << " | Preamble SINR <= -5 dB threshold" << "\n";
                 }
@@ -417,7 +404,7 @@ public:
             uint32_t numNodes = NodeList::GetNNodes();
             for (uint32_t j = 0; j < numNodes; j++) {
                 if (j == m_id) continue;
-                g_rxStateAtTxStart[{uid, (uint16_t)j}] = g_dronePhyState[j];
+                g_p1RxStateAtTxStart[m_id][j] = g_dronePhyState[j];
             }
         }
 
@@ -427,8 +414,8 @@ public:
             uint32_t numNodes = NodeList::GetNNodes();
             for (uint32_t j = 0; j < numNodes; j++) {
                 if (j == m_id) continue;
-                g_p2RxStateAtTxStart[{uid, (uint16_t)j}] = g_dronePhyState[j];
-                g_p2RxChannelAtTxStart[{uid, (uint16_t)j}] = g_droneCurrentChannel[j];
+                g_p2RxStateAtTxStart[m_id][j] = g_dronePhyState[j];
+                g_p2RxChannelAtTxStart[m_id][j] = g_droneCurrentChannel[j];
             }
         }
     }
@@ -522,22 +509,6 @@ private:
 
         double now = Simulator::Now().GetMilliSeconds();
         
-        // 結算上一回合的 AoI (For 50B Beacon Packet)
-        if (m_epoch > 1) {
-            for (uint8_t i = 0; i < NodeList::GetNNodes(); i++) {
-                if (i == m_id) continue;
-                if (m_lastGenerationTime.find(i) == m_lastGenerationTime.end()) {
-                    m_lastGenerationTime[i] = now; // Initialize
-                    m_maxAoI[i] = 0;
-                    m_sumAoI[i] = 0;
-                    m_countAoI[i] = 0;
-                }
-                double aoi = now - m_lastGenerationTime[i];
-                m_sumAoI[i] += aoi;
-                m_countAoI[i]++;
-                if (aoi > m_maxAoI[i]) m_maxAoI[i] = aoi;
-            }
-        }
         m_epochStartTime = now;
 
         // Phase 1 (Broadcast): Configurable range
@@ -763,31 +734,6 @@ private:
             m_lastScheduledRx.push_back(n.id);
             assigned++;
         }
-
-        // 上帝視角：計算拓樸準確度
-        std::vector<std::pair<uint8_t, double>> godDistances;
-        for (uint32_t i = 0; i < NodeList::GetNNodes(); i++) {
-            if (i == m_id) continue;
-            Ptr<MobilityModel> otherMobility = NodeList::GetNode(i)->GetObject<MobilityModel>();
-            double dist = myMobility->GetDistanceFrom(otherMobility);
-            if (dist <= M_RADIUS_METERS) {
-                godDistances.push_back({i, dist});
-            }
-        }
-        std::sort(godDistances.begin(), godDistances.end(), [](const auto& a, const auto& b) {
-            return a.second < b.second;
-        });
-
-        int match = 0;
-        int expectedTop = std::min(K_CLOSEST, (int)godDistances.size());
-        for (int i = 0; i < expectedTop; i++) {
-            uint8_t target = godDistances[i].first;
-            if (std::find(m_lastScheduledRx.begin(), m_lastScheduledRx.end(), target) != m_lastScheduledRx.end()) {
-                match++;
-            }
-        }
-        m_topologyMatchCount += match;
-        m_topologyCheckCount += expectedTop;
 
         for (int i = 0; i < g_numDataSlots; i++) {
             g_p2SlotAction[m_epoch][m_id][i] = m_schedule[i].action;
@@ -1190,11 +1136,7 @@ private:
                     if (txSucc == 0) {
                         cat = REASON_SENDER_CSMA_ABORT;
                     } else {
-                        PhyEnumeration rStateAtTx = IEEE_802_15_4_PHY_TRX_OFF;
-                        auto stIt = g_rxStateAtTxStart.find({txUid, (uint16_t)r});
-                        if (stIt != g_rxStateAtTxStart.end()) {
-                            rStateAtTx = stIt->second;
-                        }
+                        PhyEnumeration rStateAtTx = g_p1RxStateAtTxStart[sender][r];
 
                         if (rStateAtTx == IEEE_802_15_4_PHY_BUSY_TX || rStateAtTx == IEEE_802_15_4_PHY_TX_ON) {
                             cat = REASON_RX_DEAFNESS_BUSY_TX;
@@ -1203,9 +1145,8 @@ private:
                         } else if (rStateAtTx == IEEE_802_15_4_PHY_TRX_OFF) {
                             cat = REASON_RADIO_TURNAROUND_BUSY;
                         } else {
-                            auto dropIt = g_p1RxDropEvent.find({epoch, sender, (uint16_t)r});
-                            if (dropIt != g_p1RxDropEvent.end()) {
-                                cat = dropIt->second;
+                            if (g_p1RxDropEvent[sender][r] != 0) {
+                                cat = (P1DropCategory)g_p1RxDropEvent[sender][r];
                             } else {
                                 if (coChannelCount > 0 && sinrDb <= -5.0) {
                                     cat = REASON_PREAMBLE_LOW_SINR;
@@ -1242,6 +1183,8 @@ private:
                 g_p1TotalTargetLinks++;
             }
         }
+        memset(g_p1RxDropEvent, 0, sizeof(g_p1RxDropEvent));
+        memset(g_p1RxStateAtTxStart, 0, sizeof(g_p1RxStateAtTxStart));
     }
 
     void EvaluatePhase2Epoch(uint32_t epoch) {
@@ -1362,16 +1305,8 @@ private:
                         }
 
                         // Inspect receiver r's radio at takeoff
-                        PhyEnumeration rStateAtTx = IEEE_802_15_4_PHY_TRX_OFF;
-                        uint8_t rChannelAtTx = 0;
-                        auto stIt = g_p2RxStateAtTxStart.find({txUid, (uint16_t)r});
-                        if (stIt != g_p2RxStateAtTxStart.end()) {
-                            rStateAtTx = stIt->second;
-                        }
-                        auto chIt = g_p2RxChannelAtTxStart.find({txUid, (uint16_t)r});
-                        if (chIt != g_p2RxChannelAtTxStart.end()) {
-                            rChannelAtTx = chIt->second;
-                        }
+                        PhyEnumeration rStateAtTx = g_p2RxStateAtTxStart[sender][r];
+                        uint8_t rChannelAtTx = g_p2RxChannelAtTxStart[sender][r];
 
                         // 1. Was receiver r transmitting (half-duplex deaf)?
                         if (rStateAtTx == IEEE_802_15_4_PHY_BUSY_TX || rStateAtTx == IEEE_802_15_4_PHY_TX_ON) {
@@ -1388,10 +1323,8 @@ private:
                         }
                         // 3. r was on the SAME channel as s!
                         else {
-                            // Check exact PHY drop event recorded for this packet at r
-                            auto dropIt = g_p2RxDropEvent.find({epoch, sender, (uint16_t)r});
-                            if (dropIt != g_p2RxDropEvent.end()) {
-                                cat = dropIt->second;
+                            if (g_p2RxDropEvent[sender][r] != 0) {
+                                cat = (P2DropCategory)g_p2RxDropEvent[sender][r];
                             } else if (rStateAtTx == IEEE_802_15_4_PHY_BUSY_RX) {
                                 cat = P2_REASON_PREAMBLE_COLLISION_BUSY_RX;
                             } else if (rStateAtTx == IEEE_802_15_4_PHY_TRX_OFF) {
@@ -1440,6 +1373,9 @@ private:
                 g_p2TotalTargetLinks++;
             }
         }
+        memset(g_p2RxDropEvent, 0, sizeof(g_p2RxDropEvent));
+        memset(g_p2RxStateAtTxStart, 0, sizeof(g_p2RxStateAtTxStart));
+        memset(g_p2RxChannelAtTxStart, 0, sizeof(g_p2RxChannelAtTxStart));
     }
 
     void PrintMetrics() {

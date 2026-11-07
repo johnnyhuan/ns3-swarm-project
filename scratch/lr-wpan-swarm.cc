@@ -143,8 +143,8 @@ struct P1LinkRecord {
     int coChannelCount;
 };
 
-static PhyEnumeration g_dronePhyState[256];
-static uint64_t g_droneReceivingUid[256];
+static PhyEnumeration g_dronePhyState[512];
+static uint64_t g_droneReceivingUid[512];
 static std::map<uint64_t, P1PacketMeta> g_p1PacketsMeta;
 static std::map<std::pair<uint32_t, uint8_t>, std::vector<uint64_t>> g_p1TxUidsInEpoch;
 static std::map<std::pair<uint64_t, uint8_t>, PhyEnumeration> g_rxStateAtTxStart;
@@ -222,7 +222,7 @@ static std::vector<P2LinkRecord> g_p2LinkRecords;
 static int g_p2ReasonCounts[NUM_P2_REASONS] = {0};
 static int g_p2TotalTargetLinks = 0;
 
-static uint8_t g_droneCurrentChannel[256];
+static uint8_t g_droneCurrentChannel[512];
 static std::map<uint64_t, P2PacketMeta> g_p2PacketsMeta;
 static std::map<std::pair<uint32_t, uint8_t>, std::vector<uint64_t>> g_p2TxUidsInEpoch;
 static std::map<std::pair<uint64_t, uint8_t>, PhyEnumeration> g_p2RxStateAtTxStart;
@@ -622,7 +622,7 @@ private:
             m_myClaimedChannel = 0;
             g_droneClaimedSlot[m_epoch][m_id] = 0;
             g_droneClaimedChannel[m_epoch][m_id] = 0;
-            uint16_t payload = (m_id & 0x7F);
+            uint16_t payload = (m_id & 0xFF);
             uint8_t buffer[2] = { (uint8_t)(payload & 0xFF), (uint8_t)((payload >> 8) & 0xFF) };
             Ptr<Packet> p = Create<Packet>(buffer, 2);
             uint64_t uid = p->GetUid();
@@ -682,8 +682,8 @@ private:
         g_droneClaimedSlot[m_epoch][m_id] = m_myClaimedSlot;
         g_droneClaimedChannel[m_epoch][m_id] = m_myClaimedChannel;
 
-        // 位元封裝 (Bit-packing): ID(7 bits), Slot(5 bits), Channel(4 bits) -> Total 16 bits
-        uint16_t payload = (m_id & 0x7F) | ((m_myClaimedSlot & 0x1F) << 7) | ((m_myClaimedChannel & 0x0F) << 12);
+        // 位元封裝 (Bit-packing): ID(8 bits: 0-255), Slot(5 bits: 0-31), Channel(3 bits: 0-7) -> Total 16 bits
+        uint16_t payload = (m_id & 0xFF) | ((m_myClaimedSlot & 0x1F) << 8) | ((m_myClaimedChannel & 0x07) << 13);
         uint8_t buffer[2] = { (uint8_t)(payload & 0xFF), (uint8_t)((payload >> 8) & 0xFF) };
         Ptr<Packet> p = Create<Packet>(buffer, 2);
         uint64_t uid = p->GetUid();
@@ -902,12 +902,12 @@ private:
             p->CopyData(buffer, 2);
             uint16_t payload = buffer[0] | (buffer[1] << 8);
             
-            uint8_t senderId = payload & 0x7F;
+            uint8_t senderId = payload & 0xFF;
             g_p1ReceivedInEpoch[m_epoch][myId].insert(senderId);
             g_p2DiscoveredInP1[m_epoch][myId].insert(senderId);
             std::cout << "[P1_RX] Time: " << now << "ms, Receiver: " << myId << ", Sender: " << (int)senderId << ", RSSI: " << (int)rssi << std::endl;
-            uint8_t claimedSlot = (payload >> 7) & 0x1F;
-            uint8_t claimedChannel = (payload >> 12) & 0x0F;
+            uint8_t claimedSlot = (payload >> 8) & 0x1F;
+            uint8_t claimedChannel = (payload >> 13) & 0x07;
             
             m_monitorList.push_back({senderId, rssi, m_epoch, claimedSlot, claimedChannel});
             m_discoveryReceivedCount[senderId]++;
@@ -982,7 +982,7 @@ private:
                 }
 
                 // Find closest transmitter to R among all senders in this slot
-                uint8_t bestSender = 255;
+                int bestSender = -1;
                 double minDist = 1e9;
                 double bestPrxLinear = 0.0;
                 double bestPrxDbm = -999.0;
@@ -1005,7 +1005,7 @@ private:
                     }
                 }
 
-                if (bestSender == 255) continue;
+                if (bestSender < 0) continue;
 
                 // Calculate interference from all OTHER senders in the same slot
                 double interfLinear = 0.0;

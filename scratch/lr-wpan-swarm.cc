@@ -307,7 +307,7 @@ public:
 
         if (g_enableP1Sidelink && g_droneCurrentChannel[m_id] == BROADCAST_CHANNEL) {
             double timeInP1Us = (Simulator::Now().GetMilliSeconds() - m_epochStartTime) * 1000.0;
-            int numP1Slots = std::max(1, (int)((g_phase1DurationUs - 450.0) / g_p1SlotUs) + 1);
+            int numP1Slots = std::max(1, (int)((g_phase1DurationUs - 200.0) / g_p1SlotUs) + 1);
             int slotIdx = (int)(timeInP1Us / g_p1SlotUs);
             if (slotIdx >= 0 && slotIdx < numP1Slots) {
                 m_p1OccupiedSlotsThisEpoch.insert(slotIdx);
@@ -545,7 +545,7 @@ private:
             Simulator::Schedule(MicroSeconds(randomDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
         } else {
             // Sidelink S-SPS mode for Phase 1
-            int numP1Slots = std::max(1, (int)((g_phase1DurationUs - 450.0) / g_p1SlotUs) + 1);
+            int numP1Slots = std::max(1, (int)((g_phase1DurationUs - 200.0) / g_p1SlotUs) + 1);
 
             // Ensure slot statistics vectors are properly sized
             if ((int)m_slotSensedEnergy.size() != numP1Slots) {
@@ -942,7 +942,7 @@ private:
         if (!g_enableP1Sidelink) return;
 
         uint32_t numNodes = NodeList::GetNNodes();
-        int numP1Slots = std::max(1, (int)((g_phase1DurationUs - 450.0) / g_p1SlotUs) + 1);
+        int numP1Slots = std::max(1, (int)((g_phase1DurationUs - 200.0) / g_p1SlotUs) + 1);
 
         // Group transmitters by their claimed slot in this epoch
         std::map<int, std::vector<uint8_t>> transmittersInSlot;
@@ -1453,7 +1453,7 @@ void PrintGroundTruthReport() {
     ss << "========================================================================================\n";
     ss << "MAC Scheme                                        : " << (g_enableP1Sidelink ? "3GPP Sidelink Mode 4 S-SPS (No CSMA)" : "Continuous Random Delay + CSMA-CA") << "\n";
     if (g_enableP1Sidelink) {
-        int numP1Slots = std::max(1, (int)((g_phase1DurationUs - 450.0) / g_p1SlotUs) + 1);
+        int numP1Slots = std::max(1, (int)((g_phase1DurationUs - 200.0) / g_p1SlotUs) + 1);
         ss << "Sidelink Configuration                            : Slot " << g_p1SlotUs << " us (" << numP1Slots << " slots in " << g_p1DurationMs << "ms)\n";
     }
     ss << "Total Expected P1 Neighbor Links (Epochs x Top-K) : " << g_p1TotalTargetLinks << "\n";

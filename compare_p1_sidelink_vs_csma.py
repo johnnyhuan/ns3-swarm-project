@@ -26,7 +26,7 @@ space_z = float(sys.argv[6]) if len(sys.argv) > 6 else 80.0
 print(f"• Swarm Scale         : {num_nodes} UAVs")
 print(f"• Airspace Volume     : {space_size:.0f}m x {space_size:.0f}m x {space_z:.0f}m")
 print(f"• Phase 1 Window      : {p1_duration} ms")
-print(f"• Sidelink Slot Width : {p1_slot_us} µs ({int((p1_duration * 1000.0 - 450.0) / p1_slot_us) + 1} slots)")
+print(f"• Sidelink Slot Width : {p1_slot_us} µs ({int((p1_duration * 1000.0 - 200.0) / p1_slot_us) + 1} slots)")
 print(f"• Simulation Duration : {sim_time} s")
 print("--------------------------------------------------------------------------\n")
 

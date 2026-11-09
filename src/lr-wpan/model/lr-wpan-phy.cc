@@ -200,7 +200,7 @@ LrWpanPhy::GetTypeId()
                           MakeBooleanChecker())
             .AddAttribute("CaptureMargin",
                           "Power difference in dB needed to capture the receiver.",
-                          DoubleValue(6.0),
+                          DoubleValue(0.0),
                           MakeDoubleAccessor(&LrWpanPhy::m_captureMarginDbm),
                           MakeDoubleChecker<double>())
             .AddTraceSource("PhyRxCapture",
@@ -215,7 +215,7 @@ LrWpanPhy::LrWpanPhy()
     : m_edRequest(),
       m_setTRXState(),
       m_enableCapture(true),
-      m_captureMarginDbm(6.0)
+      m_captureMarginDbm(0.0)
 {
     m_trxState = IEEE_802_15_4_PHY_TRX_OFF;
     m_trxStatePending = IEEE_802_15_4_PHY_IDLE;

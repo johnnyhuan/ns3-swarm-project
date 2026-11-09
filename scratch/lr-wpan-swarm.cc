@@ -48,8 +48,8 @@ const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels
 bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
 double g_p1SlotUs = 100.0;       // Phase 1 Sidelink slot duration in microseconds (default 100 us -> 98 slots in 10ms)
 double g_p1CcaThresholdDbm = -96.58; // Phase 1 CSMA CCA Energy Detection Threshold in dBm (default: -96.58, standard 802.15.4)
-double g_p1CaptureThresholdDb = 6.0; // Phase 1 Sidelink Slotted SINR demodulation threshold in dB (Strict Bluetooth 5.4 LE 2M C/I: +6.0 dB)
-double g_phyCaptureMarginDb = 6.0;    // PHY layer capture margin in dB (Strict Bluetooth 5.4 LE 2M: +6.0 dB)
+double g_p1CaptureThresholdDb = 0.0; // Phase 1 Sidelink Slotted SINR demodulation threshold in dB (0.0 dB Equal Power)
+double g_phyCaptureMarginDb = 0.0;    // PHY layer capture margin in dB (0.0 dB Equal Power)
 bool g_enablePhyCapture = true;       // PHY layer capture effect switch (default: true)
 bool g_verboseLog = false;       // Verbose per-packet log switch (default: false for high-speed simulation at scale)
 
@@ -1732,8 +1732,8 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
     cmd.AddValue("p1TxPower", "Phase 1 TX Power in dBm (e.g., 0, 1, 3)", g_p1TxPower);
     cmd.AddValue("p1CcaThresholdDbm", "Phase 1 CSMA CCA Energy Detection Threshold in dBm (-106.58 to -80.0, default -96.58)", g_p1CcaThresholdDbm);
-    cmd.AddValue("p1CaptureThresholdDb", "Phase 1 Sidelink Slotted SINR capture threshold in dB (e.g. -5.0, 0.0, 3.0, 6.0, default: 6.0)", g_p1CaptureThresholdDb);
-    cmd.AddValue("phyCaptureMarginDb", "PHY layer capture margin in dB (power difference needed to preempt, default: 6.0)", g_phyCaptureMarginDb);
+    cmd.AddValue("p1CaptureThresholdDb", "Phase 1 Sidelink Slotted SINR capture threshold in dB (e.g. -5.0, 0.0, 3.0, 6.0, default: 0.0)", g_p1CaptureThresholdDb);
+    cmd.AddValue("phyCaptureMarginDb", "PHY layer capture margin in dB (power difference needed to preempt, default: 0.0)", g_phyCaptureMarginDb);
     cmd.AddValue("enablePhyCapture", "Enable PHY Layer Power Capture Effect (default: true)", g_enablePhyCapture);
     cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);
     cmd.AddValue("simTime", "Total simulation duration in seconds (default 10.0)", g_simTime);

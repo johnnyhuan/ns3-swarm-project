@@ -97,6 +97,8 @@ static int g_p1TxAbort = 0;
 static int g_p1TxSuccess = 0;
 static int g_p1RxSuccess = 0;
 static int g_totalCaptureEvents = 0;
+static int g_p1CaptureEvents = 0;
+static int g_p2CaptureEvents = 0;
 
 // 空間拓撲與 50m 鄰居密度統計
 static double g_spaceSize = 200.0;
@@ -383,6 +385,11 @@ public:
 
     void NotifyPhyRxCapture(Ptr<const Packet> capP, Ptr<const Packet> preP) {
         g_totalCaptureEvents++;
+        if (capP && capP->GetSize() == DATA_PACKET_SIZE) {
+            g_p2CaptureEvents++;
+        } else {
+            g_p1CaptureEvents++;
+        }
         uint64_t capUid = capP->GetUid();
         uint64_t preUid = preP->GetUid();
         double now = Simulator::Now().GetMilliSeconds();
@@ -393,7 +400,7 @@ public:
         auto itPre = g_p1PacketsMeta.find(preUid);
         if (itPre != g_p1PacketsMeta.end()) preSender = itPre->second.senderId;
         if (g_verboseLog) {
-            std::cout << "[P1_CAPTURE] Time: " << now << "ms, Rx: " << (int)m_id
+            std::cout << "[PHY_CAPTURE] Time: " << now << "ms, Rx: " << (int)m_id
                       << " CAPTURED Tx: " << (int)capSender << " (Uid: " << capUid << ")"
                       << ", PREEMPTED Tx: " << (int)preSender << " (Uid: " << preUid << ")" << "\n";
         }
@@ -1504,11 +1511,11 @@ void PrintGroundTruthReport() {
     }
     double meanNeighbors = (g_countNeighborsIn50m > 0) ? (g_sumNeighborsIn50m / g_countNeighborsIn50m) : 0.0;
     double pctGe5 = (g_countNeighborsIn50m > 0) ? (100.0 * g_dronesWithGe5Neighbors / g_countNeighborsIn50m) : 0.0;
-    ss << "📡 PHYSICAL RF SIGNAL PROOFS & SWARM DENSITY (Averages & Evidence):\n";
+    ss << "📡 PHYSICAL RF SIGNAL PROOFS & SWARM DENSITY (Averages & Evidence) [PHASE 1]:\n";
     ss << "  • Airspace Dimensions & Topology      : " << g_spaceSize << "m x " << g_spaceSize << "m x " << g_spaceZ << "m\n";
     ss << "  • Mean 50m Neighbors per UAV (Density): " << std::fixed << std::setprecision(2) << meanNeighbors << " UAVs\n";
     ss << "  • UAVs with >= 5 Neighbors in 50m     : " << std::fixed << std::setprecision(1) << pctGe5 << "%\n";
-    ss << "  • Total Power Capture Events Triggered : " << g_totalCaptureEvents << " (rescued packets from closer neighbors)\n";
+    ss << "  • Total Power Capture Events Triggered : " << g_p1CaptureEvents << " (rescued Phase 1 packets from closer neighbors)\n";
     if (cntSucc > 0) {
         ss << "  • Delivered Links Mean SINR           : " << std::fixed << std::setprecision(1) << (sumSinrSucc / cntSucc) << " dB (IEEE Threshold: > -5.0 dB)\n";
     }
@@ -1664,11 +1671,11 @@ void PrintPhase2GroundTruthReport() {
     }
     double meanNeighbors = (g_countNeighborsIn50m > 0) ? (g_sumNeighborsIn50m / g_countNeighborsIn50m) : 0.0;
     double pctGe5 = (g_countNeighborsIn50m > 0) ? (100.0 * g_dronesWithGe5Neighbors / g_countNeighborsIn50m) : 0.0;
-    ss << "📡 PHYSICAL RF SIGNAL PROOFS & SWARM DENSITY (Averages & Evidence):\n";
+    ss << "📡 PHYSICAL RF SIGNAL PROOFS & SWARM DENSITY (Averages & Evidence) [PHASE 2]:\n";
     ss << "  • Airspace Dimensions & Topology      : " << g_spaceSize << "m x " << g_spaceSize << "m x " << g_spaceZ << "m\n";
     ss << "  • Mean 50m Neighbors per UAV (Density): " << std::fixed << std::setprecision(2) << meanNeighbors << " UAVs\n";
     ss << "  • UAVs with >= 5 Neighbors in 50m     : " << std::fixed << std::setprecision(1) << pctGe5 << "%\n";
-    ss << "  • Total Power Capture Events Triggered : " << g_totalCaptureEvents << " (rescued packets from closer neighbors)\n";
+    ss << "  • Total Power Capture Events Triggered : " << g_p2CaptureEvents << " (rescued Phase 2 packets from closer neighbors)\n";
     if (cntSucc > 0) {
         ss << "  • Delivered Links Mean SINR           : " << std::fixed << std::setprecision(1) << (sumSinrSucc / cntSucc) << " dB (IEEE Threshold: > -5.0 dB)\n";
     }

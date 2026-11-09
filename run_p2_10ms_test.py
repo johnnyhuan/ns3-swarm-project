@@ -27,6 +27,7 @@ data_slot_us = float(sys.argv[3]) if len(sys.argv) > 3 else 1000.0 # 1000 µs (1
 num_channels = int(sys.argv[4]) if len(sys.argv) > 4 else 6
 space_size = float(sys.argv[5]) if len(sys.argv) > 5 else 200.0
 space_z = float(sys.argv[6]) if len(sys.argv) > 6 else 80.0
+p1_capt_thresh = float(sys.argv[7]) if len(sys.argv) > 7 else -5.0 # -5.0 dB (802.15.4 standard), 3.0 dB, or 6.0 dB (BLE 5.4 C/I)
 
 p1_duration = 10.0
 p1_slot_us = 100.0
@@ -37,7 +38,7 @@ guard_us = data_slot_us - 436.0 - 40.0
 cycle_ms = p1_duration + 1.0 + p2_duration
 
 print(f"• UAV Swarm Scale        : {num_nodes} UAVs")
-print(f"• Phase 1 Broadcast Win  : {p1_duration:.1f} ms (Sidelink S-SPS, {p1_slot_us:.0f} µs slot)")
+print(f"• Phase 1 Broadcast Win  : {p1_duration:.1f} ms (Sidelink S-SPS, {p1_slot_us:.0f} µs slot, SINR Thresh: {p1_capt_thresh:+.1f} dB)")
 print(f"• Phase 2 Data Window    : {p2_duration:.1f} ms ({p2_slots} slots x {data_slot_us:.0f} µs, {num_channels} channels = {total_cells} cells)")
 print(f"• Data Packet Airtime    : 436 µs (@ 2 Mbps, 50B payload + headers) + 40 µs turnaround")
 print(f"• Timing Guard Band      : {guard_us:.0f} µs")
@@ -89,7 +90,7 @@ cmd = [
     f"--p2Duration={p2_duration} --dataSlotUs={data_slot_us} --numChannels={num_channels} "
     f"--simTime={sim_time} --spaceSize={space_size} --spaceZ={space_z} "
     f"--p1TxPower=0 --p2TxPower=-2 --p1CcaThresholdDbm=-96.58 --nodeSpeed=10.0 "
-    f"--enableP1Sidelink=true --p1SlotUs={p1_slot_us} --autoPush=false"
+    f"--enableP1Sidelink=true --p1SlotUs={p1_slot_us} --p1CaptureThresholdDb={p1_capt_thresh} --autoPush=false"
 ]
 
 try:

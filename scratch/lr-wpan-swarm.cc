@@ -48,6 +48,8 @@ const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels
 bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
 double g_p1SlotUs = 100.0;       // Phase 1 Sidelink slot duration in microseconds (default 100 us -> 98 slots in 10ms)
 double g_p1CcaThresholdDbm = -96.58; // Phase 1 CSMA CCA Energy Detection Threshold in dBm (default: -96.58, standard 802.15.4)
+double g_p1CaptureThresholdDb = -5.0; // Phase 1 Sidelink Slotted SINR demodulation threshold in dB (default: -5.0 dB; 3.0 dB PHY margin; 6.0 dB BLE 5.4 C/I)
+double g_phyCaptureMarginDb = 6.0;    // PHY layer capture margin in dB (power difference needed to preempt ongoing reception)
 bool g_verboseLog = false;       // Verbose per-packet log switch (default: false for high-speed simulation at scale)
 
 const uint8_t BROADCAST_CHANNEL = 11;
@@ -270,7 +272,7 @@ public:
         // Connect PHY Traces for exact physical ground truth
         Ptr<LrWpanPhy> phy = m_device->GetPhy();
         phy->SetCaptureEnabled(true);
-        phy->SetCaptureMargin(6.0); // Strict Bluetooth 5.4 LE 2M Co-channel Rejection (+6.0 dB)
+        phy->SetCaptureMargin(g_phyCaptureMarginDb);
         g_dronePhyState[m_id] = IEEE_802_15_4_PHY_TRX_OFF;
         g_droneReceivingUid[m_id] = 0;
         g_droneCurrentChannel[m_id] = BROADCAST_CHANNEL;
@@ -989,8 +991,8 @@ private:
                 double sinr = bestPrxLinear / (interfLinear + noiseLinear);
                 double sinrDb = 10.0 * std::log10(sinr);
 
-                // Capture threshold: strict Bluetooth 5.4 LE 2M Co-channel Rejection Ratio (C/I >= +6.0 dB)
-                if (sinrDb >= 6.0) {
+                // Capture threshold: configurable via --p1CaptureThresholdDb (default -5.0 dB; 3.0 dB PHY margin; 6.0 dB BLE 5.4 C/I)
+                if (sinrDb >= g_p1CaptureThresholdDb) {
                     // Receiver R captures bestSender!
                     bool alreadyHeard = (g_p1ReceivedInEpoch[epoch][r].count(bestSender) > 0);
                     if (!alreadyHeard) {
@@ -1155,9 +1157,9 @@ private:
                             if (g_p1RxDropEvent[sender][r] != 0) {
                                 cat = (P1DropCategory)g_p1RxDropEvent[sender][r];
                             } else {
-                                if (coChannelCount > 0 && sinrDb <= -5.0) {
+                                if (coChannelCount > 0 && sinrDb <= g_p1CaptureThresholdDb) {
                                     cat = REASON_PREAMBLE_LOW_SINR;
-                                } else if (coChannelCount > 0 && sinrDb > -5.0) {
+                                } else if (coChannelCount > 0 && sinrDb > g_p1CaptureThresholdDb) {
                                     cat = REASON_PREAMBLE_COLLISION_BUSY_RX;
                                 } else {
                                     cat = REASON_PREAMBLE_LOW_SINR;
@@ -1515,12 +1517,13 @@ void PrintGroundTruthReport() {
     ss << "  • Airspace Dimensions & Topology      : " << g_spaceSize << "m x " << g_spaceSize << "m x " << g_spaceZ << "m\n";
     ss << "  • Mean 50m Neighbors per UAV (Density): " << std::fixed << std::setprecision(2) << meanNeighbors << " UAVs\n";
     ss << "  • UAVs with >= 5 Neighbors in 50m     : " << std::fixed << std::setprecision(1) << pctGe5 << "%\n";
+    ss << "  • Capture SINR Threshold Configured    : " << std::fixed << std::setprecision(1) << g_p1CaptureThresholdDb << " dB\n";
     ss << "  • Total Power Capture Events Triggered : " << g_p1CaptureEvents << " (rescued Phase 1 packets from closer neighbors)\n";
     if (cntSucc > 0) {
-        ss << "  • Delivered Links Mean SINR           : " << std::fixed << std::setprecision(1) << (sumSinrSucc / cntSucc) << " dB (IEEE Threshold: > -5.0 dB)\n";
+        ss << "  • Delivered Links Mean SINR           : " << std::fixed << std::setprecision(1) << (sumSinrSucc / cntSucc) << " dB (Threshold: >= " << g_p1CaptureThresholdDb << " dB)\n";
     }
     if (cntLowSinr > 0) {
-        ss << "  • Low SINR Dropped Links Mean SINR    : " << std::fixed << std::setprecision(1) << (sumSinrDrop / cntLowSinr) << " dB (IEEE Threshold: <= -5.0 dB)\n";
+        ss << "  • Low SINR Dropped Links Mean SINR    : " << std::fixed << std::setprecision(1) << (sumSinrDrop / cntLowSinr) << " dB (Threshold: < " << g_p1CaptureThresholdDb << " dB)\n";
         ss << "  • Low SINR Mean Received Power (Prx)  : " << std::fixed << std::setprecision(1) << (sumPrx / cntLowSinr) << " dBm\n";
         ss << "  • Low SINR Mean Interference Power (I): " << std::fixed << std::setprecision(1) << (sumInterf / cntLowSinr) << " dBm\n";
     }
@@ -1725,6 +1728,8 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
     cmd.AddValue("p1TxPower", "Phase 1 TX Power in dBm (e.g., 0, 1, 3)", g_p1TxPower);
     cmd.AddValue("p1CcaThresholdDbm", "Phase 1 CSMA CCA Energy Detection Threshold in dBm (-106.58 to -80.0, default -96.58)", g_p1CcaThresholdDbm);
+    cmd.AddValue("p1CaptureThresholdDb", "Phase 1 Sidelink Slotted SINR capture threshold in dB (e.g. -5.0, 0.0, 3.0, 6.0, default: -5.0)", g_p1CaptureThresholdDb);
+    cmd.AddValue("phyCaptureMarginDb", "PHY layer capture margin in dB (power difference needed to preempt, default: 6.0)", g_phyCaptureMarginDb);
     cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);
     cmd.AddValue("simTime", "Total simulation duration in seconds (default 10.0)", g_simTime);
     cmd.AddValue("enableP1Sidelink", "Enable Sidelink-inspired Semi-Persistent Scheduling for Phase 1 (default false)", g_enableP1Sidelink);

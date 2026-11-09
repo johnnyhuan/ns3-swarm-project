@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 UAV Swarm Phase 1 Benchmark: 50 to 150 UAVs under Strict Bluetooth 5.4 LE 2M (+6.0 dB C/I)
-Compares 3GPP Sidelink Mode 4 S-SPS (250 µs Micro-Slot, 40 slots) vs CSMA-CA Baseline.
+Compares 3GPP Sidelink Mode 4 S-SPS (100 µs Micro-Slot) vs CSMA-CA Baseline.
 - Swarm Scale: 50 to 150 UAVs (step 10, continuous sweep without gaps)
 - Physical Layer: Bluetooth 5.4 LE 2M PHY, C/I Capture Threshold = +6.0 dB
-- Broadcast Window: 10.0 ms (40 Micro-Slots of 250 µs in Sidelink)
+- Broadcast Window: 10.0 ms (98 Micro-Slots in Sidelink)
 - Airspace: 200m x 200m x 80m 3D Space, UAV Speed = 10.0 m/s
 """
 
@@ -23,7 +23,7 @@ print("=========================================================================
 
 sim_time = float(sys.argv[1]) if len(sys.argv) > 1 else 1.0
 p1_duration = 10.0
-p1_slot_us = 250.0
+p1_slot_us = 100.0
 capture_thresh_db = 6.0
 space_size = 200.0
 space_z = 80.0

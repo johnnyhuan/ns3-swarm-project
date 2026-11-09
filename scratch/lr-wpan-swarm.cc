@@ -46,7 +46,7 @@ const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels
 
 // Sidelink S-SPS (Semi-Persistent Scheduling) for Phase 1
 bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
-double g_p1SlotUs = 100.0;       // Phase 1 Sidelink slot duration in microseconds (default 100 us -> 98 slots in 10ms)
+double g_p1SlotUs = 250.0;       // Phase 1 Sidelink slot duration in microseconds (default 250 us -> 40 slots in 10ms)
 double g_p1CcaThresholdDbm = -96.58; // Phase 1 CSMA CCA Energy Detection Threshold in dBm (default: -96.58, standard 802.15.4)
 double g_p1CaptureThresholdDb = 6.0; // Phase 1 Sidelink Slotted SINR demodulation threshold in dB (Strict Bluetooth 5.4 LE 2M C/I: +6.0 dB)
 double g_phyCaptureMarginDb = 6.0;    // PHY layer capture margin in dB (Strict Bluetooth 5.4 LE 2M: +6.0 dB)

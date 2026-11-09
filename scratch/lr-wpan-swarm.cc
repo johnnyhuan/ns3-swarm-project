@@ -187,7 +187,7 @@ enum P2DropCategory {
     P2_REASON_RADIO_TURNAROUND_BUSY,         // Receiver was on correct channel but in turnaround/transient busy
     P2_REASON_SENDER_CSMA_ABORT,             // Sender aborted transmission due to busy channel at slot start
     P2_REASON_PREAMBLE_COLLISION_BUSY_RX,    // Receiver antenna was already locked onto another packet
-    P2_REASON_PREAMBLE_LOW_SINR,             // Preamble arrived, but SINR <= -5 dB (co-channel interference/noise)
+    P2_REASON_PREAMBLE_LOW_SINR,             // Preamble arrived, but SINR < +6.0 dB (BLE 5.4 C/I threshold)
     P2_REASON_PAYLOAD_INTERFERENCE_DROP,     // Preamble locked, but mid-flight packet corrupted by interference
     NUM_P2_REASONS
 };
@@ -358,7 +358,7 @@ public:
                 } else {
                     g_p1RxDropEvent[sender][m_id] = REASON_PREAMBLE_LOW_SINR;
                     if (g_verboseLog) std::cout << "[P1_PREAMBLE_LOW_SINR] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
-                              << " | Preamble SINR <= -5 dB threshold" << "\n";
+                              << " | Preamble SINR < +6.0 dB (BLE 5.4 C/I threshold)\n";
                 }
             }
         }
@@ -380,7 +380,7 @@ public:
                 } else {
                     g_p2RxDropEvent[sender][m_id] = P2_REASON_PREAMBLE_LOW_SINR;
                     if (g_verboseLog) std::cout << "[P2_PREAMBLE_LOW_SINR] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
-                              << " | Preamble SINR <= -5 dB threshold" << "\n";
+                              << " | Preamble SINR < +6.0 dB (BLE 5.4 C/I threshold)\n";
                 }
             }
         }
@@ -1021,9 +1021,9 @@ private:
                             if (g_p1RxDropEvent[sender][r] != 0) {
                                 cat = (P1DropCategory)g_p1RxDropEvent[sender][r];
                             } else {
-                                if (coChannelCount > 0 && sinrDb <= g_p1CaptureThresholdDb) {
+                                if (coChannelCount > 0 && sinrDb < g_phyCaptureMarginDb) {
                                     cat = REASON_PREAMBLE_LOW_SINR;
-                                } else if (coChannelCount > 0 && sinrDb > g_p1CaptureThresholdDb) {
+                                } else if (coChannelCount > 0 && sinrDb >= g_phyCaptureMarginDb) {
                                     cat = REASON_PREAMBLE_COLLISION_BUSY_RX;
                                 } else {
                                     cat = REASON_PREAMBLE_LOW_SINR;
@@ -1203,9 +1203,9 @@ private:
                             } else if (rStateAtTx == IEEE_802_15_4_PHY_TRX_OFF) {
                                 cat = P2_REASON_RADIO_TURNAROUND_BUSY;
                             } else {
-                                if (coChannelCount > 0 && sinrDb <= -5.0) {
+                                if (coChannelCount > 0 && sinrDb < g_phyCaptureMarginDb) {
                                     cat = P2_REASON_PREAMBLE_LOW_SINR;
-                                } else if (coChannelCount > 0 && sinrDb > -5.0) {
+                                } else if (coChannelCount > 0 && sinrDb >= g_phyCaptureMarginDb) {
                                     cat = P2_REASON_PREAMBLE_COLLISION_BUSY_RX;
                                 } else {
                                     cat = P2_REASON_PREAMBLE_LOW_SINR;
@@ -1543,12 +1543,13 @@ void PrintPhase2GroundTruthReport() {
     ss << "  • Airspace Dimensions & Topology      : " << g_spaceSize << "m x " << g_spaceSize << "m x " << g_spaceZ << "m\n";
     ss << "  • Mean 50m Neighbors per UAV (Density): " << std::fixed << std::setprecision(2) << meanNeighbors << " UAVs\n";
     ss << "  • UAVs with >= 5 Neighbors in 50m     : " << std::fixed << std::setprecision(1) << pctGe5 << "%\n";
+    ss << "  • Capture SINR Threshold Configured    : " << std::fixed << std::setprecision(1) << g_phyCaptureMarginDb << " dB (BLE 5.4 LE 2M C/I)\n";
     ss << "  • Total Power Capture Events Triggered : " << g_p2CaptureEvents << " (rescued Phase 2 packets from closer neighbors)\n";
     if (cntSucc > 0) {
-        ss << "  • Delivered Links Mean SINR           : " << std::fixed << std::setprecision(1) << (sumSinrSucc / cntSucc) << " dB (IEEE Threshold: > -5.0 dB)\n";
+        ss << "  • Delivered Links Mean SINR           : " << std::fixed << std::setprecision(1) << (sumSinrSucc / cntSucc) << " dB (BLE 5.4 C/I Threshold: >= " << g_phyCaptureMarginDb << " dB)\n";
     }
     if (cntLowSinr > 0) {
-        ss << "  • Low SINR Dropped Links Mean SINR    : " << std::fixed << std::setprecision(1) << (sumSinrDrop / cntLowSinr) << " dB (IEEE Threshold: <= -5.0 dB)\n";
+        ss << "  • Low SINR Dropped Links Mean SINR    : " << std::fixed << std::setprecision(1) << (sumSinrDrop / cntLowSinr) << " dB (BLE 5.4 C/I Threshold: < " << g_phyCaptureMarginDb << " dB)\n";
         ss << "  • Low SINR Mean Received Power (Prx)  : " << std::fixed << std::setprecision(1) << (sumPrx / cntLowSinr) << " dBm\n";
         ss << "  • Low SINR Mean Interference Power (I): " << std::fixed << std::setprecision(1) << (sumInterf / cntLowSinr) << " dBm\n";
     }
@@ -1614,6 +1615,9 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("spaceZ", "Height of 3D box in meters", g_spaceZ);
     cmd.AddValue("autoPush", "Auto git push results", autoPush);
     cmd.Parse(argc, argv);
+
+    // Keep all physical capture and demodulation thresholds strictly unified
+    g_p1CaptureThresholdDb = g_phyCaptureMarginDb;
 
     if (g_verboseLog) {
         g_runLogFile.open("run.log");

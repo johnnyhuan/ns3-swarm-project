@@ -149,15 +149,22 @@ def fmt_pct(val, total):
     pct = (100.0 * val / total) if total > 0 else 0.0
     return f"{val:,} ({pct:.1f}%)"
 
+prr_diff_str = f"{sps['prr'] - csma['prr']:+5.1f}% PRR Gain"
+fail_diff_str = f"{sps['fail'] - csma['fail']:+d} Drops"
+coll_diff_str = f"{sps['preamble_coll'] - csma['preamble_coll']:+d}"
+sinr_diff_str = f"{sps['low_sinr'] - csma['low_sinr']:+d}"
+deaf_diff_str = f"{sps['rx_deafness'] - csma['rx_deafness']:+d}"
+capt_diff_str = f"{sps['captures'] - csma['captures']:+,} Rescues"
+
 print(f"| {'Expected Target Neighbor Links':<35} | {csma['links']:^22,} | {sps['links']:^22,} | {'Baseline':^18} |")
-print(f"| {'✅ Delivered Links (Success)':<35} | {fmt_pct(csma['succ'], csma['links']):^22} | {fmt_pct(sps['succ'], sps['links']):^22} | {f'{sps['prr'] - csma['prr']:+5.1f}% PRR Gain':^18} |")
-print(f"| {'❌ Total Failed Links (Dropped)':<35} | {fmt_pct(csma['fail'], csma['links']):^22} | {fmt_pct(sps['fail'], sps['links']):^22} | {f'{sps['fail'] - csma['fail']:+d} Drops':^18} |")
+print(f"| {'✅ Delivered Links (Success)':<35} | {fmt_pct(csma['succ'], csma['links']):^22} | {fmt_pct(sps['succ'], sps['links']):^22} | {prr_diff_str:^18} |")
+print(f"| {'❌ Total Failed Links (Dropped)':<35} | {fmt_pct(csma['fail'], csma['links']):^22} | {fmt_pct(sps['fail'], sps['links']):^22} | {fail_diff_str:^18} |")
 print("|" + "-" * 37 + "|" + "-" * 24 + "|" + "-" * 24 + "|" + "-" * 20 + "|")
 print(f"| {'1. SENDER_CSMA_ABORT (Backoff)':<35} | {fmt_pct(csma['csma_abort'], csma['links']):^22} | {fmt_pct(sps['csma_abort'], sps['links']):^22} | {'-100% (No Abort)':^18} |")
-print(f"| {'2. PREAMBLE_COLLISION_BUSY_RX':<35} | {fmt_pct(csma['preamble_coll'], csma['links']):^22} | {fmt_pct(sps['preamble_coll'], sps['links']):^22} | {f'{sps['preamble_coll'] - csma['preamble_coll']:+d}':^18} |")
-print(f"| {'3. PREAMBLE_LOW_SINR (< 6.0 dB)':<35} | {fmt_pct(csma['low_sinr'], csma['links']):^22} | {fmt_pct(sps['low_sinr'], sps['links']):^22} | {f'{sps['low_sinr'] - csma['low_sinr']:+d}':^18} |")
-print(f"| {'4. RX_DEAFNESS_BUSY_TX (Half-Duplex)':<35} | {fmt_pct(csma['rx_deafness'], csma['links']):^22} | {fmt_pct(sps['rx_deafness'], sps['links']):^22} | {f'{sps['rx_deafness'] - csma['rx_deafness']:+d}':^18} |")
-print(f"| {'5. Total Power Capture Rescues':<35} | {csma['captures']:^22,} | {sps['captures']:^22,} | {f'{sps['captures'] - csma['captures']:+,} Rescues':^18} |")
+print(f"| {'2. PREAMBLE_COLLISION_BUSY_RX':<35} | {fmt_pct(csma['preamble_coll'], csma['links']):^22} | {fmt_pct(sps['preamble_coll'], sps['links']):^22} | {coll_diff_str:^18} |")
+print(f"| {'3. PREAMBLE_LOW_SINR (< 6.0 dB)':<35} | {fmt_pct(csma['low_sinr'], csma['links']):^22} | {fmt_pct(sps['low_sinr'], sps['links']):^22} | {sinr_diff_str:^18} |")
+print(f"| {'4. RX_DEAFNESS_BUSY_TX (Half-Duplex)':<35} | {fmt_pct(csma['rx_deafness'], csma['links']):^22} | {fmt_pct(sps['rx_deafness'], sps['links']):^22} | {deaf_diff_str:^18} |")
+print(f"| {'5. Total Power Capture Rescues':<35} | {csma['captures']:^22,} | {sps['captures']:^22,} | {capt_diff_str:^18} |")
 print("=" * 110)
 
 # Save Report

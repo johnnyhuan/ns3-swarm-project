@@ -358,7 +358,7 @@ public:
                 } else {
                     g_p1RxDropEvent[sender][m_id] = REASON_PREAMBLE_LOW_SINR;
                     if (g_verboseLog) std::cout << "[P1_PREAMBLE_LOW_SINR] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
-                              << " | Preamble SINR < +6.0 dB (BLE 5.4 C/I threshold)\n";
+                              << " | Preamble Sync Word SINR <= -5 dB\n";
                 }
             }
         }
@@ -380,7 +380,7 @@ public:
                 } else {
                     g_p2RxDropEvent[sender][m_id] = P2_REASON_PREAMBLE_LOW_SINR;
                     if (g_verboseLog) std::cout << "[P2_PREAMBLE_LOW_SINR] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
-                              << " | Preamble SINR < +6.0 dB (BLE 5.4 C/I threshold)\n";
+                              << " | Preamble Sync Word SINR <= -5 dB\n";
                 }
             }
         }

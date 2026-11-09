@@ -495,8 +495,9 @@ LrWpanPhy::EndPreamble(Ptr<LrWpanSpectrumSignalParameters> lrWpanRxParams)
             LrWpanSpectrumValueHelper::TotalAvgPower(interferenceAndNoise,
                                                      m_phyPIBAttributes.phyCurrentChannel);
 
-        // Bluetooth 5.4 LE 2M GFSK demodulation limit (BER <= 10e-3 at SINR >= m_captureMarginDbm, default: +6.0 dB)
-        if (10.0 * log10(sinr) >= m_captureMarginDbm)
+        // Figure out if packet is decodable based on SINR.
+        // Preamble & Sync Word Correlator acquisition threshold (Access Address correlation sensitivity: > -5 dB)
+        if (10 * log10(sinr) > -5)
         {
             ChangeTrxState(IEEE_802_15_4_PHY_BUSY_RX);
 
@@ -549,7 +550,7 @@ LrWpanPhy::EndPreamble(Ptr<LrWpanSpectrumSignalParameters> lrWpanRxParams)
                     LrWpanSpectrumValueHelper::TotalAvgPower(interferenceAndNoise,
                                                              m_phyPIBAttributes.phyCurrentChannel);
 
-                if (diffDbm >= m_captureMarginDbm && 10.0 * log10(sinr) >= m_captureMarginDbm)
+                if (diffDbm >= m_captureMarginDbm && 10.0 * log10(sinr) > -5.0)
                 {
                     captured = true;
                     Ptr<Packet> currPacket = m_currentRxPacket.first->packetBurst->GetPackets().front();

@@ -286,4 +286,10 @@ plt.savefig(fig2_path, dpi=300)
 plt.close()
 print(f"✅ Dashboard plot saved to: {fig2_path}")
 
+print("📤 Uploading benchmark results to GitHub...")
+try:
+    subprocess.run("git add exp_p1_scale_50_150* && git commit -m 'data: upload 50-150 UAV benchmark results' && git push origin main", shell=True, cwd=PROJECT_DIR)
+except Exception as e:
+    print(f"Notice on auto-push: {e}")
+
 print("\n🎉 Benchmark Completed Successfully!")

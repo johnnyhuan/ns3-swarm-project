@@ -224,4 +224,10 @@ plt.savefig(fig_path, dpi=300)
 plt.close()
 print(f"✅ Diagnostic figure saved to: {fig_path}")
 
+print("📤 Uploading diagnostic results to GitHub...")
+try:
+    subprocess.run("git add exp_100_drones_breakdown* && git commit -m 'data: upload 100 UAVs breakdown diagnostic report' && git push origin main", shell=True, cwd=PROJECT_DIR)
+except Exception as e:
+    print(f"Notice on auto-push: {e}")
+
 print("\n🎉 100 UAVs Failure Analysis Completed Successfully!")

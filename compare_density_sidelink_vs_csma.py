@@ -73,7 +73,7 @@ def run_simulation(nodes, enable_sidelink):
         f"scratch/lr-wpan-swarm --numNodes={nodes} --p1Duration={p1_duration} "
         f"--simTime={sim_time} --spaceSize={space_size} --spaceZ={space_z} "
         f"--enableP1Sidelink={'true' if enable_sidelink else 'false'} "
-        f"--p1SlotUs={p1_slot_us} --autoPush=false"
+        f"--p1SlotUs={p1_slot_us} --p1CaptureThresholdDb=6.0 --phyCaptureMarginDb=6.0 --autoPush=false"
     ]
     
     try:

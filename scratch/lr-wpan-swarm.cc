@@ -33,6 +33,7 @@ double g_p1AvoidRssi = -999.0; // Specific defense RSSI threshold in dBm (-106 t
 bool g_enableDefense = true; // Defense design switch: true = spatial slot exclusion, false = exact cell avoidance only
 int g_numDataChannels = 6;   // Phase 2 Data Channels (configurable via cmd line, 0 to 10)
 int g_numDataSlots = 10;     // Phase 2 Data Slots (configurable via cmd line, 5 to 20)
+double g_p2DurationMs = 0.0; // Phase 2 Duration in ms (if set > 0, overrides numSlots = p2Duration / 2.5ms)
 
 double g_p1DurationMs = 25.0; // Phase 1 Duration in ms (configurable via cmd line, 10 to 40)
 double g_phase1DurationUs = 25000.0;
@@ -1592,6 +1593,8 @@ void PrintPhase2GroundTruthReport() {
     ss << "\n========================================================================================\n";
     ss << "       🔬 PHASE 2 PHYSICAL & MAC GROUND TRUTH ANALYSIS (Top-K within 50m) 🔬           \n";
     ss << "========================================================================================\n";
+    ss << "Phase 2 Configuration                             : Duration " << (g_numDataSlots * DATA_SLOT_US / 1000.0) 
+       << " ms (" << g_numDataSlots << " slots x " << (DATA_SLOT_US / 1000.0) << " ms, " << g_numDataChannels << " channels)\n";
     ss << "Total Expected P2 Neighbor Links (Epochs x Top-K) : " << g_p2TotalTargetLinks << "\n";
     double succPct = (g_p2TotalTargetLinks > 0) ? (100.0 * g_p2ReasonCounts[P2_REASON_SUCCESS] / g_p2TotalTargetLinks) : 0;
     int totalFails = g_p2TotalTargetLinks - g_p2ReasonCounts[P2_REASON_SUCCESS];
@@ -1723,6 +1726,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("enableDefense", "Enable spatial slot defense (default true)", g_enableDefense);
     cmd.AddValue("numChannels", "Number of Phase 2 data channels (e.g., 0 to 10)", g_numDataChannels);
     cmd.AddValue("numSlots", "Number of Phase 2 data slots (e.g., 5 to 20)", g_numDataSlots);
+    cmd.AddValue("p2Duration", "Phase 2 total duration in ms (if set > 0, sets numSlots = p2Duration / 2.5ms)", g_p2DurationMs);
     cmd.AddValue("numNodes", "Number of UAV nodes in swarm (e.g., 50, 100)", numNodes);
     cmd.AddValue("nodeSpeed", "Speed of UAVs in m/s (default 10.0 m/s, 0 for static hover)", nodeSpeed);
     cmd.AddValue("spaceSize", "Side length of 3D box (X and Y) in meters", g_spaceSize);
@@ -1736,6 +1740,10 @@ int main(int argc, char *argv[]) {
             g_originalCoutBuffer = std::cout.rdbuf();
             std::cout.rdbuf(g_runLogFile.rdbuf());
         }
+    }
+
+    if (g_p2DurationMs > 0.0) {
+        g_numDataSlots = std::max(1, (int)(g_p2DurationMs / (DATA_SLOT_US / 1000.0)));
     }
 
     if (g_numDataSlots > MAX_DATA_SLOTS) {

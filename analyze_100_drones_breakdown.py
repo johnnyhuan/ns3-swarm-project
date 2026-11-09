@@ -19,7 +19,7 @@ print("=========================================================================
 sim_time = float(sys.argv[1]) if len(sys.argv) > 1 else 1.0
 num_nodes = 100
 p1_duration = 10.0
-p1_slot_us = 100.0
+p1_slot_us = 250.0
 capture_thresh_db = 6.0
 space_size = 200.0
 space_z = 80.0

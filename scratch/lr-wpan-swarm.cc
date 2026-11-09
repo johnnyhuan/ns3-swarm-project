@@ -50,6 +50,7 @@ double g_p1SlotUs = 100.0;       // Phase 1 Sidelink slot duration in microsecon
 double g_p1CcaThresholdDbm = -96.58; // Phase 1 CSMA CCA Energy Detection Threshold in dBm (default: -96.58, standard 802.15.4)
 double g_p1CaptureThresholdDb = 6.0; // Phase 1 Sidelink Slotted SINR demodulation threshold in dB (Strict Bluetooth 5.4 LE 2M C/I: +6.0 dB)
 double g_phyCaptureMarginDb = 6.0;    // PHY layer capture margin in dB (Strict Bluetooth 5.4 LE 2M: +6.0 dB)
+bool g_enablePhyCapture = true;       // PHY layer capture effect switch (default: true)
 bool g_verboseLog = false;       // Verbose per-packet log switch (default: false for high-speed simulation at scale)
 
 const uint8_t BROADCAST_CHANNEL = 11;
@@ -271,7 +272,7 @@ public:
         
         // Connect PHY Traces for exact physical ground truth
         Ptr<LrWpanPhy> phy = m_device->GetPhy();
-        phy->SetCaptureEnabled(true);
+        phy->SetCaptureEnabled(g_enablePhyCapture);
         phy->SetCaptureMargin(g_phyCaptureMarginDb);
         g_dronePhyState[m_id] = IEEE_802_15_4_PHY_TRX_OFF;
         g_droneReceivingUid[m_id] = 0;
@@ -1517,6 +1518,7 @@ void PrintGroundTruthReport() {
     ss << "  • Airspace Dimensions & Topology      : " << g_spaceSize << "m x " << g_spaceSize << "m x " << g_spaceZ << "m\n";
     ss << "  • Mean 50m Neighbors per UAV (Density): " << std::fixed << std::setprecision(2) << meanNeighbors << " UAVs\n";
     ss << "  • UAVs with >= 5 Neighbors in 50m     : " << std::fixed << std::setprecision(1) << pctGe5 << "%\n";
+    ss << "  • PHY Layer Power Capture Enabled      : " << (g_enablePhyCapture ? "YES" : "NO") << "\n";
     ss << "  • Capture SINR Threshold Configured    : " << std::fixed << std::setprecision(1) << g_p1CaptureThresholdDb << " dB\n";
     ss << "  • Total Power Capture Events Triggered : " << g_p1CaptureEvents << " (rescued Phase 1 packets from closer neighbors)\n";
     if (cntSucc > 0) {
@@ -1730,6 +1732,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p1CcaThresholdDbm", "Phase 1 CSMA CCA Energy Detection Threshold in dBm (-106.58 to -80.0, default -96.58)", g_p1CcaThresholdDbm);
     cmd.AddValue("p1CaptureThresholdDb", "Phase 1 Sidelink Slotted SINR capture threshold in dB (e.g. -5.0, 0.0, 3.0, 6.0, default: 6.0)", g_p1CaptureThresholdDb);
     cmd.AddValue("phyCaptureMarginDb", "PHY layer capture margin in dB (power difference needed to preempt, default: 6.0)", g_phyCaptureMarginDb);
+    cmd.AddValue("enablePhyCapture", "Enable PHY Layer Power Capture Effect (default: true)", g_enablePhyCapture);
     cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);
     cmd.AddValue("simTime", "Total simulation duration in seconds (default 10.0)", g_simTime);
     cmd.AddValue("enableP1Sidelink", "Enable Sidelink-inspired Semi-Persistent Scheduling for Phase 1 (default false)", g_enableP1Sidelink);

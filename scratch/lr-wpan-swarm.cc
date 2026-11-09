@@ -444,25 +444,25 @@ public:
         auto it = g_packetTxStartTime.find(uid);
         if (it != g_packetTxStartTime.end()) {
             Time duration = Simulator::Now() - it->second;
-            if (p->GetSize() == MINI_BEACON_SIZE && !g_measuredP1AirTime) {
+            if (!g_measuredP1AirTime) {
                 g_measuredP1AirTime = true;
                 std::cout << "\n================================================================================\n"
                           << "🔬 REAL HARDWARE AIR-TIME MEASUREMENT (Measured by ns-3 PHY Trace) 🔬\n"
                           << "--------------------------------------------------------------------------------\n"
                           << "• Packet Type                : Phase 1 Mini-Beacon (ID + Slot + Channel)\n"
-                          << "• Application Payload Size   : " << p->GetSize() << " Bytes\n"
+                          << "• Total PHY Frame Size       : " << p->GetSize() << " Bytes (Payload + MAC Header + FCS)\n"
                           << "• PHY TxBegin Clock Time     : " << std::fixed << std::setprecision(3) << it->second.GetMicroSeconds() << " µs\n"
                           << "• PHY TxEnd Clock Time       : " << std::fixed << std::setprecision(3) << Simulator::Now().GetMicroSeconds() << " µs\n"
                           << "• EXACT MEASURED AIR TIME    : " << std::fixed << std::setprecision(3) << duration.GetMicroSeconds() << " µs ("
                           << (duration.GetMicroSeconds() / 1000.0) << " ms)\n"
                           << "================================================================================\n\n" << std::flush;
-            } else if (p->GetSize() == DATA_PACKET_SIZE && !g_measuredP2AirTime) {
+            } else if (!g_measuredP2AirTime && p->GetSize() > 20) {
                 g_measuredP2AirTime = true;
                 std::cout << "\n================================================================================\n"
                           << "🔬 REAL HARDWARE AIR-TIME MEASUREMENT (Measured by ns-3 PHY Trace) 🔬\n"
                           << "--------------------------------------------------------------------------------\n"
                           << "• Packet Type                : Phase 2 Data Packet\n"
-                          << "• Application Payload Size   : " << p->GetSize() << " Bytes\n"
+                          << "• Total PHY Frame Size       : " << p->GetSize() << " Bytes (Payload + MAC Header + FCS)\n"
                           << "• PHY TxBegin Clock Time     : " << std::fixed << std::setprecision(3) << it->second.GetMicroSeconds() << " µs\n"
                           << "• PHY TxEnd Clock Time       : " << std::fixed << std::setprecision(3) << Simulator::Now().GetMicroSeconds() << " µs\n"
                           << "• EXACT MEASURED AIR TIME    : " << std::fixed << std::setprecision(3) << duration.GetMicroSeconds() << " µs ("

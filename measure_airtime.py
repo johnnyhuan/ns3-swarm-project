@@ -29,21 +29,22 @@ for rel_path in ["scratch/lr-wpan-swarm.cc", "src/lr-wpan/model/lr-wpan-phy.cc",
 
 cmd = [
     "./ns3", "run",
-    "scratch/lr-wpan-swarm --numNodes=2 --simTime=0.03 --p1Duration=10.0 --p2Duration=10.0 --enableP1Sidelink=true"
+    "scratch/lr-wpan-swarm --numNodes=2 --simTime=0.1 --p1Duration=10.0 --p2Duration=10.0 --enableP1Sidelink=true"
 ]
 
 print("📡 Executing Real Hardware Air-Time Measurement via ns-3 PHY Traces...\n")
 proc = subprocess.run(cmd, cwd=NS3_DIR, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
-found = False
+printed_any = False
+in_block = False
 for line in proc.stdout.split("\n"):
     if "REAL HARDWARE AIR-TIME MEASUREMENT" in line:
-        found = True
-    if found:
+        in_block = True
+        printed_any = True
+    if in_block:
         print(line)
         if line.startswith("===") and "REAL HARDWARE" not in line:
-            # End of first block or check if p2 appears
-            pass
+            in_block = False
 
-if not found:
+if not printed_any:
     print(proc.stdout)

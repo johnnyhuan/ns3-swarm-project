@@ -387,6 +387,7 @@ public:
     }
 
     void NotifyPhyRxCapture(Ptr<const Packet> capP, Ptr<const Packet> preP) {
+        if (!g_enablePhyCapture) return;
         g_totalCaptureEvents++;
         if (capP && capP->GetSize() == DATA_PACKET_SIZE) {
             g_p2CaptureEvents++;
@@ -906,6 +907,7 @@ private:
 
     void ProcessSidelinkSlottedCapture(uint32_t epoch) {
         if (!g_enableP1Sidelink) return;
+        if (!g_enablePhyCapture) return;
 
         uint32_t numNodes = NodeList::GetNNodes();
         int numP1Slots = std::max(1, (int)((g_phase1DurationUs - 250.0) / g_p1SlotUs) + 1);

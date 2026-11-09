@@ -213,4 +213,10 @@ if results:
     plt.close()
     print(f"✅ Dashboard plot saved to: {dash_fig_path}")
 
+print("📤 Pushing benchmark results and plots to GitHub...")
+try:
+    subprocess.run("git add exp_p1_capture_threshold* && git commit -m 'data: update P1 capture threshold benchmark results and plots' && git push origin main", shell=True, cwd=PROJECT_DIR)
+except Exception as e:
+    print(f"Notice on auto-push: {e}")
+
 print("\n🎉 Benchmark Completed Successfully!")

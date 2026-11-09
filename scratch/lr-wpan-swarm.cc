@@ -1028,9 +1028,11 @@ private:
     }
 
     void EvaluatePhase1Epoch(uint32_t epoch) {
-        if (g_enableP1Sidelink) {
-            ProcessSidelinkSlottedCapture(epoch);
-        }
+        // Pure Real PHY Evaluation: Rely 100% on ns-3 LrWpanPhy/SpectrumChannel true hardware reception
+        // Strictly avoid any synthetic formula post-processing!
+        // if (g_enableP1Sidelink) {
+        //     ProcessSidelinkSlottedCapture(epoch);
+        // }
         uint32_t numNodes = NodeList::GetNNodes();
         std::vector<Ptr<MobilityModel>> mobs(numNodes);
         std::vector<double> sTxTimes(numNodes, -1.0);

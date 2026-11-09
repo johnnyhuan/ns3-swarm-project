@@ -95,7 +95,7 @@ def run_simulation(nodes, enable_capture):
 
 def parse_metrics(p1_text, stdout_text):
     data = {
-        "links": 0, "succ": 0, "prr": 0.0, "fail": 0,
+        "links": 0, "succ": 0, "prr": 0.0, "p1_prr": 0.0, "fail": 0,
         "csma_abort": 0, "rx_deafness": 0, "preamble_coll": 0,
         "low_sinr": 0, "captures": 0
     }
@@ -109,6 +109,7 @@ def parse_metrics(p1_text, stdout_text):
     if m:
         data["succ"] = int(m.group(1))
         data["prr"] = float(m.group(2))
+        data["p1_prr"] = float(m.group(2))
 
     m = re.search(r"Failed Link Receptions \(Dropped/Missed\)\s*:\s*(\d+)", src)
     if m: data["fail"] = int(m.group(1))

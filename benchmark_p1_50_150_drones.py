@@ -149,7 +149,7 @@ for nodes in node_counts:
     print(f"   [1/2] Running CSMA-CA Baseline ... ", end="", flush=True)
     csma_res = run_simulation(nodes, enable_sidelink=False)
     if csma_res is not None:
-        print(f"PRR: {csma_res['p1_prr']:.1f}% | Coll: {csma_res['preamble_coll']} | Aborts: {csma_res['csma_abort']}")
+        print(f"PRR: {csma_res['p1_prr']:.1f}% | Coll: {csma_res['preamble_coll']} | Aborts: {csma_res['csma_abort']} | Captures: {csma_res['captures']}")
     else:
         print(f"TIMEOUT / ERROR")
 
@@ -179,8 +179,8 @@ for nodes in node_counts:
 print("\n" + "=" * 125)
 print("📊 UAV SWARM PHASE 1 BENCHMARK SUMMARY (50-150 UAVs, C/I >= +6.0 dB) 📊")
 print("=" * 125)
-print(f"| {'Nodes':^7} | {'CSMA PRR':^11} | {'S-SPS PRR':^11} | {'Δ Gain':^10} | {'CSMA Abort':^12} | {'CSMA Coll':^11} | {'SPS Coll':^10} | {'SPS Captures':^14} | {'Evaluation':^20} |")
-print("|" + "-" * 9 + "|" + "-" * 13 + "|" + "-" * 13 + "|" + "-" * 12 + "|" + "-" * 14 + "|" + "-" * 13 + "|" + "-" * 12 + "|" + "-" * 16 + "|" + "-" * 22 + "|")
+print(f"| {'Nodes':^7} | {'CSMA PRR':^10} | {'S-SPS PRR':^10} | {'Δ Gain':^9} | {'CSMA Abort':^11} | {'CSMA Coll':^10} | {'CSMA Capt':^10} | {'SPS Capt':^10} | {'Evaluation':^18} |")
+print("|" + "-" * 9 + "|" + "-" * 12 + "|" + "-" * 12 + "|" + "-" * 11 + "|" + "-" * 13 + "|" + "-" * 12 + "|" + "-" * 12 + "|" + "-" * 12 + "|" + "-" * 20 + "|")
 
 for r in results:
     nodes = r["nodes"]
@@ -189,11 +189,11 @@ for r in results:
     diff_str = f"{r['diff']:+6.1f}%" if r["diff"] is not None else "N/A"
     csma_abort = f"{r['csma']['csma_abort']:,}" if r["csma"] else "N/A"
     csma_coll = f"{r['csma']['preamble_coll']:,}" if r["csma"] else "N/A"
-    sps_coll = f"{r['sps']['preamble_coll']:,}" if r["sps"] else "N/A"
+    csma_capt = f"{r['csma']['captures']:,}" if r["csma"] else "N/A"
     sps_capt = f"{r['sps']['captures']:,}" if r["sps"] else "N/A"
 
     eval_str = "🚀 Sidelink Dominant" if (r["diff"] is not None and r["diff"] > 5.0) else ("🤝 Comparable" if (r["diff"] is not None and abs(r["diff"]) <= 5.0) else "CSMA Marginally Ahead")
-    print(f"| {nodes:^7} | {csma_prr:^11} | {sps_prr:^11} | {diff_str:^10} | {csma_abort:^12} | {csma_coll:^11} | {sps_coll:^10} | {sps_capt:^14} | {eval_str:^20} |")
+    print(f"| {nodes:^7} | {csma_prr:^10} | {sps_prr:^10} | {diff_str:^9} | {csma_abort:^11} | {csma_coll:^10} | {csma_capt:^10} | {sps_capt:^10} | {eval_str:^18} |")
 
 print("=" * 125)
 

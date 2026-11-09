@@ -6,9 +6,9 @@
 | Failure Category | CSMA-CA Baseline | Sidelink S-SPS (+6dB) | Delta Difference |
 | :--- | :--- | :--- | :--- |
 | Total Links | 23674 | 23674 | Baseline |
-| Delivered (PRR) | 20836 (88.0%) | 14578 (61.6%) | -26.4% |
-| CSMA Aborts | 276 | 227 | -49 |
-| Preamble Collisions | 1944 | 5409 | 3465 |
-| Low SINR (< 6dB) | 388 | 1301 | 913 |
-| RX Deafness (TX) | 226 | 2078 | 1852 |
-| Power Capture Rescues | 7614 | 2326 | +-5288 |
+| Delivered (PRR) | 20622 (87.1%) | 18168 (76.7%) | -10.4% |
+| CSMA Aborts | 517 | 424 | -93 |
+| Preamble Collisions | 1860 | 3196 | 1336 |
+| Low SINR (< 6dB) | 195 | 395 | 200 |
+| RX Deafness (TX) | 472 | 1479 | 1007 |
+| Power Capture Rescues | 7418 | 91 | +-7327 |

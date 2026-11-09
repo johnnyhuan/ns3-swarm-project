@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Publication-Quality Academic Plot: 50 to 150 UAV Swarm Scalability
-Compares Proposed Autonomous Slotted MAC (Proposed Scheme) vs IEEE 802.15.4 CSMA/CA Baseline.
+Compares Proposed Autonomous Slotted MAC (Proposed Scheme) vs CSMA-CA Baseline (BLE 2M PHY).
 STRICTLY adheres to: NO 'Sidelink' terminology.
 """
 
@@ -33,7 +33,7 @@ fig, ax = plt.subplots(figsize=(9, 5.5), dpi=300)
 ax.plot(nodes, prop_prr, marker='s', markersize=8, linewidth=2.4, color='#1f77b4',
         label='Proposed Autonomous Slotted MAC (Proposed Scheme)', zorder=4)
 ax.plot(nodes, csma_prr, marker='o', markersize=8, linewidth=2.4, color='#d62728',
-        linestyle='--', label='IEEE 802.15.4 CSMA/CA Baseline', zorder=3)
+        linestyle='--', label='CSMA-CA Baseline (BLE 2M PHY)', zorder=3)
 
 # Annotate each data point
 for i, n in enumerate(nodes):

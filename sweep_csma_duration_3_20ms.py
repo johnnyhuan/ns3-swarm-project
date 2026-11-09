@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 CSMA-CA Phase 1 Broadcast Duration Sweep: 3.0 ms to 20.0 ms (Continuous 1 ms step, 18 points)
-Evaluates IEEE 802.15.4 CSMA-CA Delivery PRR and Detailed Physical Failure Root Causes:
+Evaluates BLE 5.4 2M PHY CSMA-CA Delivery PRR and Detailed Physical Failure Root Causes:
 - Swarm Scale: 100 UAVs in 200m x 200m x 80m
 - Duration Points: 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 ms
-- Physical Layer: Bluetooth 5.4 LE 2M PHY, Strict C/I = +6.0 dB
+- Physical Layer: Bluetooth 5.4 LE 2M PHY (2 Mbps, 244 us air time), Strict C/I = +6.0 dB
 - Tracks: Delivery PRR, Collisions, Aborts, Half-Duplex Deafness, Low SINR, Power Captures
 """
 
@@ -182,14 +182,14 @@ capt_list = [r["captures"] for r in results]
 
 # Figure 1: PRR vs Duration
 fig, ax = plt.subplots(figsize=(10, 6), dpi=300)
-ax.plot(dur_list, prr_list, marker='o', markersize=8, linewidth=2.5, color='#d62728', label='IEEE 802.15.4 CSMA/CA PRR')
+ax.plot(dur_list, prr_list, marker='o', markersize=8, linewidth=2.5, color='#d62728', label='CSMA-CA (BLE 5.4 2M PHY)')
 
 for i, d in enumerate(dur_list):
     offset_y = 10 if i % 2 == 0 else -16
     ax.annotate(f"{prr_list[i]:.1f}%", (d, prr_list[i]), textcoords="offset points", xytext=(0, offset_y),
                 ha='center', fontsize=9, fontweight='bold', color='#d62728')
 
-ax.set_title('CSMA-CA Packet Delivery Ratio vs Broadcast Window Duration (3ms ~ 20ms)', fontsize=13, fontweight='bold', pad=12)
+ax.set_title('CSMA-CA Packet Delivery Ratio vs Broadcast Window Duration (BLE 5.4 2M PHY, 100 UAVs)', fontsize=13, fontweight='bold', pad=12)
 ax.set_xlabel('Phase 1 Broadcast Window Duration (ms, 1ms Step)', fontsize=11, fontweight='bold')
 ax.set_ylabel('Top-5 Neighbor Delivery PRR (%)', fontsize=11, fontweight='bold')
 ax.set_xticks(dur_list)

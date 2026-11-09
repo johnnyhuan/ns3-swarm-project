@@ -228,7 +228,7 @@ sps_prrs = [r["sps"]["p1_prr"] for r in results]
 # Figure 1: Clean Comparison Curve
 fig, ax = plt.subplots(figsize=(10, 6))
 ax.plot(nodes_list, sps_prrs, marker='s', markersize=8, linewidth=2.5, color='#1f77b4', label='3GPP Sidelink S-SPS (100 µs Micro-Slot, C/I $\ge$ +6.0 dB)')
-ax.plot(nodes_list, csma_prrs, marker='o', markersize=8, linewidth=2.5, color='#d62728', linestyle='--', label='IEEE 802.15.4 / CSMA-CA Baseline')
+ax.plot(nodes_list, csma_prrs, marker='o', markersize=8, linewidth=2.5, color='#d62728', linestyle='--', label='CSMA-CA Baseline (BLE 2M PHY)')
 
 for i, n in enumerate(nodes_list):
     ax.annotate(f"{sps_prrs[i]:.1f}%", (n, sps_prrs[i]), textcoords="offset points", xytext=(0, 10), ha='center', fontsize=9, fontweight='bold', color='#1f77b4')

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 UAV Swarm Phase 1 Scalability Benchmark (50 to 150 UAVs)
-Compares Proposed Autonomous Slotted MAC (Proposed Scheme) vs IEEE 802.15.4 CSMA/CA Baseline.
+Compares Proposed Autonomous Slotted MAC (Proposed Scheme) vs CSMA-CA Baseline (BLE 2M PHY).
 - Physical Layer: BLE 5.4 2M PHY, C/I Capture Threshold = +6.0 dB
 - Swarm Scale: 50 to 150 UAVs (Step 10)
 - Airspace: 200m x 200m x 80m 3D Space, UAV Speed = 10.0 m/s

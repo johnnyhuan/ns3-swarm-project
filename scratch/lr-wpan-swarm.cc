@@ -32,17 +32,17 @@ double g_p1AvoidDist = 50.0; // RX Deafness defense distance in meters
 double g_p1AvoidRssi = -999.0; // Specific defense RSSI threshold in dBm (-106 to -90, overrides p1AvoidDist if set)
 bool g_enableDefense = true; // Defense design switch: true = spatial slot exclusion, false = exact cell avoidance only
 int g_numDataChannels = 6;   // Phase 2 Data Channels (configurable via cmd line, 0 to 10)
-int g_numDataSlots = 10;     // Phase 2 Data Slots (configurable via cmd line, 5 to 20)
-double g_p2DurationMs = 0.0; // Phase 2 Duration in ms (if set > 0, overrides numSlots = p2Duration / 2.5ms)
+int g_numDataSlots = 10;     // Phase 2 Data Slots (configurable via cmd line, 1 to 16)
+double g_p2DurationMs = 10.0; // Phase 2 Duration in ms (configurable via cmd line, default: 10.0 ms)
+double g_dataSlotUs = 1000.0; // Phase 2 Data Slot Duration in microseconds (default: 1000.0 us for 2 Mbps PHY)
 
-double g_p1DurationMs = 25.0; // Phase 1 Duration in ms (configurable via cmd line, 10 to 40)
-double g_phase1DurationUs = 25000.0;
-double g_cycleMs = 51.0;            // Dynamically computed: g_p1DurationMs + 1 + (g_numDataSlots * 2.5)
+double g_p1DurationMs = 10.0; // Phase 1 Duration in ms (configurable via cmd line, default: 10.0 ms)
+double g_phase1DurationUs = 10000.0;
+double g_cycleMs = 21.0;            // Dynamically computed: g_p1DurationMs + 1 + (g_numDataSlots * g_dataSlotUs / 1000.0)
 double g_simTime = 10.0;            // Total simulation duration in seconds (default 10.0s)
 const double GAP_US = 1000.0; 
-const int MAX_DATA_SLOTS = 32;            // Maximum supported slots (up to 31 in 5-bit encoding)
-const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels
-const double DATA_SLOT_US = 2500.0; 
+const int MAX_DATA_SLOTS = 32;            // Maximum supported slot array buffer size
+const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels 
 
 // Sidelink S-SPS (Semi-Persistent Scheduling) for Phase 1
 bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
@@ -579,7 +579,7 @@ private:
         }
         if (m_id == 0) {
             Simulator::Schedule(MicroSeconds(g_phase1DurationUs), &SwarmSchedulerApp::EvaluatePhase1Epoch, this, m_epoch);
-            double p2DoneUs = g_phase1DurationUs + GAP_US + (g_numDataSlots * DATA_SLOT_US) + 100.0;
+            double p2DoneUs = g_phase1DurationUs + GAP_US + (g_numDataSlots * g_dataSlotUs) + 100.0;
             Simulator::Schedule(MicroSeconds(p2DoneUs), &SwarmSchedulerApp::EvaluatePhase2Epoch, this, m_epoch);
         }
         Simulator::Schedule(MicroSeconds(g_phase1DurationUs + GAP_US), &SwarmSchedulerApp::ComputeSchedule, this);
@@ -737,7 +737,7 @@ private:
         for (int i = 0; i < g_numDataSlots; i++) {
             g_p2SlotAction[m_epoch][m_id][i] = m_schedule[i].action;
             g_p2SlotTarget[m_epoch][m_id][i] = m_schedule[i].targetId;
-            Simulator::Schedule(MicroSeconds(i * DATA_SLOT_US), &SwarmSchedulerApp::ExecuteDataSlot, this, i);
+            Simulator::Schedule(MicroSeconds(i * g_dataSlotUs), &SwarmSchedulerApp::ExecuteDataSlot, this, i);
         }
     }
 
@@ -887,8 +887,8 @@ private:
             g_totalDataPacketsReceived++;
             
             // 更新 AoI Generation Time (Just-in-Time 採樣模型：在專屬時槽起點才採樣)
-            // 每個時槽 2.5ms，所以封包產生的時間大約是抵達時間 (now) 往前推 2.5ms
-            m_lastGenerationTime[srcId] = now - 2.5;
+            // 封包產生的時間大約是抵達時間 (now) 往前推一個時槽長度 (g_dataSlotUs / 1000.0 ms)
+            m_lastGenerationTime[srcId] = now - (g_dataSlotUs / 1000.0);
         }
     }
 
@@ -1273,7 +1273,7 @@ private:
                 double nowMs = Simulator::Now().GetMilliSeconds();
                 if (delivered) {
                     cat = P2_REASON_SUCCESS;
-                    g_lastBeaconRxGenTime[{(uint16_t)r, sender}] = nowMs - 2.5;
+                    g_lastBeaconRxGenTime[{(uint16_t)r, sender}] = nowMs - (g_dataSlotUs / 1000.0);
                     if (r == 0) {
                         g_d0Top5BcnRx[sender]++;
                     }
@@ -1593,8 +1593,7 @@ void PrintPhase2GroundTruthReport() {
     ss << "\n========================================================================================\n";
     ss << "       🔬 PHASE 2 PHYSICAL & MAC GROUND TRUTH ANALYSIS (Top-K within 50m) 🔬           \n";
     ss << "========================================================================================\n";
-    ss << "Phase 2 Configuration                             : Duration " << (g_numDataSlots * DATA_SLOT_US / 1000.0) 
-       << " ms (" << g_numDataSlots << " slots x " << (DATA_SLOT_US / 1000.0) << " ms, " << g_numDataChannels << " channels)\n";
+    ss << "Phase 2 Configuration                             : " << g_numDataSlots << " slots x " << g_dataSlotUs << " us (" << (g_numDataSlots * g_dataSlotUs / 1000.0) << " ms), " << g_numDataChannels << " channels\n";
     ss << "Total Expected P2 Neighbor Links (Epochs x Top-K) : " << g_p2TotalTargetLinks << "\n";
     double succPct = (g_p2TotalTargetLinks > 0) ? (100.0 * g_p2ReasonCounts[P2_REASON_SUCCESS] / g_p2TotalTargetLinks) : 0;
     int totalFails = g_p2TotalTargetLinks - g_p2ReasonCounts[P2_REASON_SUCCESS];
@@ -1726,7 +1725,8 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("enableDefense", "Enable spatial slot defense (default true)", g_enableDefense);
     cmd.AddValue("numChannels", "Number of Phase 2 data channels (e.g., 0 to 10)", g_numDataChannels);
     cmd.AddValue("numSlots", "Number of Phase 2 data slots (e.g., 5 to 20)", g_numDataSlots);
-    cmd.AddValue("p2Duration", "Phase 2 total duration in ms (if set > 0, sets numSlots = p2Duration / 2.5ms)", g_p2DurationMs);
+    cmd.AddValue("p2Duration", "Phase 2 duration in ms (default: 10.0 ms)", g_p2DurationMs);
+    cmd.AddValue("dataSlotUs", "Phase 2 data slot duration in microseconds (default: 1000.0 us, e.g. 625.0 or 1000.0)", g_dataSlotUs);
     cmd.AddValue("numNodes", "Number of UAV nodes in swarm (e.g., 50, 100)", numNodes);
     cmd.AddValue("nodeSpeed", "Speed of UAVs in m/s (default 10.0 m/s, 0 for static hover)", nodeSpeed);
     cmd.AddValue("spaceSize", "Side length of 3D box (X and Y) in meters", g_spaceSize);
@@ -1743,16 +1743,16 @@ int main(int argc, char *argv[]) {
     }
 
     if (g_p2DurationMs > 0.0) {
-        g_numDataSlots = std::max(1, (int)(g_p2DurationMs / (DATA_SLOT_US / 1000.0)));
+        g_numDataSlots = std::max(1, (int)(g_p2DurationMs * 1000.0 / g_dataSlotUs));
     }
 
-    if (g_numDataSlots > MAX_DATA_SLOTS) {
-        std::cerr << "Warning: numSlots (" << g_numDataSlots << ") exceeds MAX_DATA_SLOTS (" << MAX_DATA_SLOTS << "), clamping to " << MAX_DATA_SLOTS << std::endl;
-        g_numDataSlots = MAX_DATA_SLOTS;
+    if (g_numDataSlots > 16) {
+        std::cerr << "Warning: numSlots (" << g_numDataSlots << ") exceeds 4-bit slot capacity (16), clamping to 16" << std::endl;
+        g_numDataSlots = 16;
     }
 
     g_phase1DurationUs = g_p1DurationMs * 1000.0;
-    g_cycleMs = (g_phase1DurationUs + GAP_US + g_numDataSlots * DATA_SLOT_US) / 1000.0;
+    g_cycleMs = (g_phase1DurationUs + GAP_US + g_numDataSlots * g_dataSlotUs) / 1000.0;
 
     NodeContainer nodes;
     nodes.Create(numNodes);

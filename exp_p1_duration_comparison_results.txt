@@ -1,0 +1,22 @@
+# UAV Swarm Phase 1 Cycle Duration Benchmark: Sidelink S-SPS vs CSMA-CA
+- Swarm Scale         : 150 UAVs
+- Phase 1 Range       : 3.0 ms to 15.0 ms (step 1.0 ms, 13 points)
+- Airspace Dimensions : 200m x 200m x 80m
+- Sidelink Slot Width : 100.0 µs
+- Simulation Duration : 1.0 s per run
+
+| P1 Duration (ms) | Cycle (ms) | S-SPS Slots | CSMA PRR (%) | Sidelink S-SPS PRR (%) | Δ Gain (%) | CSMA Collisions | SPS Collisions | CSMA Aborts | SPS Captures | CSMA AoI (ms) | SPS AoI (ms) | Evaluation |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 3 ms | 29.0 ms | 28 | 41.7% | 71.7% | +30.0% | 4463 | 1761 | 6915 | 56835 | 33.0ms | 35.4ms | Sidelink Dominant |
+| 4 ms | 30.0 ms | 38 | 51.8% | 79.9% | +28.1% | 4126 | 1811 | 4776 | 76048 | 25.3ms | 28.9ms | Sidelink Dominant |
+| 5 ms | 31.0 ms | 48 | 61.8% | 83.3% | +21.5% | 3515 | 1639 | 3253 | 88370 | 18.6ms | 24.6ms | Sidelink Dominant |
+| 6 ms | 32.0 ms | 58 | 70.5% | 86.7% | +16.2% | 2990 | 1321 | 1935 | 102712 | 16.0ms | 22.8ms | Sidelink Dominant |
+| 7 ms | 33.0 ms | 68 | 76.7% | 88.2% | +11.5% | 2411 | 1276 | 1397 | 110759 | 14.2ms | 22.3ms | Sidelink Dominant |
+| 8 ms | 34.0 ms | 78 | 80.6% | 89.9% | +9.3% | 1961 | 1145 | 1089 | 122967 | 13.2ms | 21.5ms | Sidelink Dominant |
+| 9 ms | 35.0 ms | 88 | 84.2% | 91.7% | +7.5% | 1584 | 875 | 807 | 125710 | 11.9ms | 19.6ms | Sidelink Dominant |
+| 10 ms | 36.0 ms | 98 | 87.7% | 92.4% | +4.7% | 1272 | 860 | 472 | 137912 | 11.9ms | 19.1ms | Sidelink Dominant |
+| 11 ms | 37.0 ms | 108 | 89.5% | 92.8% | +3.3% | 1065 | 747 | 408 | 136186 | 11.3ms | 18.3ms | Sidelink Dominant |
+| 12 ms | 38.0 ms | 118 | 91.0% | 93.2% | +2.2% | 904 | 718 | 369 | 142215 | 11.4ms | 17.7ms | Comparable |
+| 13 ms | 39.0 ms | 128 | 92.6% | 93.4% | +0.8% | 789 | 685 | 210 | 144616 | 10.5ms | 17.9ms | Comparable |
+| 14 ms | 40.0 ms | 138 | 92.9% | 94.6% | +1.7% | 706 | 556 | 233 | 150456 | 10.7ms | 18.0ms | Comparable |
+| 15 ms | 41.0 ms | 148 | 93.3% | 94.4% | +1.1% | 663 | 597 | 205 | 156370 | 10.8ms | 17.7ms | Comparable |

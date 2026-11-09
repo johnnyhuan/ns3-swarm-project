@@ -583,9 +583,9 @@ private:
             // Record claimed slot in global registry for Phase 1 Sidelink
             g_p1DroneClaimedSlot[m_epoch][m_id] = m_p1ClaimedSlot;
 
-            // Micro-jitter inside the claimed slot (0 to 5 us) for physical-layer tie-breaking while staying strictly inside the slot
-            double maxJitterUs = std::max(0.0, std::min(5.0, g_p1SlotUs - 245.0));
-            double jitterUs = (maxJitterUs > 0.0) ? uv->GetValue(0.0, maxJitterUs) : 0.0;
+            // Micro-jitter inside the claimed slot for physical-layer tie-breaking
+            double maxJitterUs = std::min(10.0, std::max(2.0, g_p1SlotUs * 0.05));
+            double jitterUs = uv->GetValue(0.0, maxJitterUs);
             double txDelayUs = m_p1ClaimedSlot * g_p1SlotUs + jitterUs;
 
             Simulator::Schedule(MicroSeconds(txDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);

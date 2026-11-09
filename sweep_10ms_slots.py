@@ -47,20 +47,21 @@ for rel_path in sync_files:
             pass
 
 # Slot width list to sweep (microseconds)
-# Covering coarse to fine grid: 20 slots up to 115 slots
+# Deep low-duration sweep: 100 µs down to 10 µs (98 slots up to 976 slots)
 slot_configs = [
-    (500.0, "20 slots (500 µs)"),
-    (330.0, "30 slots (330 µs)"),
-    (250.0, "40 slots (250 µs)"),
-    (200.0, "49 slots (200 µs)"),
-    (160.0, "61 slots (160 µs)"),
-    (140.0, "70 slots (140 µs)"),
-    (125.0, "79 slots (125 µs)"),
-    (110.0, "89 slots (110 µs)"),
     (100.0, "98 slots (100 µs)"),
-    (95.0,  "103 slots (95 µs)"),
     (90.0,  "109 slots (90 µs)"),
-    (85.0,  "115 slots (85 µs)")
+    (85.0,  "115 slots (85 µs)"),
+    (80.0,  "122 slots (80 µs)"),
+    (75.0,  "131 slots (75 µs)"),
+    (70.0,  "140 slots (70 µs)"),
+    (65.0,  "151 slots (65 µs)"),
+    (60.0,  "163 slots (60 µs)"),
+    (50.0,  "196 slots (50 µs)"),
+    (40.0,  "244 slots (40 µs)"),
+    (30.0,  "326 slots (30 µs)"),
+    (20.0,  "488 slots (20 µs)"),
+    (10.0,  "976 slots (10 µs)")
 ]
 
 def run_simulation(enable_sidelink, slot_us=100.0):
@@ -128,7 +129,7 @@ print("\n[Step 1/2] Running CSMA-CA Baseline (Continuous Random Backoff, No Slot
 csma_res = run_simulation(enable_sidelink=False)
 print(f"  ==> CSMA-CA PRR: {csma_res['prr']:.1f}% ({csma_res['succ']}/{csma_res['links']}) | Aborts: {csma_res['csma_abort']} | Coll: {csma_res['preamble_coll']} | Captures: {csma_res['captures']}")
 
-print("\n[Step 2/2] Sweeping Sidelink Slot Counts in 10ms Window (20 to 115 Slots)...")
+print("\n[Step 2/2] Sweeping Sidelink Slot Counts in 10ms Window (100 µs down to 10 µs)...")
 sidelink_results = []
 for slot_us, label in slot_configs:
     slots_cnt = max(1, int((p1_duration * 1000.0 - 250.0) / slot_us) + 1)

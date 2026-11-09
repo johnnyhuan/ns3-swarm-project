@@ -1,0 +1,19 @@
+# UAV Swarm Phase 1 Benchmark: 50 to 150 UAVs (Strict Bluetooth 5.4 LE 2M +6.0 dB C/I)
+- Date: 2026-11-09 02:47:56
+- Phase 1 Duration: 10.0 ms
+- Sidelink Slot Width: 100 µs (98 slots)
+- Capture SINR Threshold: +6.0 dB
+
+| Nodes | CSMA PRR (%) | S-SPS PRR (%) | Δ Gain (%) | CSMA Aborts | CSMA Collisions | SPS Collisions | SPS Captures | Evaluation |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 50 | 88.5% | 80.7% | -7.8% | 93 | 790 | 1156 | 1697 | Comparable |
+| 60 | 87.3% | 73.8% | -13.5% | 225 | 1058 | 2164 | 2102 | Comparable |
+| 70 | 88.2% | 78.6% | -9.6% | 158 | 1299 | 2074 | 2935 | Comparable |
+| 80 | 86.7% | 75.3% | -11.4% | 330 | 1655 | 2794 | 3030 | Comparable |
+| 90 | 88.1% | 77.9% | -10.2% | 300 | 1759 | 3032 | 3685 | Comparable |
+| 100 | 88.0% | 78.1% | -9.9% | 276 | 1944 | 3270 | 4224 | Comparable |
+| 110 | 85.3% | 72.3% | -13.0% | 584 | 2551 | 4797 | 4791 | Comparable |
+| 120 | 86.7% | 75.0% | -11.7% | 525 | 2383 | 4530 | 4006 | Comparable |
+| 130 | 85.7% | 73.5% | -12.2% | 965 | 2524 | 5225 | 4749 | Comparable |
+| 140 | 84.9% | 72.7% | -12.2% | 860 | 2993 | 5982 | 5612 | Comparable |
+| 150 | 84.6% | 74.7% | -9.9% | 927 | 3228 | 5912 | 6042 | Comparable |

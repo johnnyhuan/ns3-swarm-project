@@ -94,8 +94,12 @@ for thresh in thresholds:
 
     # Parse metrics
     m_p1_links = re.search(r"Total Expected P1 Neighbor Links.*:\s*(\d+)", p1_text)
-    m_p1_succ = re.search(r"1\.\s+SUCCESS.*:\s*(\d+)\s*\(([\d\.]+)%\)", p1_text)
-    m_p1_fail = re.search(r"TOTAL DROPPED / MISSED LINKS.*:\s*(\d+)\s*\(([\d\.]+)%\)", p1_text)
+    m_p1_succ = re.search(r"Successfully Received \(Delivered\)\s*:\s*(\d+)\s*\(([\d\.]+)%\)", p1_text)
+    if not m_p1_succ:
+        m_p1_succ = re.search(r"1\.\s+SUCCESS.*:\s*(\d+)\s*\(([\d\.]+)%\)", p1_text)
+    m_p1_fail = re.search(r"Failed Link Receptions.*:\s*(\d+)\s*\(([\d\.]+)%\)", p1_text)
+    if not m_p1_fail:
+        m_p1_fail = re.search(r"TOTAL DROPPED / MISSED LINKS.*:\s*(\d+)\s*\(([\d\.]+)%\)", p1_text)
     m_p1_capt = re.search(r"Total Power Capture Events Triggered\s*:\s*(\d+)", p1_text)
     m_p1_low_sinr = re.search(r"PREAMBLE_LOW_SINR.*:\s*(\d+)", p1_text)
     m_p1_coll = re.search(r"PREAMBLE_COLLISION_BUSY_RX.*:\s*(\d+)", p1_text)

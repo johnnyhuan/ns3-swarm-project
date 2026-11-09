@@ -267,6 +267,8 @@ public:
         
         // Connect PHY Traces for exact physical ground truth
         Ptr<LrWpanPhy> phy = m_device->GetPhy();
+        phy->SetCaptureEnabled(true);
+        phy->SetCaptureMargin(6.0); // Strict Bluetooth 5.4 LE 2M Co-channel Rejection (+6.0 dB)
         g_dronePhyState[m_id] = IEEE_802_15_4_PHY_TRX_OFF;
         g_droneReceivingUid[m_id] = 0;
         g_droneCurrentChannel[m_id] = BROADCAST_CHANNEL;
@@ -980,8 +982,8 @@ private:
                 double sinr = bestPrxLinear / (interfLinear + noiseLinear);
                 double sinrDb = 10.0 * std::log10(sinr);
 
-                // Capture threshold: standard IEEE 802.15.4 demodulation threshold (-5.0 dB)
-                if (sinrDb >= -5.0) {
+                // Capture threshold: strict Bluetooth 5.4 LE 2M Co-channel Rejection Ratio (C/I >= +6.0 dB)
+                if (sinrDb >= 6.0) {
                     // Receiver R captures bestSender!
                     bool alreadyHeard = (g_p1ReceivedInEpoch[epoch][r].count(bestSender) > 0);
                     if (!alreadyHeard) {

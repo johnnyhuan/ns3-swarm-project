@@ -1,0 +1,12 @@
+# Phase 2 Data Delivery Benchmark Report (150 UAVs, P1=10ms, P2=10ms)
+
+- Swarm Scale       : 150 UAVs
+- Phase 1 Window    : 10.0 ms (Sidelink Mode 4 S-SPS, 100 µs micro-slot)
+- Phase 2 Window    : 10.0 ms
+- 2 Mbps Packet Air : 436 µs (50B payload + 11B MAC header + 12 symbols PPDU header)
+- Fast Turnaround   : 40 µs (BLE 5.4 fast PLL turnaround)
+
+| Slot (µs) | Slots | Guard Band | Phase 1 PRR | Phase 2 PRR | P1 Discovery Miss | RX Deafness | Preamble Collisions | Power Captures | Mean AoI (ms) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 625 µs | 16 | 149 µs | 0.0% | 0.0% | 0 | 0 | 0 | 0 | 0.0 ms |
+| 1000 µs | 10 | 524 µs | 91.7% | 75.1% | 2576 | 3199 | 765 | 197874 | 11.8 ms |

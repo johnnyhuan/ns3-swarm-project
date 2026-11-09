@@ -1,0 +1,11 @@
+# Phase 1 Capture / Demodulation Threshold Sensitivity Benchmark
+- Swarm Scale: 150 UAVs in 200m x 200m x 80m
+- Phase 1 Window: 10.0 ms (100 µs Micro-Slot, 98 slots)
+
+| Threshold (dB) | P1 PRR (%) | Delivered | Captures | Low SINR Drops | Physical Meaning |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| -5.0 dB | 0.0% | 0 | 6046 | 727 | Original IEEE 802.15.4 DSSS demodulation floor |
+| -3.0 dB | 0.0% | 0 | 6042 | 739 |  |
+| +0.0 dB | 0.0% | 0 | 6044 | 943 | Equal Power (0 dB) boundary |
+| +3.0 dB | 0.0% | 0 | 6041 | 1297 | Original ns-3 PHY Capture Margin (+3.0 dB) |
+| +6.0 dB | 0.0% | 0 | 6042 | 1649 | Strict Bluetooth 5.4 LE 2M C/I (+6.0 dB) |

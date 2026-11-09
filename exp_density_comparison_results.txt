@@ -6,15 +6,15 @@
 
 | Swarm Scale (UAVs) | CSMA-CA PRR (%) | Sidelink S-SPS PRR (%) | Δ Gain (%) | CSMA Deafness | SPS Deafness | CSMA Collisions | SPS Collisions | SPS Captures | Evaluation |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| 30 | 80.8% | 93.2% | +12.4% | 19 | 40 | 131 | 110 | 9916 | Sidelink Dominant |
-| 50 | 78.5% | 92.4% | +13.9% | 34 | 132 | 219 | 185 | 27301 | Sidelink Dominant |
-| 75 | 74.6% | 93.2% | +18.6% | 39 | 157 | 299 | 372 | 46339 | Sidelink Dominant |
-| 100 | 72.5% | 93.7% | +21.2% | 64 | 201 | 351 | 418 | 81077 | Sidelink Dominant |
-| 150 | 64.3% | 92.4% | +28.1% | 68 | 316 | 474 | 860 | 137912 | Sidelink Dominant |
-| 200 | 57.6% | 92.1% | +34.5% | 92 | 488 | 504 | 1078 | 206341 | Sidelink Dominant |
-| 250 | 49.8% | 91.8% | +42.0% | 108 | 628 | 496 | 1346 | 291052 | Sidelink Dominant |
-| 300 | Saturated (N/A) | 93.0% | N/A | N/A | 649 | N/A | 1489 | 345252 | CSMA Collapsed (S-SPS Survives) |
-| 350 | Saturated (N/A) | 92.4% | N/A | N/A | 780 | N/A | 1856 | 441124 | CSMA Collapsed (S-SPS Survives) |
-| 400 | Saturated (N/A) | 92.5% | N/A | N/A | 946 | N/A | 1940 | 488115 | CSMA Collapsed (S-SPS Survives) |
-| 450 | Saturated (N/A) | 91.8% | N/A | N/A | 1177 | N/A | 2368 | 578611 | CSMA Collapsed (S-SPS Survives) |
-| 500 | Saturated (N/A) | 91.5% | N/A | N/A | 1303 | N/A | 2818 | 641583 | CSMA Collapsed (S-SPS Survives) |
+| 30 | 92.1% | 93.2% | +1.1% | 14 | 40 | 149 | 110 | 9916 | Comparable |
+| 50 | 90.7% | 92.4% | +1.7% | 48 | 132 | 365 | 185 | 27301 | Comparable |
+| 75 | 91.1% | 93.2% | +2.1% | 86 | 157 | 504 | 372 | 46339 | Comparable |
+| 100 | 91.0% | 93.7% | +2.7% | 116 | 201 | 683 | 418 | 81077 | Comparable |
+| 150 | 87.7% | 92.4% | +4.7% | 269 | 316 | 1272 | 860 | 137912 | Sidelink Dominant |
+| 200 | 84.6% | 92.1% | +7.5% | 433 | 488 | 2052 | 1078 | 206341 | Sidelink Dominant |
+| 250 | 79.8% | 91.8% | +12.0% | 664 | 628 | 3210 | 1346 | 291052 | Sidelink Dominant |
+| 300 | 79.3% | 93.0% | +13.7% | 837 | 649 | 3869 | 1489 | 345252 | Sidelink Dominant |
+| 350 | 78.0% | 92.4% | +14.4% | 964 | 780 | 4802 | 1856 | 441124 | Sidelink Dominant |
+| 400 | 76.8% | 92.5% | +15.7% | 1259 | 946 | 5819 | 1940 | 488115 | Sidelink Dominant |
+| 450 | 76.4% | 91.8% | +15.4% | 1332 | 1177 | 6720 | 2368 | 578611 | Sidelink Dominant |
+| 500 | 75.2% | 91.5% | +16.3% | 1635 | 1303 | 7869 | 2818 | 641583 | Sidelink Dominant |

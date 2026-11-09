@@ -93,17 +93,14 @@ for thresh in thresholds:
             p1_text = f.read()
 
     # Parse metrics
-    m_p1_links = re.search(r"Total Expected P1 Neighbor Links.*:\s*(\d+)", p1_text)
-    m_p1_succ = re.search(r"Successfully Received \(Delivered\)\s*:\s*(\d+)\s*\(([\d\.]+)%\)", p1_text)
-    if not m_p1_succ:
-        m_p1_succ = re.search(r"1\.\s+SUCCESS.*:\s*(\d+)\s*\(([\d\.]+)%\)", p1_text)
-    m_p1_fail = re.search(r"Failed Link Receptions.*:\s*(\d+)\s*\(([\d\.]+)%\)", p1_text)
-    if not m_p1_fail:
-        m_p1_fail = re.search(r"TOTAL DROPPED / MISSED LINKS.*:\s*(\d+)\s*\(([\d\.]+)%\)", p1_text)
-    m_p1_capt = re.search(r"Total Power Capture Events Triggered\s*:\s*(\d+)", p1_text)
-    m_p1_low_sinr = re.search(r"PREAMBLE_LOW_SINR.*:\s*(\d+)", p1_text)
-    m_p1_coll = re.search(r"PREAMBLE_COLLISION_BUSY_RX.*:\s*(\d+)", p1_text)
-    m_p1_deaf = re.search(r"RX_DEAFNESS_BUSY_TX.*:\s*(\d+)", p1_text)
+    src_text = p1_text if p1_text else out
+    m_p1_links = re.search(r"Total Expected P1 Neighbor Links.*:\s*(\d+)", src_text)
+    m_p1_succ = re.search(r"Successfully Received \(Delivered\)\s*:\s*(\d+)\s*\(([\d\.]+)%\)", src_text)
+    m_p1_fail = re.search(r"Failed Link Receptions \(Dropped/Missed\)\s*:\s*(\d+)\s*\(([\d\.]+)%\)", src_text)
+    m_p1_capt = re.search(r"Total Power Capture Events Triggered\s*:\s*(\d+)", src_text)
+    m_p1_low_sinr = re.search(r"PREAMBLE_LOW_SINR\s*:\s*(\d+)", src_text)
+    m_p1_coll = re.search(r"PREAMBLE_COLLISION_BUSY_RX\s*:\s*(\d+)", src_text)
+    m_p1_deaf = re.search(r"RX_DEAFNESS_BUSY_TX\s*:\s*(\d+)", src_text)
 
     links = int(m_p1_links.group(1)) if m_p1_links else 0
     succ = int(m_p1_succ.group(1)) if m_p1_succ else 0
@@ -173,7 +170,7 @@ if results:
     ax1.set_xlabel('SINR Capture Demodulation Threshold (dB)', fontsize=12, fontweight='bold')
     ax1.set_ylabel('Phase 1 Delivery PRR (%)', fontsize=12, fontweight='bold', color='#1f77b4')
     ax1.tick_params(axis='y', labelcolor='#1f77b4')
-    ax1.set_ylim(min(prrs) - 5, max(prrs) + 5)
+    ax1.set_ylim(max(0.0, min(prrs) - 5.0), min(102.0, max(prrs) + 5.0))
     ax1.grid(True, linestyle='--', alpha=0.6)
 
     # Annotations
@@ -216,11 +213,5 @@ if results:
     plt.savefig(dash_fig_path, dpi=300)
     plt.close()
     print(f"✅ Dashboard plot saved to: {dash_fig_path}")
-
-print("📤 Pushing benchmark results and plots to GitHub...")
-try:
-    subprocess.run("git add exp_p1_capture_threshold* && git commit -m 'data: update P1 capture threshold benchmark results and plots' && git push origin main", shell=True, cwd=PROJECT_DIR)
-except Exception as e:
-    print(f"Notice on auto-push: {e}")
 
 print("\n🎉 Benchmark Completed Successfully!")

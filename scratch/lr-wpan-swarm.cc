@@ -158,6 +158,9 @@ static PhyEnumeration g_p1RxStateAtTxStart[1024][1024];
 static uint8_t g_p1RxDropEvent[1024][1024];
 static std::map<uint32_t, std::map<uint16_t, std::set<uint16_t>>> g_p1ReceivedInEpoch;
 static std::map<uint32_t, std::map<uint16_t, int>> g_p1TxSuccessInEpoch;
+static std::map<uint64_t, Time> g_packetTxStartTime;
+static bool g_measuredP1AirTime = false;
+static bool g_measuredP2AirTime = false;
 
 static std::vector<P1LinkRecord> g_p1LinkRecords;
 static int g_p1ReasonCounts[NUM_P1_REASONS] = {0};
@@ -283,6 +286,7 @@ public:
         phy->TraceConnectWithoutContext("PhyRxDrop", MakeCallback(&SwarmSchedulerApp::NotifyPhyRxDrop, this));
         phy->TraceConnectWithoutContext("PhyRxCapture", MakeCallback(&SwarmSchedulerApp::NotifyPhyRxCapture, this));
         phy->TraceConnectWithoutContext("PhyTxBegin", MakeCallback(&SwarmSchedulerApp::NotifyPhyTxBegin, this));
+        phy->TraceConnectWithoutContext("PhyTxEnd", MakeCallback(&SwarmSchedulerApp::NotifyPhyTxEnd, this));
 
         Simulator::Schedule(Seconds(g_simTime - 0.001), &SwarmSchedulerApp::PrintMetrics, this);
     }
@@ -411,6 +415,8 @@ public:
 
     void NotifyPhyTxBegin(Ptr<const Packet> p) {
         uint64_t uid = p->GetUid();
+        g_packetTxStartTime[uid] = Simulator::Now();
+
         auto it = g_p1PacketsMeta.find(uid);
         if (it != g_p1PacketsMeta.end()) {
             it->second.txStartTime = Simulator::Now().GetMilliSeconds();
@@ -430,6 +436,40 @@ public:
                 g_p2RxStateAtTxStart[m_id][j] = g_dronePhyState[j];
                 g_p2RxChannelAtTxStart[m_id][j] = g_droneCurrentChannel[j];
             }
+        }
+    }
+
+    void NotifyPhyTxEnd(Ptr<const Packet> p) {
+        uint64_t uid = p->GetUid();
+        auto it = g_packetTxStartTime.find(uid);
+        if (it != g_packetTxStartTime.end()) {
+            Time duration = Simulator::Now() - it->second;
+            if (p->GetSize() == MINI_BEACON_SIZE && !g_measuredP1AirTime) {
+                g_measuredP1AirTime = true;
+                std::cout << "\n================================================================================\n"
+                          << "🔬 REAL HARDWARE AIR-TIME MEASUREMENT (Measured by ns-3 PHY Trace) 🔬\n"
+                          << "--------------------------------------------------------------------------------\n"
+                          << "• Packet Type                : Phase 1 Mini-Beacon (ID + Slot + Channel)\n"
+                          << "• Application Payload Size   : " << p->GetSize() << " Bytes\n"
+                          << "• PHY TxBegin Clock Time     : " << std::fixed << std::setprecision(3) << it->second.GetMicroSeconds() << " µs\n"
+                          << "• PHY TxEnd Clock Time       : " << std::fixed << std::setprecision(3) << Simulator::Now().GetMicroSeconds() << " µs\n"
+                          << "• EXACT MEASURED AIR TIME    : " << std::fixed << std::setprecision(3) << duration.GetMicroSeconds() << " µs ("
+                          << (duration.GetMicroSeconds() / 1000.0) << " ms)\n"
+                          << "================================================================================\n\n" << std::flush;
+            } else if (p->GetSize() == DATA_PACKET_SIZE && !g_measuredP2AirTime) {
+                g_measuredP2AirTime = true;
+                std::cout << "\n================================================================================\n"
+                          << "🔬 REAL HARDWARE AIR-TIME MEASUREMENT (Measured by ns-3 PHY Trace) 🔬\n"
+                          << "--------------------------------------------------------------------------------\n"
+                          << "• Packet Type                : Phase 2 Data Packet\n"
+                          << "• Application Payload Size   : " << p->GetSize() << " Bytes\n"
+                          << "• PHY TxBegin Clock Time     : " << std::fixed << std::setprecision(3) << it->second.GetMicroSeconds() << " µs\n"
+                          << "• PHY TxEnd Clock Time       : " << std::fixed << std::setprecision(3) << Simulator::Now().GetMicroSeconds() << " µs\n"
+                          << "• EXACT MEASURED AIR TIME    : " << std::fixed << std::setprecision(3) << duration.GetMicroSeconds() << " µs ("
+                          << (duration.GetMicroSeconds() / 1000.0) << " ms)\n"
+                          << "================================================================================\n\n" << std::flush;
+            }
+            g_packetTxStartTime.erase(it);
         }
     }
 

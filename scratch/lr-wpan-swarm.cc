@@ -402,7 +402,14 @@ public:
 
     void NotifyPhyRxCapture(Ptr<const Packet> capP, Ptr<const Packet> preP) {
         g_totalCaptureEvents++;
-        if (capP && capP->GetSize() == DATA_PACKET_SIZE) {
+        bool isP2 = false;
+        if (capP) {
+            uint64_t capUid = capP->GetUid();
+            if (g_p2PacketsMeta.find(capUid) != g_p2PacketsMeta.end() || capP->GetSize() > 25) {
+                isP2 = true;
+            }
+        }
+        if (isP2) {
             g_p2CaptureEvents++;
         } else {
             g_p1CaptureEvents++;

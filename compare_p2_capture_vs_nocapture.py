@@ -131,8 +131,8 @@ def run_case(enable_p2_capture, tag):
 
     return data
 
-res_with = run_case(True, "With Capture (+6.0 dB)")
-res_without = run_case(False, "Without Capture (Disabled)")
+res_with = run_case(True, "Phase 2 With Capture (+6.0 dB)")
+res_without = run_case(False, "Phase 2 Without Capture (Pure Collision)")
 
 if not res_with or not res_without:
     print("Error executing cases.")
@@ -140,9 +140,12 @@ if not res_with or not res_without:
 
 # Summary Comparison Output
 print("\n" + "=" * 105)
-print("📊 PHASE 2 CAPTURE EFFECT ABLATION COMPARISON SUMMARY (100 UAVs, BLE 2M PHY) 📊")
+print("📊 PHASE 2 CAPTURE ABLATION: P1 FIXED WITH CAPTURE, EVALUATING P2 CAPTURE IMPACT 📊")
 print("=" * 105)
-print(f"| {'Metric / Failure Category':<35} | {'With Capture (+6dB)':<22} | {'Without Capture':<20} | {'Difference (Δ)':<18} |")
+print(f"• Phase 1 Broadcast Window: 10.0 ms CSMA-CA (Strictly FIXED with +6.0 dB Capture in both cases)")
+print(f"• Phase 2 Data Window     : 10.0 ms Slotted (10 slots x 1000 µs, 6 Channels = 60 cells)")
+print("-" * 105)
+print(f"| {'Metric / Failure Category':<35} | {'P2 With Capture (+6dB)':<22} | {'P2 Without Capture':<20} | {'Difference (Δ)':<18} |")
 print("|" + "-" * 37 + "|" + "-" * 24 + "|" + "-" * 22 + "|" + "-" * 20 + "|")
 
 def fmt_diff(v_with, v_without, is_prr=False):
@@ -177,9 +180,9 @@ csv_path = os.path.join(PROJECT_DIR, "exp_p2_capture_comparison_results.csv")
 with open(txt_path, "w", encoding="utf-8") as f:
     f.write(f"# Phase 2 Power Capture Ablation Benchmark (100 UAVs, BLE 2M PHY)\n")
     f.write(f"- Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-    f.write(f"- Phase 1: 10.0 ms CSMA-CA Broadcast\n")
+    f.write(f"- Phase 1: 10.0 ms CSMA-CA Broadcast (Strictly FIXED with +6.0 dB Capture on both cases)\n")
     f.write(f"- Phase 2: 10.0 ms Slotted (10 slots x 1000 µs, 6 Channels = 60 cells)\n\n")
-    f.write(f"| Metric / Failure Category | With Capture (+6dB) | Without Capture | Difference (Δ) |\n")
+    f.write(f"| Metric / Failure Category | P2 With Capture (+6dB) | P2 Without Capture | Difference (Δ) |\n")
     f.write(f"| :--- | :--- | :--- | :--- |\n")
     f.write(f"| Phase 1 Discovery PRR | {res_with['p1_prr']:.1f}% | {res_without['p1_prr']:.1f}% | {fmt_diff(res_with['p1_prr'], res_without['p1_prr'], True)} |\n")
     f.write(f"| Phase 2 Data PRR | {res_with['p2_prr']:.1f}% ({res_with['p2_success']:,}) | {res_without['p2_prr']:.1f}% ({res_without['p2_success']:,}) | {fmt_diff(res_with['p2_prr'], res_without['p2_prr'], True)} |\n")

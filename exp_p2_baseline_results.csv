@@ -1,0 +1,2 @@
+P1_PRR,P2_PRR,P2_Expected,P2_Delivered,P2_Fails,P1_Miss,TX_Deafness,RX_Deafness,Ch_Mismatch,Collisions,Aborts,Low_SINR,Payload_Drop,Captures
+87.10,81.10,23181,18807,4374,2706,91,916,412,247,0,2,0,0

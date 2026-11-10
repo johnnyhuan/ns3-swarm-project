@@ -1,0 +1,21 @@
+# Phase 2 (10ms Window) Slot Duration Optimization Benchmark
+- Date: 2026-11-10 06:27:35
+- Swarm Scale: 100 UAVs in 200m x 200m x 80m
+- PHY Standard: Bluetooth 5.4 LE 2M PHY (2 Mbps, 244 µs air time)
+- Phase 1: Fixed 10.0 ms CSMA-CA with Capture (+6.0 dB)
+- Phase 2: Fixed 10.0 ms Data Phase, 6 Channels, Capture DISABLED
+
+| Slot Duration | Slots in 10ms | Total Cells (6 Ch) | P1 PRR | P2 Data PRR | P1 Discovery Miss | RX Deafness Conflict | Preamble Collisions |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 400 µs | 25 | 150 | 0.0% | 0.0% (0) | 0 | 0 | 0 |
+| 500 µs | 20 | 120 | 0.0% | 0.0% (0) | 0 | 0 | 0 |
+| 625 µs (BLE Baseband Slot) | 16 | 96 | 0.0% | 0.0% (0) | 0 | 0 | 0 |
+| 750 µs | 13 | 78 | 63.6% | 61.0% (14746) | 7754 | 272 | 123 |
+| 800 µs | 12 | 72 | 0.0% | 0.0% (0) | 0 | 0 | 0 |
+| 1000 µs | 10 | 60 | 86.8% | 81.2% (18815) | 2768 | 918 | 192 |
+| 1250 µs | 8 | 48 | 86.8% | 77.5% (17962) | 2789 | 1511 | 284 |
+| 1500 µs | 6 | 36 | 86.9% | 68.6% (16581) | 2958 | 3021 | 409 |
+| 2000 µs | 5 | 30 | 86.8% | 60.9% (14108) | 2930 | 3887 | 379 |
+| 2500 µs | 4 | 24 | 86.8% | 50.6% (11732) | 2961 | 5079 | 425 |
+
+- Optimal Slot: 1000 µs (10 slots, 60 cells) achieving 81.2% P2 PRR

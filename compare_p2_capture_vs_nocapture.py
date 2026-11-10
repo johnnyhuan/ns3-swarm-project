@@ -85,7 +85,7 @@ def run_case(enable_p2_capture, tag):
 
     data = {
         "tag": tag,
-        "capture_enabled": enable_capture,
+        "capture_enabled": enable_p2_capture,
         "p1_prr": 0.0, "p2_prr": 0.0, "p2_links": 0, "p2_success": 0, "p2_fails": 0,
         "p1_miss": 0, "tx_deafness": 0, "rx_deafness": 0, "ch_mismatch": 0,
         "collisions": 0, "csma_abort": 0, "low_sinr": 0, "payload_drop": 0,

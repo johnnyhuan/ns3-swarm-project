@@ -48,8 +48,8 @@ for rel_path in ["scratch/lr-wpan-swarm.cc", "src/lr-wpan/model/lr-wpan-phy.cc",
         except Exception:
             pass
 
-def run_case(enable_capture, tag):
-    print(f"\n▶️ Running Simulation: {tag} (enableCapture={enable_capture}) ... ", end="", flush=True)
+def run_case(enable_p2_capture, tag):
+    print(f"\n▶️ Running Simulation: {tag} (P1 Capture=ON, P2 Capture={'ON' if enable_p2_capture else 'OFF'}) ... ", end="", flush=True)
     for fname in ["p1_ground_truth_report.txt", "p2_ground_truth_report.txt", "run.log"]:
         fpath = os.path.join(NS3_DIR, fname)
         if os.path.exists(fpath):
@@ -60,7 +60,8 @@ def run_case(enable_capture, tag):
         "./ns3", "run",
         f"scratch/lr-wpan-swarm --numNodes={num_nodes} --p1Duration={p1_duration} "
         f"--enableP1Sidelink=false --p2Duration={p2_duration} --dataSlotUs={data_slot_us} "
-        f"--numChannels={num_channels} --enablePhyCapture={'true' if enable_capture else 'false'} "
+        f"--numChannels={num_channels} --enableP1Capture=true "
+        f"--enableP2Capture={'true' if enable_p2_capture else 'false'} "
         f"--phyCaptureMarginDb=6.0 --simTime={sim_time} "
         f"--spaceSize={space_size} --spaceZ={space_z} --nodeSpeed=10.0 --autoPush=false"
     ]

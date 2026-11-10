@@ -50,7 +50,9 @@ double g_p1SlotUs = 300.0;       // Phase 1 Sidelink slot duration in microsecon
 double g_p1CcaThresholdDbm = -96.58; // Phase 1 CSMA CCA Energy Detection Threshold in dBm (default: -96.58, standard 802.15.4)
 double g_p1CaptureThresholdDb = 6.0; // Phase 1 Sidelink Slotted SINR demodulation threshold in dB (Strict Bluetooth 5.4 LE 2M C/I: +6.0 dB)
 double g_phyCaptureMarginDb = 6.0;    // PHY layer capture margin in dB (Strict Bluetooth 5.4 LE 2M: +6.0 dB)
-bool g_enablePhyCapture = true;      // Physical layer capture effect switch (default: true)
+bool g_enablePhyCapture = true;      // Global physical layer capture effect switch (default: true)
+bool g_enableP1Capture = true;       // Phase 1 capture switch (default: true)
+bool g_enableP2Capture = true;       // Phase 2 capture switch (default: true)
 bool g_verboseLog = false;       // Verbose per-packet log switch (default: false for high-speed simulation at scale)
 
 const uint8_t BROADCAST_CHANNEL = 11;
@@ -275,7 +277,7 @@ public:
         
         // Connect PHY Traces for exact physical ground truth
         Ptr<LrWpanPhy> phy = m_device->GetPhy();
-        phy->SetCaptureEnabled(g_enablePhyCapture);
+        phy->SetCaptureEnabled(g_enableP1Capture);
         phy->SetCaptureMargin(g_phyCaptureMarginDb);
         g_dronePhyState[m_id] = IEEE_802_15_4_PHY_TRX_OFF;
         g_droneReceivingUid[m_id] = 0;
@@ -558,6 +560,7 @@ private:
 
         // Phase 1 (Broadcast): Configurable range
         SwitchChannelAndPower(BROADCAST_CHANNEL, (int8_t)g_p1TxPower);
+        m_device->GetPhy()->SetCaptureEnabled(g_enableP1Capture);
         
         if (!g_enableP1Sidelink) {
             Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
@@ -719,6 +722,9 @@ private:
     }
 
     void ComputeSchedule() {
+        // Switch PHY Capture mode for Phase 2
+        m_device->GetPhy()->SetCaptureEnabled(g_enableP2Capture);
+
         // 第一步：過濾出 50m 避撞安全監控半徑內的鄰機 (固定以 50m / -98 dBm 評估或最近鄰居)
         double safetyRssi = g_p1TxPower - 46.6777 - 30.0 * std::log10(50.0); // -97.65 dBm ~ -98 dBm
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
@@ -1645,8 +1651,10 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p1CcaThresholdDbm", "Phase 1 CSMA CCA Energy Detection Threshold in dBm (-106.58 to -80.0, default -96.58)", g_p1CcaThresholdDbm);
     cmd.AddValue("p1CaptureThresholdDb", "Phase 1 Sidelink Slotted SINR capture threshold in dB (e.g. -5.0, 0.0, 3.0, 6.0, default: 6.0)", g_p1CaptureThresholdDb);
     cmd.AddValue("phyCaptureMarginDb", "PHY layer capture margin in dB (power difference needed to preempt, default: 6.0)", g_phyCaptureMarginDb);
-    cmd.AddValue("enableCapture", "Enable physical layer capture effect (default: true)", g_enablePhyCapture);
-    cmd.AddValue("enablePhyCapture", "Enable physical layer capture effect (default: true)", g_enablePhyCapture);
+    cmd.AddValue("enableCapture", "Enable physical layer capture effect globally (default: true)", g_enablePhyCapture);
+    cmd.AddValue("enablePhyCapture", "Enable physical layer capture effect globally (default: true)", g_enablePhyCapture);
+    cmd.AddValue("enableP1Capture", "Enable Phase 1 capture effect (default: true)", g_enableP1Capture);
+    cmd.AddValue("enableP2Capture", "Enable Phase 2 capture effect (default: true)", g_enableP2Capture);
     cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);
     cmd.AddValue("simTime", "Total simulation duration in seconds (default 10.0)", g_simTime);
     cmd.AddValue("enableP1Sidelink", "Enable Sidelink-inspired Semi-Persistent Scheduling for Phase 1 (default false)", g_enableP1Sidelink);
@@ -1664,6 +1672,11 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("spaceZ", "Height of 3D box in meters", g_spaceZ);
     cmd.AddValue("autoPush", "Auto git push results", autoPush);
     cmd.Parse(argc, argv);
+
+    if (!g_enablePhyCapture) {
+        g_enableP1Capture = false;
+        g_enableP2Capture = false;
+    }
 
     // Keep all physical capture and demodulation thresholds strictly unified
     g_p1CaptureThresholdDb = g_phyCaptureMarginDb;

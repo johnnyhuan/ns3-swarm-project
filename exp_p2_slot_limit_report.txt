@@ -1,0 +1,21 @@
+# Phase 2 High-Resolution Slot Boundary Limit Benchmark (600µs ~ 750µs)
+- Date: 2026-11-10 08:43:25
+- Swarm Scale: 100 UAVs in 200m x 200m x 80m
+- PHY Standard: Bluetooth 5.4 LE 2M PHY (2 Mbps, 404µs air time + 128µs CCA + 40µs PLL)
+- Phase 1: Fixed 10.0 ms CSMA-CA with Capture (+6.0 dB)
+- Phase 2: Fixed 10.0 ms Data Phase, 6 Channels, Capture DISABLED
+
+| Slot Duration | Slots in 10ms | Total Cells (6 Ch) | P1 PRR | P2 Data PRR | Cutoff Drops | RX Deafness | Preamble Collisions |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 600 µs | 16 | 96 | 0.0% | 0.0% (0) | 0 | 0 | 0 |
+| 625 µs (BLE Baseband Slot) | 16 | 96 | 0.0% | 0.0% (0) | 0 | 0 | 0 |
+| 640 µs | 15 | 90 | 0.0% | 0.0% (0) | 0 | 0 | 0 |
+| 650 µs | 15 | 90 | 0.0% | 0.0% (0) | 0 | 0 | 0 |
+| 660 µs | 15 | 90 | 0.0% | 0.0% (0) | 0 | 0 | 0 |
+| 675 µs | 14 | 84 | 0.0% | 0.0% (0) | 0 | 0 | 0 |
+| 700 µs | 14 | 84 | 86.5% | 82.6% (19550) | 1149 | 76 | 19 |
+| 720 µs | 13 | 78 | 87.2% | 82.6% (19970) | 1275 | 96 | 14 |
+| 735 µs | 13 | 78 | 87.1% | 83.0% (19643) | 0 | 605 | 141 |
+| 750 µs | 13 | 78 | 87.3% | 83.2% (19692) | 0 | 630 | 146 |
+
+- Optimal Slot: 750 µs (13 slots, 78 cells) achieving 83.2% P2 PRR

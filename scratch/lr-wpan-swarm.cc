@@ -50,9 +50,8 @@ double g_p1SlotUs = 300.0;       // Phase 1 Sidelink slot duration in microsecon
 double g_p1CcaThresholdDbm = -96.58; // Phase 1 CSMA CCA Energy Detection Threshold in dBm (default: -96.58, standard 802.15.4)
 double g_p1CaptureThresholdDb = 6.0; // Phase 1 Sidelink Slotted SINR demodulation threshold in dB (Strict Bluetooth 5.4 LE 2M C/I: +6.0 dB)
 double g_phyCaptureMarginDb = 6.0;    // PHY layer capture margin in dB (Strict Bluetooth 5.4 LE 2M: +6.0 dB)
-bool g_enablePhyCapture = true;      // Global physical layer capture effect switch (default: true)
-bool g_enableP1Capture = true;       // Phase 1 capture switch (default: true)
-bool g_enableP2Capture = true;       // Phase 2 capture switch (default: true)
+bool g_enablePhyCapture = true;      // Phase 1 physical layer capture effect switch (default: true)
+bool g_enableP2Capture = false;      // Phase 2 physical layer capture effect switch (default: false)
 bool g_verboseLog = false;       // Verbose per-packet log switch (default: false for high-speed simulation at scale)
 
 const uint8_t BROADCAST_CHANNEL = 11;
@@ -277,7 +276,7 @@ public:
         
         // Connect PHY Traces for exact physical ground truth
         Ptr<LrWpanPhy> phy = m_device->GetPhy();
-        phy->SetCaptureEnabled(g_enableP1Capture);
+        phy->SetCaptureEnabled(g_enablePhyCapture);
         phy->SetCaptureMargin(g_phyCaptureMarginDb);
         g_dronePhyState[m_id] = IEEE_802_15_4_PHY_TRX_OFF;
         g_droneReceivingUid[m_id] = 0;
@@ -402,14 +401,7 @@ public:
 
     void NotifyPhyRxCapture(Ptr<const Packet> capP, Ptr<const Packet> preP) {
         g_totalCaptureEvents++;
-        bool isP2 = false;
-        if (capP) {
-            uint64_t capUid = capP->GetUid();
-            if (g_p2PacketsMeta.find(capUid) != g_p2PacketsMeta.end() || capP->GetSize() > 25) {
-                isP2 = true;
-            }
-        }
-        if (isP2) {
+        if (capP && capP->GetSize() == DATA_PACKET_SIZE) {
             g_p2CaptureEvents++;
         } else {
             g_p1CaptureEvents++;
@@ -566,8 +558,8 @@ private:
         double now = Simulator::Now().GetSeconds() * 1000.0;
 
         // Phase 1 (Broadcast): Configurable range
+        m_device->GetPhy()->SetCaptureEnabled(g_enablePhyCapture);
         SwitchChannelAndPower(BROADCAST_CHANNEL, (int8_t)g_p1TxPower);
-        m_device->GetPhy()->SetCaptureEnabled(g_enableP1Capture);
         
         if (!g_enableP1Sidelink) {
             Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
@@ -729,7 +721,7 @@ private:
     }
 
     void ComputeSchedule() {
-        // Switch PHY Capture mode for Phase 2
+        // Entering Phase 2: toggle capture to Phase 2 setting
         m_device->GetPhy()->SetCaptureEnabled(g_enableP2Capture);
 
         // 第一步：過濾出 50m 避撞安全監控半徑內的鄰機 (固定以 50m / -98 dBm 評估或最近鄰居)
@@ -1368,11 +1360,12 @@ void PrintGroundTruthReport() {
     ss << "\n========================================================================================\n";
     ss << "       🔬 PHASE 1 PHYSICAL & MAC GROUND TRUTH ANALYSIS (Top-K within 50m) 🔬           \n";
     ss << "========================================================================================\n";
-    ss << "MAC Scheme                                        : " << (g_enableP1Sidelink ? "3GPP Sidelink Mode 4 S-SPS (No CSMA)" : "Continuous Random Delay + CSMA-CA") << "\n";
-    ss << "PHY Capture Effect                                : " << (g_enablePhyCapture ? ("ENABLED (Margin: " + std::to_string((int)g_phyCaptureMarginDb) + " dB)") : "DISABLED (Pure Collision)") << "\n";
+    ss << "MAC Scheme                                        : " << (g_enableP1Sidelink ? "Autonomous Slotted MAC (No CSMA)" : "Continuous Random Delay + CSMA-CA") << "\n";
+    ss << "Phase 1 PHY Capture                               : " << (g_enablePhyCapture ? ("ENABLED (Margin: " + std::to_string((int)g_phyCaptureMarginDb) + " dB)") : "DISABLED (Pure Collision)") << "\n";
+    ss << "Phase 2 PHY Capture                               : " << (g_enableP2Capture ? ("ENABLED (Margin: " + std::to_string((int)g_phyCaptureMarginDb) + " dB)") : "DISABLED (No Capture Event)") << "\n";
     if (g_enableP1Sidelink) {
         int numP1Slots = std::max(1, (int)(g_phase1DurationUs / g_p1SlotUs));
-        ss << "Sidelink Configuration                            : Slot " << g_p1SlotUs << " us (" << numP1Slots << " slots in " << g_p1DurationMs << "ms)\n";
+        ss << "Slotted Configuration                             : Slot " << g_p1SlotUs << " us (" << numP1Slots << " slots in " << g_p1DurationMs << "ms)\n";
     }
     ss << "Total Expected P1 Neighbor Links (Epochs x Top-K) : " << g_p1TotalTargetLinks << "\n";
     double succPct = (g_p1TotalTargetLinks > 0) ? (100.0 * g_p1ReasonCounts[REASON_SUCCESS] / g_p1TotalTargetLinks) : 0;
@@ -1605,7 +1598,7 @@ void PrintPhase2GroundTruthReport() {
     ss << "  • Airspace Dimensions & Topology      : " << g_spaceSize << "m x " << g_spaceSize << "m x " << g_spaceZ << "m\n";
     ss << "  • Mean 50m Neighbors per UAV (Density): " << std::fixed << std::setprecision(2) << meanNeighbors << " UAVs\n";
     ss << "  • UAVs with >= 5 Neighbors in 50m     : " << std::fixed << std::setprecision(1) << pctGe5 << "%\n";
-    ss << "  • Capture SINR Threshold Configured    : " << std::fixed << std::setprecision(1) << g_phyCaptureMarginDb << " dB (BLE 5.4 LE 2M C/I)\n";
+    ss << "  • Phase 2 Capture Enabled             : " << (g_enableP2Capture ? ("YES (Margin: " + std::to_string((int)g_phyCaptureMarginDb) + " dB)") : "DISABLED (No Capture Event)") << "\n";
     ss << "  • Total Power Capture Events Triggered : " << g_p2CaptureEvents << " (rescued Phase 2 packets from closer neighbors)\n";
     if (cntSucc > 0) {
         ss << "  • Delivered Links Mean SINR           : " << std::fixed << std::setprecision(1) << (sumSinrSucc / cntSucc) << " dB (BLE 5.4 C/I Threshold: >= " << g_phyCaptureMarginDb << " dB)\n";
@@ -1658,10 +1651,9 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p1CcaThresholdDbm", "Phase 1 CSMA CCA Energy Detection Threshold in dBm (-106.58 to -80.0, default -96.58)", g_p1CcaThresholdDbm);
     cmd.AddValue("p1CaptureThresholdDb", "Phase 1 Sidelink Slotted SINR capture threshold in dB (e.g. -5.0, 0.0, 3.0, 6.0, default: 6.0)", g_p1CaptureThresholdDb);
     cmd.AddValue("phyCaptureMarginDb", "PHY layer capture margin in dB (power difference needed to preempt, default: 6.0)", g_phyCaptureMarginDb);
-    cmd.AddValue("enableCapture", "Enable physical layer capture effect globally (default: true)", g_enablePhyCapture);
-    cmd.AddValue("enablePhyCapture", "Enable physical layer capture effect globally (default: true)", g_enablePhyCapture);
-    cmd.AddValue("enableP1Capture", "Enable Phase 1 capture effect (default: true)", g_enableP1Capture);
-    cmd.AddValue("enableP2Capture", "Enable Phase 2 capture effect (default: true)", g_enableP2Capture);
+    cmd.AddValue("enableCapture", "Enable physical layer capture effect (default: true)", g_enablePhyCapture);
+    cmd.AddValue("enablePhyCapture", "Enable physical layer capture effect (default: true)", g_enablePhyCapture);
+    cmd.AddValue("enableP2Capture", "Enable capture effect in Phase 2 (default: false)", g_enableP2Capture);
     cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);
     cmd.AddValue("simTime", "Total simulation duration in seconds (default 10.0)", g_simTime);
     cmd.AddValue("enableP1Sidelink", "Enable Sidelink-inspired Semi-Persistent Scheduling for Phase 1 (default false)", g_enableP1Sidelink);
@@ -1679,11 +1671,6 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("spaceZ", "Height of 3D box in meters", g_spaceZ);
     cmd.AddValue("autoPush", "Auto git push results", autoPush);
     cmd.Parse(argc, argv);
-
-    if (!g_enablePhyCapture) {
-        g_enableP1Capture = false;
-        g_enableP2Capture = false;
-    }
 
     // Keep all physical capture and demodulation thresholds strictly unified
     g_p1CaptureThresholdDb = g_phyCaptureMarginDb;

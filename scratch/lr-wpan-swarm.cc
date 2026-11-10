@@ -33,7 +33,7 @@ double g_p1AvoidRssi = -999.0; // Specific defense RSSI threshold in dBm (-106 t
 bool g_enableDefense = true; // Defense design switch: true = spatial slot exclusion, false = exact cell avoidance only
 int g_numDataChannels = 6;   // Phase 2 Data Channels (configurable via cmd line, 0 to 10)
 int g_numDataSlots = 10;     // Phase 2 Data Slots (configurable via cmd line, 1 to 16)
-double g_p2DurationMs = 10.0; // Phase 2 Duration in ms (configurable via cmd line, default: 10.0 ms)
+double g_p2DurationMs = -1.0; // Phase 2 Duration in ms (configurable via cmd line, default: computed from numSlots)
 double g_dataSlotUs = 1000.0; // Phase 2 Data Slot Duration in microseconds (default: 1000.0 us for 2 Mbps PHY)
 double g_slotGuardBandUs = 50.0; // Phase 2 slot end guard band in microseconds reserved for transceiver turnaround to RX
 
@@ -1755,13 +1755,16 @@ int main(int argc, char *argv[]) {
     }
 
     if (g_p2DurationMs > 0.0) {
-        g_numDataSlots = std::max(1, (int)(g_p2DurationMs * 1000.0 / g_dataSlotUs));
+        g_numDataSlots = std::max(1, (int)std::round(g_p2DurationMs * 1000.0 / g_dataSlotUs));
+    } else {
+        g_numDataSlots = std::max(1, g_numDataSlots);
     }
 
     if (g_numDataSlots > MAX_DATA_SLOTS) {
         std::cerr << "Warning: numSlots (" << g_numDataSlots << ") exceeds MAX_DATA_SLOTS (" << MAX_DATA_SLOTS << "), clamping to " << MAX_DATA_SLOTS << std::endl;
         g_numDataSlots = MAX_DATA_SLOTS;
     }
+    g_p2DurationMs = g_numDataSlots * g_dataSlotUs / 1000.0;
 
     g_phase1DurationUs = g_p1DurationMs * 1000.0;
     g_cycleMs = (g_phase1DurationUs + GAP_US + g_numDataSlots * g_dataSlotUs) / 1000.0;

@@ -279,36 +279,32 @@ fig, ax1 = plt.subplots(figsize=(12, 6.5), dpi=300)
 line1 = ax1.plot(slot_nums, p2_prrs, marker='s', markersize=8, linewidth=2.8, color='#1f77b4', label='Phase 2 Delivery PRR (%)')
 line2 = ax1.plot(slot_nums, p1_prrs, marker='o', markersize=6, linewidth=1.8, color='#2ca02c', linestyle='--', label='Phase 1 Broadcast PRR (%) (Discovery Baseline)')
 
-# Annotate points
-for i, s in enumerate(slot_nums):
-    if s in [3, 5, 8, 11, 14, 18, 21, 25] or i == best_idx:
-        color_txt = '#d62728' if i == best_idx else '#1f77b4'
-        weight_txt = 'bold'
-        ax1.annotate(f"{p2_prrs[i]:.1f}%", (s, p2_prrs[i]), textcoords="offset points", xytext=(0, 9),
-                    ha='center', fontsize=9.5, fontweight=weight_txt, color=color_txt)
-
-# Highlight optimal operating point
-ax1.scatter([results[best_idx]['num_slots']], [best_prr], color='#d62728', s=200, zorder=5, marker='*',
-            label=f"Optimal Peak ({results[best_idx]['num_slots']} slots: {best_prr:.1f}%)")
+# Annotate key data points cleanly (NO star, NO red highlight, uniform clean blue)
+annot_slots = [3, 5, 8, 11, 14, 17, 20, 23, 25]
+for s in annot_slots:
+    if s in slot_nums:
+        idx = slot_nums.index(s)
+        ax1.annotate(f"{p2_prrs[idx]:.1f}%", (s, p2_prrs[idx]), textcoords="offset points", xytext=(0, 9),
+                    ha='center', fontsize=9.5, fontweight='bold', color='#1f77b4')
 
 ax1.set_title(f'Phase 2 Delivery PRR vs. Slot Count (3 ~ 25 Slots @ Fixed 750µs, Zero Cutoff)\n'
-              f'100 UAV Swarm, Bluetooth 5.4 LE 2M PHY, simTime={sim_time:.1f}s, P2 Capture DISABLED', fontsize=12.5, fontweight='bold', pad=12)
+              f'100 UAV Swarm, Bluetooth 5.4 LE 2M PHY, simTime={sim_time:.1f}s, P2 Capture DISABLED', fontsize=12.5, fontweight='bold', pad=14)
 ax1.set_xlabel('Number of Phase 2 Slots (Slot Duration = 750 µs)', fontsize=11.5, fontweight='bold')
-ax1.set_ylabel('Packet Reception Ratio / PRR (%)', fontsize=11.5, fontweight='bold')
+ax1.set_ylabel('Delivery PRR (%)', fontsize=11.5, fontweight='bold')
 ax1.set_xticks(slot_nums)
-ax1.set_xlim(2.5, 25.5)
-ax1.set_ylim(0, 100)
-ax1.grid(True, linestyle='--', alpha=0.55)
+ax1.set_xlim(2.4, 25.6)
+ax1.set_ylim(20, 100)
+ax1.grid(True, linestyle='--', alpha=0.5)
 
-# Secondary top X-axis showing Phase 2 Duration and Available Cells
+# Secondary top X-axis showing ONLY Phase 2 Duration (e.g. 2.25 ms, 6.00 ms) - NO cells
 ax2 = ax1.twiny()
 ax2.set_xlim(ax1.get_xlim())
 tick_slots = [3, 5, 8, 11, 14, 17, 20, 23, 25]
 ax2.set_xticks(tick_slots)
-ax2.set_xticklabels([f"{s * 750 / 1000.0:.2f}ms\n({s * num_channels} cells)" for s in tick_slots], fontsize=9)
-ax2.set_xlabel('Phase 2 Duration (ms) & Available Orthogonal Cells (6 Channels)', fontsize=10.5, fontweight='bold', labelpad=8)
+ax2.set_xticklabels([f"{s * slot_us / 1000.0:.2f} ms" for s in tick_slots], fontsize=10, fontweight='medium')
+ax2.set_xlabel('Phase 2 Duration (ms)', fontsize=11, fontweight='bold', labelpad=8)
 
-lines = line1 + line2 + [ax1.get_legend_handles_labels()[0][-1]]
+lines = line1 + line2
 labels = [l.get_label() for l in lines]
 ax1.legend(lines, labels, loc='lower right', fontsize=10.5, framealpha=0.95)
 

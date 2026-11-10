@@ -279,16 +279,14 @@ fig, ax1 = plt.subplots(figsize=(12, 6.5), dpi=300)
 line1 = ax1.plot(slot_nums, p2_prrs, marker='s', markersize=8, linewidth=2.8, color='#1f77b4', label='Phase 2 Delivery PRR (%)')
 line2 = ax1.plot(slot_nums, p1_prrs, marker='o', markersize=6, linewidth=1.8, color='#2ca02c', linestyle='--', label='Phase 1 Broadcast PRR (%) (Discovery Baseline)')
 
-# Annotate key data points cleanly (NO star, NO red highlight, uniform clean blue)
+# Annotate key data points BELOW the points (va='top', xytext=(0, -14)) to avoid colliding with P1
 annot_slots = [3, 5, 8, 11, 14, 17, 20, 23, 25]
 for s in annot_slots:
     if s in slot_nums:
         idx = slot_nums.index(s)
-        ax1.annotate(f"{p2_prrs[idx]:.1f}%", (s, p2_prrs[idx]), textcoords="offset points", xytext=(0, 9),
-                    ha='center', fontsize=9.5, fontweight='bold', color='#1f77b4')
+        ax1.annotate(f"{p2_prrs[idx]:.1f}%", (s, p2_prrs[idx]), textcoords="offset points", xytext=(0, -14),
+                    ha='center', va='top', fontsize=9.5, fontweight='bold', color='#1f77b4')
 
-ax1.set_title(f'Phase 2 Delivery PRR vs. Slot Count (3 ~ 25 Slots @ Fixed 750µs, Zero Cutoff)\n'
-              f'100 UAV Swarm, Bluetooth 5.4 LE 2M PHY, simTime={sim_time:.1f}s, P2 Capture DISABLED', fontsize=12.5, fontweight='bold', pad=14)
 ax1.set_xlabel('Number of Phase 2 Slots (Slot Duration = 750 µs)', fontsize=11.5, fontweight='bold')
 ax1.set_ylabel('Delivery PRR (%)', fontsize=11.5, fontweight='bold')
 ax1.set_xticks(slot_nums)
@@ -302,7 +300,12 @@ ax2.set_xlim(ax1.get_xlim())
 tick_slots = [3, 5, 8, 11, 14, 17, 20, 23, 25]
 ax2.set_xticks(tick_slots)
 ax2.set_xticklabels([f"{s * slot_us / 1000.0:.2f} ms" for s in tick_slots], fontsize=10, fontweight='medium')
-ax2.set_xlabel('Phase 2 Duration (ms)', fontsize=11, fontweight='bold', labelpad=8)
+ax2.set_xlabel('Phase 2 Duration (ms)', fontsize=11, fontweight='bold', labelpad=10)
+
+# Main Title placed cleanly above ax2 with proper pad so it never collides with ax2 label
+ax2.set_title(f'Phase 2 Delivery PRR vs. Slot Count (3 ~ 25 Slots @ Fixed 750µs, Zero Cutoff)\n'
+              f'100 UAV Swarm, Bluetooth 5.4 LE 2M PHY, simTime={sim_time:.1f}s, P2 Capture DISABLED',
+              fontsize=12.5, fontweight='bold', pad=18)
 
 lines = line1 + line2
 labels = [l.get_label() for l in lines]

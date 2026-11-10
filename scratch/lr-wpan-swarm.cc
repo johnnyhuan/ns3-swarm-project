@@ -1740,8 +1740,13 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("nodeSpeed", "Speed of UAVs in m/s (default 10.0 m/s, 0 for static hover)", nodeSpeed);
     cmd.AddValue("spaceSize", "Side length of 3D box (X and Y) in meters", g_spaceSize);
     cmd.AddValue("spaceZ", "Height of 3D box in meters", g_spaceZ);
+    uint32_t rngRun = 1;
+    cmd.AddValue("rngRun", "RngSeedManager Run number for repeatable experiments (default: 1)", rngRun);
     cmd.AddValue("autoPush", "Auto git push results", autoPush);
     cmd.Parse(argc, argv);
+
+    RngSeedManager::SetSeed(1);
+    RngSeedManager::SetRun(rngRun);
 
     // Keep all physical capture and demodulation thresholds strictly unified
     g_p1CaptureThresholdDb = g_phyCaptureMarginDb;

@@ -88,6 +88,10 @@ def run_single_slot(slot_us):
     try:
         proc = subprocess.run(cmd, cwd=NS3_DIR, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=300)
         stdout_output = proc.stdout
+        if proc.returncode != 0:
+            print(f"\n❌ [NS3 ERROR] Command returned exit code {proc.returncode} at slot = {slot_us} µs:")
+            lines = stdout_output.strip().split("\n")
+            print("\n".join(lines[-25:]))
     except subprocess.TimeoutExpired:
         print(f"TIMEOUT at slot = {slot_us} µs!")
         return None

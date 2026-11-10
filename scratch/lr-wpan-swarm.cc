@@ -847,7 +847,7 @@ private:
         // 1. If this slot was a TX slot, enforce slot boundary transmission cutoff!
         if (s.action == ScheduleSlot::TX) {
             Ptr<LrWpanPhy> phy = m_device->GetPhy();
-            PhyEnumeration phyState = phy->GetTrxState();
+            PhyEnumeration phyState = g_dronePhyState[myId];
             
             // Check if UAV is still actively transmitting or waiting in CSMA/CCA
             if (phyState == IEEE_802_15_4_PHY_BUSY_TX || phyState == IEEE_802_15_4_PHY_TX_ON) {
@@ -868,7 +868,7 @@ private:
                 }
                 
                 if (m_csma) m_csma->Cancel();
-                phy->AbortTx();
+                phy->PlmeSetTRXStateRequest(IEEE_802_15_4_PHY_FORCE_TRX_OFF);
             } else {
                 // Transmission already finished before cutoff; cancel any lingering CSMA
                 if (m_csma) m_csma->Cancel();

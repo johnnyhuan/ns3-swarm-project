@@ -431,6 +431,11 @@ class LrWpanPhy : public SpectrumPhy
     void AbortTx();
 
     /**
+     * Get the current transceiver state.
+     */
+    PhyEnumeration GetTrxState() const;
+
+    /**
      * IEEE 802.15.4-2006 section 6.2.2.9
      * PLME-SET.request
      * Set attributes per definition from Table 23 in section 6.4.2

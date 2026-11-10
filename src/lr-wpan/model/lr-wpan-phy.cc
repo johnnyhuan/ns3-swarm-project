@@ -1736,6 +1736,12 @@ LrWpanPhy::AbortTx()
     }
 }
 
+PhyEnumeration
+LrWpanPhy::GetTrxState() const
+{
+    return m_trxState;
+}
+
 Time
 LrWpanPhy::CalculateTxTime(Ptr<const Packet> packet)
 {

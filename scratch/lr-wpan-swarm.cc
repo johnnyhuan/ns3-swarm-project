@@ -24,7 +24,7 @@ std::streambuf* g_originalCoutBuffer = nullptr;
 NS_LOG_COMPONENT_DEFINE("LrWpanSwarm");
 
 // --- 系統常數設定 ---
-const uint32_t MINI_BEACON_SIZE = 2; 
+const uint32_t MINI_BEACON_SIZE = 4; 
 const uint32_t DATA_PACKET_SIZE = 50;
 double g_p2TxPower = -2.0; // Phase 2 TX Power (configurable via cmd line, optimal at -2 dBm)
 double g_p1TxPower = 0.0;  // Phase 1 TX Power (configurable via cmd line)
@@ -41,7 +41,7 @@ double g_phase1DurationUs = 10000.0;
 double g_cycleMs = 21.0;            // Dynamically computed: g_p1DurationMs + 1 + (g_numDataSlots * g_dataSlotUs / 1000.0)
 double g_simTime = 10.0;            // Total simulation duration in seconds (default 10.0s)
 const double GAP_US = 1000.0; 
-const int MAX_DATA_SLOTS = 32;            // Maximum supported slot array buffer size
+const int MAX_DATA_SLOTS = 64;            // Maximum supported slot array buffer size
 const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels 
 
 // Sidelink S-SPS (Semi-Persistent Scheduling) for Phase 1
@@ -645,9 +645,9 @@ private:
             m_myClaimedChannel = 0;
             g_droneClaimedSlot[m_epoch][m_id] = 0;
             g_droneClaimedChannel[m_epoch][m_id] = 0;
-            uint16_t payload = (m_id & 0x01FF);
-            uint8_t buffer[2] = { (uint8_t)(payload & 0xFF), (uint8_t)((payload >> 8) & 0xFF) };
-            Ptr<Packet> p = Create<Packet>(buffer, 2);
+            uint32_t payload = (m_id & 0x01FF);
+            uint8_t buffer[4] = { (uint8_t)(payload & 0xFF), (uint8_t)((payload >> 8) & 0xFF), 0, 0 };
+            Ptr<Packet> p = Create<Packet>(buffer, 4);
             uint64_t uid = p->GetUid();
             P1PacketMeta meta;
             meta.senderId = m_id;
@@ -705,10 +705,15 @@ private:
         g_droneClaimedSlot[m_epoch][m_id] = m_myClaimedSlot;
         g_droneClaimedChannel[m_epoch][m_id] = m_myClaimedChannel;
 
-        // 位元封裝 (Bit-packing): ID(9 bits: 0-511), Slot(4 bits: 0-15), Channel(3 bits: 0-7) -> Total 16 bits
-        uint16_t payload = (m_id & 0x01FF) | ((m_myClaimedSlot & 0x0F) << 9) | ((m_myClaimedChannel & 0x07) << 13);
-        uint8_t buffer[2] = { (uint8_t)(payload & 0xFF), (uint8_t)((payload >> 8) & 0xFF) };
-        Ptr<Packet> p = Create<Packet>(buffer, 2);
+        // 位元封裝 (Bit-packing in 4 bytes): ID(9 bits: 0-511), Slot(8 bits: 0-255), Channel(4 bits: 0-15) -> Total 21 bits in 32 bits
+        uint32_t payload = (m_id & 0x01FF) | ((m_myClaimedSlot & 0x00FF) << 9) | ((m_myClaimedChannel & 0x000F) << 17);
+        uint8_t buffer[4] = {
+            (uint8_t)(payload & 0xFF),
+            (uint8_t)((payload >> 8) & 0xFF),
+            (uint8_t)((payload >> 16) & 0xFF),
+            (uint8_t)((payload >> 24) & 0xFF)
+        };
+        Ptr<Packet> p = Create<Packet>(buffer, 4);
         uint64_t uid = p->GetUid();
         P1PacketMeta meta;
         meta.senderId = m_id;
@@ -905,16 +910,16 @@ private:
                     }
                 }
             }
-            uint8_t buffer[2];
-            p->CopyData(buffer, 2);
-            uint16_t payload = buffer[0] | (buffer[1] << 8);
+            uint8_t buffer[4];
+            p->CopyData(buffer, 4);
+            uint32_t payload = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
             
             uint16_t senderId = payload & 0x01FF;
             g_p1ReceivedInEpoch[m_epoch][myId].insert(senderId);
             g_p2DiscoveredInP1[m_epoch][myId].insert(senderId);
             if (g_verboseLog) std::cout << "[P1_RX] Time: " << now << "ms, Receiver: " << myId << ", Sender: " << (int)senderId << ", RSSI: " << (int)rssi << "\n";
-            uint8_t claimedSlot = (payload >> 9) & 0x0F;
-            uint8_t claimedChannel = (payload >> 13) & 0x07;
+            uint8_t claimedSlot = (payload >> 9) & 0x00FF;
+            uint8_t claimedChannel = (payload >> 17) & 0x000F;
             
             m_monitorList.push_back({senderId, rssi, m_epoch, claimedSlot, claimedChannel});
             m_discoveryReceivedCount[senderId]++;
@@ -1687,9 +1692,9 @@ int main(int argc, char *argv[]) {
         g_numDataSlots = std::max(1, (int)(g_p2DurationMs * 1000.0 / g_dataSlotUs));
     }
 
-    if (g_numDataSlots > 16) {
-        std::cerr << "Warning: numSlots (" << g_numDataSlots << ") exceeds 4-bit slot capacity (16), clamping to 16" << std::endl;
-        g_numDataSlots = 16;
+    if (g_numDataSlots > MAX_DATA_SLOTS) {
+        std::cerr << "Warning: numSlots (" << g_numDataSlots << ") exceeds MAX_DATA_SLOTS (" << MAX_DATA_SLOTS << "), clamping to " << MAX_DATA_SLOTS << std::endl;
+        g_numDataSlots = MAX_DATA_SLOTS;
     }
 
     g_phase1DurationUs = g_p1DurationMs * 1000.0;

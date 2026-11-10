@@ -1087,6 +1087,12 @@ LrWpanPhy::PlmeSetTRXStateRequest(PhyEnumeration state)
             {
                 NS_LOG_DEBUG("force TRX_OFF, terminate transmission");
                 m_currentTxPacket.second = true;
+                m_pdDataRequest.Cancel();
+                m_currentTxPacket.first = nullptr;
+                if (!m_pdDataConfirmCallback.IsNull())
+                {
+                    m_pdDataConfirmCallback(IEEE_802_15_4_PHY_UNSPECIFIED);
+                }
             }
             ChangeTrxState(IEEE_802_15_4_PHY_TRX_OFF);
             // Clear any other state

@@ -35,6 +35,7 @@ int g_numDataChannels = 6;   // Phase 2 Data Channels (configurable via cmd line
 int g_numDataSlots = 10;     // Phase 2 Data Slots (configurable via cmd line, 1 to 16)
 double g_p2DurationMs = 10.0; // Phase 2 Duration in ms (configurable via cmd line, default: 10.0 ms)
 double g_dataSlotUs = 1000.0; // Phase 2 Data Slot Duration in microseconds (default: 1000.0 us for 2 Mbps PHY)
+double g_slotGuardBandUs = 50.0; // Phase 2 slot end guard band in microseconds reserved for transceiver turnaround to RX
 
 double g_p1DurationMs = 10.0; // Phase 1 Duration in ms (configurable via cmd line, default: 10.0 ms)
 double g_phase1DurationUs = 10000.0;
@@ -193,6 +194,7 @@ enum P2DropCategory {
     P2_REASON_PREAMBLE_COLLISION_BUSY_RX,    // Receiver antenna was already locked onto another packet
     P2_REASON_PREAMBLE_LOW_SINR,             // Preamble arrived, but SINR < +6.0 dB (BLE 5.4 C/I threshold)
     P2_REASON_PAYLOAD_INTERFERENCE_DROP,     // Preamble locked, but mid-flight packet corrupted by interference
+    P2_REASON_SLOT_BOUNDARY_CUTOFF,          // Transmission exceeded slot duration and was forcefully aborted
     NUM_P2_REASONS
 };
 
@@ -206,7 +208,8 @@ static const char* P2ReasonStrings[] = {
     "SENDER_CSMA_ABORT",
     "PREAMBLE_COLLISION_BUSY_RX",
     "PREAMBLE_LOW_SINR",
-    "PAYLOAD_INTERFERENCE_DROP"
+    "PAYLOAD_INTERFERENCE_DROP",
+    "SLOT_BOUNDARY_CUTOFF"
 };
 
 struct P2PacketMeta {
@@ -242,6 +245,9 @@ static uint8_t g_p2RxDropEvent[1024][1024];
 
 static std::map<uint32_t, std::map<uint16_t, std::set<uint16_t>>> g_p2ReceivedInEpoch;
 static std::map<uint32_t, std::map<uint16_t, bool>> g_p2TxAbortInEpoch;
+static uint32_t g_p2SlotCutoffCount = 0;
+static std::map<uint32_t, std::map<uint16_t, bool>> g_p2DroneCutoffInEpoch;
+static std::set<uint64_t> g_p2CutoffUids;
 static std::map<uint32_t, std::map<uint16_t, uint8_t>> g_droneClaimedSlot;
 static std::map<uint32_t, std::map<uint16_t, uint8_t>> g_droneClaimedChannel;
 static std::map<uint32_t, std::map<uint16_t, int>> g_p1DroneClaimedSlot;
@@ -627,11 +633,11 @@ private:
         }
         if (m_id == 0) {
             Simulator::Schedule(MicroSeconds(g_phase1DurationUs), &SwarmSchedulerApp::EvaluatePhase1Epoch, this, m_epoch);
-            double p2DoneUs = g_phase1DurationUs + GAP_US + (g_numDataSlots * g_dataSlotUs) + 100.0;
+            double p2DoneUs = g_phase1DurationUs + GAP_US + (g_numDataSlots * g_dataSlotUs) - 1.0;
             Simulator::Schedule(MicroSeconds(p2DoneUs), &SwarmSchedulerApp::EvaluatePhase2Epoch, this, m_epoch);
         }
         Simulator::Schedule(MicroSeconds(g_phase1DurationUs + GAP_US), &SwarmSchedulerApp::ComputeSchedule, this);
-        Simulator::Schedule(MilliSeconds(g_cycleMs), &SwarmSchedulerApp::ScheduleCycle, this);
+        Simulator::Schedule(MicroSeconds(g_cycleMs * 1000.0), &SwarmSchedulerApp::ScheduleCycle, this);
     }
 
     void PickResourceAndSendBeacon() {
@@ -794,6 +800,16 @@ private:
             g_p2SlotAction[m_epoch][m_id][i] = m_schedule[i].action;
             g_p2SlotTarget[m_epoch][m_id][i] = m_schedule[i].targetId;
             Simulator::Schedule(MicroSeconds(i * g_dataSlotUs), &SwarmSchedulerApp::ExecuteDataSlot, this, i);
+
+            // Slot boundary transmission cutoff:
+            // Transmissions are strictly constrained to this slot window.
+            // At (slotEnd - guardBand), the drone forcefully interrupts any ongoing transmission
+            // and transitions its transceiver to RX_ON, ensuring it settles in RX before slotEnd.
+            double guardUs = std::min(g_slotGuardBandUs, g_dataSlotUs * 0.2);
+            double cutoffUs = (i + 1) * g_dataSlotUs - guardUs;
+            if (cutoffUs > i * g_dataSlotUs) {
+                Simulator::Schedule(MicroSeconds(cutoffUs), &SwarmSchedulerApp::EndDataSlotAndSwitchToRx, this, i);
+            }
         }
     }
 
@@ -821,6 +837,47 @@ private:
         } else if (s.action == ScheduleSlot::RX) {
             SwitchChannelAndPower(s.channel, g_p2TxPower);
         }
+    }
+
+    void EndDataSlotAndSwitchToRx(int slotIndex) {
+        uint32_t myId = m_device->GetNode()->GetId();
+        double now = Simulator::Now().GetSeconds() * 1000.0;
+        ScheduleSlot s = m_schedule[slotIndex];
+
+        // 1. If this slot was a TX slot, enforce slot boundary transmission cutoff!
+        if (s.action == ScheduleSlot::TX) {
+            Ptr<LrWpanPhy> phy = m_device->GetPhy();
+            PhyEnumeration phyState = phy->GetTrxState();
+            
+            // Check if UAV is still actively transmitting or waiting in CSMA/CCA
+            if (phyState == IEEE_802_15_4_PHY_BUSY_TX || phyState == IEEE_802_15_4_PHY_TX_ON) {
+                // Forcefully interrupt ongoing transmission!
+                g_p2SlotCutoffCount++;
+                g_p2TxAbortInEpoch[m_epoch][myId] = true;
+                g_p2DroneCutoffInEpoch[m_epoch][myId] = true;
+                
+                auto uidsIt = g_p2TxUidsInEpoch.find({m_epoch, (uint16_t)myId});
+                if (uidsIt != g_p2TxUidsInEpoch.end() && !uidsIt->second.empty()) {
+                    g_p2CutoffUids.insert(uidsIt->second.back());
+                }
+                
+                if (g_verboseLog) {
+                    std::cout << "[P2_SLOT_CUTOFF] Time: " << now << "ms, Drone: " << myId 
+                              << " slot " << slotIndex 
+                              << " duration expired! Forcefully interrupting TX and switching to RX.\n";
+                }
+                
+                if (m_csma) m_csma->Cancel();
+                phy->AbortTx();
+            } else {
+                // Transmission already finished before cutoff; cancel any lingering CSMA
+                if (m_csma) m_csma->Cancel();
+            }
+        }
+
+        // 2. Command UAV transceiver to switch to RX_ON!
+        // Leaves guardUs (50us) for PLL turnaround (40us) to settle before next slot starts.
+        m_device->GetPhy()->PlmeSetTRXStateRequest(IEEE_802_15_4_PHY_RX_ON);
     }
 
     void DataConfirm(McpsDataConfirmParams params) {
@@ -934,6 +991,10 @@ private:
             }
             m_lastDiscoveryTime[senderId] = now;
         } else if (p->GetSize() == DATA_PACKET_SIZE) {
+            // Drop packet if sender was forced to cut off due to slot expiration
+            if (g_p2CutoffUids.find(p->GetUid()) != g_p2CutoffUids.end()) {
+                return;
+            }
             uint8_t addrBuffer[2];
             params.m_srcAddr.CopyTo(addrBuffer);
             uint16_t srcId = (addrBuffer[0] << 8) | addrBuffer[1];
@@ -1223,6 +1284,8 @@ private:
 
                     if (!discoveredInP1) {
                         cat = P2_REASON_P1_DISCOVERY_MISS;
+                    } else if (g_p2DroneCutoffInEpoch[epoch][sender] || (p2TxUids[sender] != 0 && g_p2CutoffUids.count(p2TxUids[sender]))) {
+                        cat = P2_REASON_SLOT_BOUNDARY_CUTOFF;
                     } else if (g_p2TxAbortInEpoch[epoch][sender]) {
                         cat = P2_REASON_SENDER_CSMA_ABORT;
                     } else {
@@ -1531,6 +1594,8 @@ void PrintPhase2GroundTruthReport() {
     ss << "       🔬 PHASE 2 PHYSICAL & MAC GROUND TRUTH ANALYSIS (Top-K within 50m) 🔬           \n";
     ss << "========================================================================================\n";
     ss << "Phase 2 Configuration                             : " << g_numDataSlots << " slots x " << g_dataSlotUs << " us (" << (g_numDataSlots * g_dataSlotUs / 1000.0) << " ms), " << g_numDataChannels << " channels\n";
+    ss << "Slot Guard Band (RX Turnaround)                   : " << g_slotGuardBandUs << " us\n";
+    ss << "Total Slot Boundary Force Cutoffs                 : " << g_p2SlotCutoffCount << "\n";
     ss << "Total Expected P2 Neighbor Links (Epochs x Top-K) : " << g_p2TotalTargetLinks << "\n";
     double succPct = (g_p2TotalTargetLinks > 0) ? (100.0 * g_p2ReasonCounts[P2_REASON_SUCCESS] / g_p2TotalTargetLinks) : 0;
     int totalFails = g_p2TotalTargetLinks - g_p2ReasonCounts[P2_REASON_SUCCESS];
@@ -1670,6 +1735,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("numSlots", "Number of Phase 2 data slots (e.g., 5 to 20)", g_numDataSlots);
     cmd.AddValue("p2Duration", "Phase 2 duration in ms (default: 10.0 ms)", g_p2DurationMs);
     cmd.AddValue("dataSlotUs", "Phase 2 data slot duration in microseconds (default: 1000.0 us, e.g. 625.0 or 1000.0)", g_dataSlotUs);
+    cmd.AddValue("slotGuardBandUs", "Phase 2 slot end guard band in microseconds reserved for switching to RX (default 50.0 us)", g_slotGuardBandUs);
     cmd.AddValue("numNodes", "Number of UAV nodes in swarm (e.g., 50, 100)", numNodes);
     cmd.AddValue("nodeSpeed", "Speed of UAVs in m/s (default 10.0 m/s, 0 for static hover)", nodeSpeed);
     cmd.AddValue("spaceSize", "Side length of 3D box (X and Y) in meters", g_spaceSize);

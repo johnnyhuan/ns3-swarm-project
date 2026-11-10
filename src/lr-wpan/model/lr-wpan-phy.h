@@ -426,6 +426,11 @@ class LrWpanPhy : public SpectrumPhy
     void PlmeSetTRXStateRequest(PhyEnumeration state);
 
     /**
+     * Forcefully abort any active transmission due to slot boundary cutoff.
+     */
+    void AbortTx();
+
+    /**
      * IEEE 802.15.4-2006 section 6.2.2.9
      * PLME-SET.request
      * Set attributes per definition from Table 23 in section 6.4.2

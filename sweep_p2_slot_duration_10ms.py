@@ -128,6 +128,7 @@ def parse_p2_metrics(p1_text, p2_text, stdout_text, slot_us):
         "collisions": 0,
         "low_sinr": 0,
         "payload_drop": 0,
+        "slot_cutoff": 0,
         "p2_captures": 0
     }
 
@@ -169,6 +170,9 @@ def parse_p2_metrics(p1_text, p2_text, stdout_text, slot_us):
     m = re.search(r"PAYLOAD_INTERFERENCE_DROP\s*:\s*(\d+)", src)
     if m: data["payload_drop"] = int(m.group(1))
 
+    m = re.search(r"SLOT_BOUNDARY_CUTOFF\s*:\s*(\d+)", src)
+    if m: data["slot_cutoff"] = int(m.group(1))
+
     m = re.search(r"Total Power Capture Events Triggered\s*:\s*(\d+)", src)
     if m: data["p2_captures"] = int(m.group(1))
 
@@ -182,7 +186,7 @@ for s_us in slot_durations_us:
     print(f"▶️ Testing Slot Duration = {s_us:>6.1f} µs ({slots_cnt:>2} slots, {cells:>3} cells) ... ", end="", flush=True)
     res = run_single_slot(s_us)
     if res is not None:
-        print(f"P2 PRR: {res['p2_prr']:>5.1f}% ({res['p2_success']:,}) | P1 Miss: {res['p1_miss']:>4} | RX Deaf: {res['rx_deafness']:>4} | Coll: {res['collisions']:>3} | Cap: {res['p2_captures']}")
+        print(f"P2 PRR: {res['p2_prr']:>5.1f}% ({res['p2_success']:,}) | Cutoff: {res['slot_cutoff']:>4} | RX Deaf: {res['rx_deafness']:>4} | Coll: {res['collisions']:>3}")
         results.append(res)
     else:
         print("ERROR / TIMEOUT")
@@ -221,9 +225,9 @@ csv_path = os.path.join(PROJECT_DIR, "exp_p2_slot_sweep_results.csv")
 txt_path = os.path.join(PROJECT_DIR, "exp_p2_slot_sweep_report.txt")
 
 with open(csv_path, "w", encoding="utf-8") as f:
-    f.write("Slot_Duration_us,Num_Slots,Total_Cells,P1_PRR,P2_Links,P2_Success,P2_PRR,P1_Miss,TX_Deafness,RX_Deafness,Channel_Mismatch,Collisions,Low_SINR,Payload_Drop,P2_Captures\n")
+    f.write("Slot_Duration_us,Num_Slots,Total_Cells,P1_PRR,P2_Links,P2_Success,P2_PRR,P1_Miss,TX_Deafness,RX_Deafness,Channel_Mismatch,Collisions,Low_SINR,Payload_Drop,Slot_Cutoff,P2_Captures\n")
     for r in results:
-        f.write(f"{r['slot_us']:.1f},{r['num_slots']},{r['total_cells']},{r['p1_prr']:.2f},{r['p2_links']},{r['p2_success']},{r['p2_prr']:.2f},{r['p1_miss']},{r['tx_deafness']},{r['rx_deafness']},{r['ch_mismatch']},{r['collisions']},{r['low_sinr']},{r['payload_drop']},{r['p2_captures']}\n")
+        f.write(f"{r['slot_us']:.1f},{r['num_slots']},{r['total_cells']},{r['p1_prr']:.2f},{r['p2_links']},{r['p2_success']},{r['p2_prr']:.2f},{r['p1_miss']},{r['tx_deafness']},{r['rx_deafness']},{r['ch_mismatch']},{r['collisions']},{r['low_sinr']},{r['payload_drop']},{r.get('slot_cutoff', 0)},{r['p2_captures']}\n")
 
 with open(txt_path, "w", encoding="utf-8") as f:
     f.write(f"# Phase 2 (10ms Window) Slot Duration Optimization Benchmark\n")

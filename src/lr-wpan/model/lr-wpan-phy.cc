@@ -1209,7 +1209,7 @@ LrWpanPhy::PlmeSetAttributeRequest(PhyPibAttributeIdentifier id, Ptr<PhyPibAttri
                 m_currentTxPacket.first = nullptr;
                 if (!m_pdDataConfirmCallback.IsNull())
                 {
-                    m_pdDataConfirmCallback(IEEE_802_15_4_PHY_TRX_OFF);
+                    m_pdDataConfirmCallback(IEEE_802_15_4_PHY_UNSPECIFIED);
                 }
             }
 
@@ -1378,7 +1378,7 @@ LrWpanPhy::PlmeSetAttributeRequest(PhyPibAttributeIdentifier id, Ptr<PhyPibAttri
                 m_currentTxPacket.first = nullptr;
                 if (!m_pdDataConfirmCallback.IsNull())
                 {
-                    m_pdDataConfirmCallback(IEEE_802_15_4_PHY_TRX_OFF);
+                    m_pdDataConfirmCallback(IEEE_802_15_4_PHY_UNSPECIFIED);
                 }
             }
 
@@ -1711,6 +1711,28 @@ LrWpanPhy::EndTx()
         {
             ChangeTrxState(IEEE_802_15_4_PHY_TX_ON);
         }
+    }
+}
+
+void
+LrWpanPhy::AbortTx()
+{
+    NS_LOG_FUNCTION(this);
+    if (m_trxState == IEEE_802_15_4_PHY_BUSY_TX)
+    {
+        NS_LOG_DEBUG("Forced slot cutoff: aborting active transmission");
+        m_currentTxPacket.second = true;
+        m_pdDataRequest.Cancel();
+        m_currentTxPacket.first = nullptr;
+        ChangeTrxState(IEEE_802_15_4_PHY_TRX_OFF);
+        if (!m_pdDataConfirmCallback.IsNull())
+        {
+            m_pdDataConfirmCallback(IEEE_802_15_4_PHY_UNSPECIFIED);
+        }
+    }
+    else if (m_trxState == IEEE_802_15_4_PHY_TX_ON)
+    {
+        ChangeTrxState(IEEE_802_15_4_PHY_TRX_OFF);
     }
 }
 

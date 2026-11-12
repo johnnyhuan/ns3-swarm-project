@@ -1,0 +1,20 @@
+P1 CSMA vs Sidelink | 100 UAVs | simTime 3.0s | slot 300.0 us | lock 6.0 dB | rngRun=1
+========================================================================
+Metric                                        CSMA        Sidelink
+------------------------------------------------------------------
+Target links (Top-K in 50m)                  72009           72009
+P1 PRR (%)                                   75.30           58.70
+SUCCESS                                      54206           42249
+SENDER_CSMA_ABORT                               70               0
+RX_DEAFNESS_BUSY_TX                            548            1405
+PREAMBLE_COLLISION_BUSY_RX                    4944             607
+PREAMBLE_LOW_SINR                            12239           27745
+RADIO_TURNAROUND_BUSY                            0               0
+PAYLOAD_INTERFERENCE_CORRUPTION                  2               3
+------------------------------------------------------------------
+PRR 0-10m (%)                                 97.6            99.1
+PRR 10-20m (%)                                95.2            91.3
+PRR 20-30m (%)                                85.8            65.0
+PRR 30-40m (%)                                58.5            28.1
+PRR 40-50m (%)                                 2.5             0.5
+========================================================================

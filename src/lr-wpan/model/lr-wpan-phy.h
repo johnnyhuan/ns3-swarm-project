@@ -365,6 +365,13 @@ class LrWpanPhy : public SpectrumPhy
     double GetPreambleLockThreshold() const;
 
     /**
+     * Get the BLE 5.4 LE 2M sync window (preamble + Access Address) duration.
+     * A receiver locks onto a packet at the end of this window.
+     * @return sync window duration (24 us)
+     */
+    Time GetSyncDuration() const;
+
+    /**
      * Notify the SpectrumPhy instance of an incoming waveform.
      *
      * @param params the SpectrumSignalParameters associated with the incoming waveform

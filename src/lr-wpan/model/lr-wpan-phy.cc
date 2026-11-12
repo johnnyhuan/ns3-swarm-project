@@ -82,6 +82,18 @@ constexpr std::array<PhyPpduHeaderSymbolNumber, 10> ppduHeaderSymbolNumbers{{
     {0, 0, 0},        // IEEE_802_15_4_INVALID_PHY_OPTION
 }};
 
+/*
+ * BLE 5.4 LE 2M (uncoded, 2 Mbps = 0.5 us/bit) frame timing used instead of the
+ * 802.15.4 SHR/PHR symbol timing for the on-air frame.
+ *   Preamble 2 B (8 us) + Access Address 4 B (16 us) = 24 us sync window
+ *   PDU header 2 B = 8 us
+ *   CRC-24 (3 B) replaces the 802.15.4 FCS-16 (2 B, already counted in the PSDU): +1 B = 4 us
+ * CCA / backoff timing (symbol based) is unchanged.
+ */
+constexpr double kBleSyncUs = 24.0;
+constexpr double kBlePduHeaderUs = 8.0;
+constexpr double kBleCrcExtraUs = 4.0;
+
 std::ostream&
 operator<<(std::ostream& os, const PhyEnumeration& state)
 {
@@ -514,11 +526,12 @@ LrWpanPhy::CheckInterference()
         // NS_ASSERT (currentRxParams && !m_currentRxPacket.second);
 
         Ptr<Packet> currentPacket = currentRxParams->packetBurst->GetPackets().front();
-        if (m_errorModel)
+
+        // BLE 5.4 LE 2M GFSK has no spreading gain: if the SINR during any part of the
+        // packet falls below the co-channel C/I (same threshold as the preamble lock),
+        // bits are corrupted and the CRC-24 check fails -> the whole packet is lost.
+        if (Simulator::Now() > m_rxLastUpdate)
         {
-            // How many bits did we receive since the last calculation?
-            double t = (Simulator::Now() - m_rxLastUpdate).ToDouble(Time::MS);
-            uint32_t chunkSize = ceil(t * (GetDataOrSymbolRate(true) / 1000));
             Ptr<SpectrumValue> interferenceAndNoise = m_signal->GetSignalPsd();
             *interferenceAndNoise -= *currentRxParams->psd;
             *interferenceAndNoise += *m_noise;
@@ -527,25 +540,16 @@ LrWpanPhy::CheckInterference()
                                                          m_phyPIBAttributes.phyCurrentChannel) /
                 LrWpanSpectrumValueHelper::TotalAvgPower(interferenceAndNoise,
                                                          m_phyPIBAttributes.phyCurrentChannel);
-            double per = 1.0 - m_errorModel->GetChunkSuccessRate(sinr, chunkSize);
 
-            // The LQI is the total packet success rate scaled to 0-255.
-            // If not already set, initialize to 255.
             LrWpanLqiTag tag(std::numeric_limits<uint8_t>::max());
             currentPacket->PeekPacketTag(tag);
-            uint8_t lqi = tag.Get();
-            tag.Set(lqi - (per * lqi));
-            currentPacket->ReplacePacketTag(tag);
-
-            if (m_random->GetValue() < per)
+            if (10.0 * log10(sinr) < m_preambleLockThresholdDb)
             {
                 // The packet was destroyed, drop the packet after reception.
                 m_currentRxPacket.second = true;
+                tag.Set(0);
             }
-        }
-        else
-        {
-            NS_LOG_WARN("Missing ErrorModel");
+            currentPacket->ReplacePacketTag(tag);
         }
     }
     m_rxLastUpdate = Simulator::Now();
@@ -591,10 +595,9 @@ LrWpanPhy::EndRx(Ptr<SpectrumSignalParameters> par)
     UpdateEnergyTracking();
 
     Ptr<LrWpanSpectrumSignalParameters> currentRxParams = m_currentRxPacket.first;
-    if (currentRxParams == params)
-    {
-        CheckInterference();
-    }
+    // Evaluate the locked packet up to now before any signal leaves the channel, so that an
+    // interferer ending mid-packet is accounted for over exactly the time it was present.
+    CheckInterference();
 
     // The packet reception has ended, remove it from the accumulated signals
     // in the receptor tracker
@@ -697,8 +700,8 @@ LrWpanPhy::PdDataRequest(const uint32_t psduLength, Ptr<Packet> p)
             Ptr<LrWpanSpectrumSignalParameters> txParams = Create<LrWpanSpectrumSignalParameters>();
             txParams->duration = CalculateTxTime(p);
 
-            double preambleSymbols = ppduHeaderSymbolNumbers[m_phyOption].shrPreamble;
-            txParams->preambleDuration = Seconds(preambleSymbols / GetDataOrSymbolRate(false));
+            // BLE 5.4 LE 2M: preamble + Access Address sync window (24 us)
+            txParams->preambleDuration = GetSyncDuration();
 
             txParams->txPhy = GetObject<SpectrumPhy>();
             txParams->psd = m_txPsd;
@@ -1657,6 +1660,7 @@ LrWpanPhy::CalculateTxTime(Ptr<const Packet> packet)
     Time txTime = GetPpduHeaderTxTime();
 
     txTime += Seconds(packet->GetSize() * 8.0 / GetDataOrSymbolRate(isData));
+    txTime += MicroSeconds(kBleCrcExtraUs); // CRC-24 instead of FCS-16
 
     return txTime;
 }
@@ -1696,17 +1700,14 @@ Time
 LrWpanPhy::GetPpduHeaderTxTime()
 {
     NS_LOG_FUNCTION(this);
+    // BLE 5.4 LE 2M: preamble + Access Address (24 us) + PDU header (8 us)
+    return MicroSeconds(kBleSyncUs + kBlePduHeaderUs);
+}
 
-    bool isData = false;
-    double totalPpduHdrSymbols;
-
-    NS_ASSERT(m_phyOption < IEEE_802_15_4_INVALID_PHY_OPTION);
-
-    totalPpduHdrSymbols = ppduHeaderSymbolNumbers[m_phyOption].shrPreamble +
-                          ppduHeaderSymbolNumbers[m_phyOption].shrSfd +
-                          ppduHeaderSymbolNumbers[m_phyOption].phr;
-
-    return Seconds(totalPpduHdrSymbols / GetDataOrSymbolRate(isData));
+Time
+LrWpanPhy::GetSyncDuration() const
+{
+    return MicroSeconds(kBleSyncUs);
 }
 
 void

@@ -47,7 +47,7 @@ const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels
 
 // Sidelink S-SPS (Semi-Persistent Scheduling) for Phase 1
 bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
-double g_p1SlotUs = 300.0;       // Phase 1 Sidelink slot duration in microseconds (default 300 us -> 33 slots in 10ms, accommodating 244us air time + 40us PLL turnaround)
+double g_p1SlotUs = 300.0;       // Phase 1 Sidelink slot duration in us (default 300 us -> 33 slots in 10ms; slot start -> TX end = CCA 128 + turnaround 40 + BLE air time 88 = 256 us)
 double g_p1CcaThresholdDbm = -96.58; // Phase 1 CSMA CCA Energy Detection Threshold in dBm (default: -96.58, standard 802.15.4)
 double g_preambleLockDb = 6.0;        // Preamble / sync-word lock SINR threshold in dB (BLE 5.4 LE 2M C/I: +6.0 dB)
 bool g_verboseLog = false;       // Verbose per-packet log switch (default: false for high-speed simulation at scale)
@@ -317,10 +317,10 @@ public:
 
         if (g_enableP1Sidelink && g_droneCurrentChannel[m_id] == BROADCAST_CHANNEL) {
             // RxBegin fires at preamble lock, i.e. a fixed latency after the sender's slot start:
-            // CCA (8 symbols) + RX->TX turnaround (40 us) + preamble (8 symbols) = 296 us.
-            // Map back to the sender's slot; without this, every packet was booked into slot s+1.
+            // CCA (8 symbols = 128 us) + RX->TX turnaround (40 us) + BLE sync window (24 us).
+            // Map back to the sender's slot; without this, packets were booked into slot s+1.
             double symbolUs = 1e6 / m_device->GetPhy()->GetDataOrSymbolRate(false);
-            double rxLatencyUs = 8.0 * symbolUs + 40.0 + 8.0 * symbolUs;
+            double rxLatencyUs = 8.0 * symbolUs + 40.0 + m_device->GetPhy()->GetSyncDuration().GetMicroSeconds();
             double timeInP1Us = (Simulator::Now() - m_epochStartTime).GetMicroSeconds() - rxLatencyUs;
             int numP1Slots = std::max(1, (int)(g_phase1DurationUs / g_p1SlotUs));
             int slotIdx = (timeInP1Us < 0.0) ? -1 : (int)(timeInP1Us / g_p1SlotUs);
@@ -370,7 +370,7 @@ public:
                 } else {
                     g_p1RxDropEvent[sender][m_id] = REASON_PREAMBLE_LOW_SINR;
                     if (g_verboseLog) std::cout << "[P1_PREAMBLE_LOW_SINR] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
-                              << " | Preamble Sync Word SINR <= -5 dB\n";
+                              << " | Preamble/Access Address SINR below lock threshold (" << g_preambleLockDb << " dB)\n";
                 }
             }
         }
@@ -396,7 +396,7 @@ public:
                 } else {
                     g_p2RxDropEvent[sender][m_id] = P2_REASON_PREAMBLE_LOW_SINR;
                     if (g_verboseLog) std::cout << "[P2_PREAMBLE_LOW_SINR] Time: " << now << "ms, Rx: " << (int)m_id << ", Tx: " << (int)sender << ", Uid: " << uid
-                              << " | Preamble Sync Word SINR <= -5 dB\n";
+                              << " | Preamble/Access Address SINR below lock threshold (" << g_preambleLockDb << " dB)\n";
                 }
             }
         }
@@ -1026,7 +1026,7 @@ private:
                 uint64_t txUid = sTxUids[sender];
                 double sTxTime = sTxTimes[sender];
 
-                // Check other concurrent transmissions during sender's mini-beacon (~0.25 ms window)
+                // Check other concurrent transmissions during sender's mini-beacon (BLE 2M air time ~0.088 ms)
                 double interfLinear = 0.0;
                 int coChannelCount = 0;
                 if (txUid != 0) {
@@ -1034,7 +1034,7 @@ private:
                         if (other == sender || other == r) continue;
                         if (sTxTimes[other] >= 0.0) {
                             double diff = std::abs(sTxTimes[other] - sTxTime);
-                            if (diff < 0.25) { // Concurrent transmission on Broadcast Channel 11 (2 Mbps: ~244us air time)
+                            if (diff < 0.088) { // Overlaps on Broadcast Channel 11 (BLE 5.4 LE 2M air time: 24+8+52+4 = 88 us)
                                 Ptr<MobilityModel> otherMob = mobs[other];
                                 double otherDist = rMob->GetDistanceFrom(otherMob);
                                 double otherPrxDbm = g_p1TxPower - 46.6777 - 30.0 * std::log10(std::max(0.1, otherDist));

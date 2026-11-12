@@ -72,8 +72,6 @@ def parse(text):
     for r in REASONS[1:]:
         m = re.search(rf"\b{r}\s*:\s*(\d+)", text)
         row[r] = int(m.group(1)) if m else 0
-    m = re.search(r"P1 Slot Deadline Cutoffs\s*:\s*(\d+)", text)
-    row["CUTOFF"] = int(m.group(1)) if m else 0
     m = re.search(r"P1 Slot Boundary Force Cutoffs\s*:\s*(\d+)", text)
     row["CUTOFFS"] = int(m.group(1)) if m else 0
     m = re.search(r"P1 Beacons Not Started Within Slot\s*:\s*(\d+)", text)
@@ -130,7 +128,6 @@ lines.append(f"{'P1 PRR (%) min..max':34s}" + "".join(
 lines.append(f"{'Target links / seed':34s}" + "".join(f"{mean(l, 'TOTAL'):>{W}.0f}" for l in labels))
 for r in REASONS:
     lines.append(f"{r:34s}" + "".join(f"{mean(l, r):>{W}.0f}" for l in labels))
-lines.append(f"{'P1 slot deadline cutoffs (total)':34s}" + "".join(f"{sum(r['CUTOFF'] for r in runs[l]):>{W}d}" for l in labels))
 lines.append(f"{'Slot-end force cutoffs (TX)':34s}" + "".join(f"{mean(l, 'CUTOFFS'):>{W}.1f}" for l in labels))
 lines.append(f"{'Beacons not started in slot':34s}" + "".join(f"{mean(l, 'LATE'):>{W}.1f}" for l in labels))
 lines.append("-" * len(header))

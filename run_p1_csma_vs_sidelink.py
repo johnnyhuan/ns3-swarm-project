@@ -39,6 +39,8 @@ for rel_path in ["scratch/lr-wpan-swarm.cc",
                  "src/lr-wpan/model/lr-wpan-phy.cc",
                  "src/lr-wpan/model/lr-wpan-phy.h",
                  "src/lr-wpan/model/lr-wpan-csmaca.cc",
+                 "src/lr-wpan/model/lr-wpan-mac.cc",
+                 "src/lr-wpan/model/lr-wpan-mac.h",
                  "src/lr-wpan/model/lr-wpan-csmaca.h"]:
     src_f = os.path.join(PROJECT_DIR, rel_path)
     dst_f = os.path.join(NS3_DIR, rel_path)

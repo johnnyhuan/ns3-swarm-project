@@ -6,8 +6,8 @@ Same topology (rngRun=1) for both MACs; prints the Phase 1 ground-truth breakdow
 side by side and pushes the results to GitHub main.
 
 Usage:
-    python3 run_p1_csma_vs_sidelink.py [numNodes] [simTime] [p1SlotUs] [lockDb]
-    python3 run_p1_csma_vs_sidelink.py                  # 100 nodes, 3.0 s, 300 us slots, 6 dB
+    python3 run_p1_csma_vs_sidelink.py [numNodes] [simTime] [p1TxPower] [ccaDbm] [slotUs ...]
+    python3 run_p1_csma_vs_sidelink.py        # 100 nodes, 3.0 s, +4 dBm, CCA -97 dBm, slots 160 200 300
 """
 import os
 import re
@@ -17,8 +17,10 @@ import sys
 
 num_nodes = int(sys.argv[1]) if len(sys.argv) > 1 else 100
 sim_time = float(sys.argv[2]) if len(sys.argv) > 2 else 3.0
-slot_us = float(sys.argv[3]) if len(sys.argv) > 3 else 300.0
-lock_db = float(sys.argv[4]) if len(sys.argv) > 4 else 6.0
+tx_power = float(sys.argv[3]) if len(sys.argv) > 3 else 4.0
+cca_dbm = float(sys.argv[4]) if len(sys.argv) > 4 else -97.0
+slot_list = [float(x) for x in sys.argv[5:]] or [160.0, 200.0, 300.0]
+lock_db = 6.0
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 NS3_DIR = os.path.expanduser("~/ns-3-dev")
@@ -40,13 +42,13 @@ REASONS = ["SUCCESS", "SENDER_CSMA_ABORT", "RX_DEAFNESS_BUSY_TX",
            "RADIO_TURNAROUND_BUSY", "PAYLOAD_INTERFERENCE_CORRUPTION"]
 BRACKETS = ["0-10m", "10-20m", "20-30m", "30-40m", "40-50m"]
 
-MODES = [
-    ("CSMA", "csma", "--enableP1Sidelink=false"),
-    ("Sidelink", "sidelink", f"--enableP1Sidelink=true --p1SlotUs={slot_us}"),
+MODES = [("CSMA", "csma", "--enableP1Sidelink=false")] + [
+    (f"SL {s:g}us", f"sidelink_{s:g}us", f"--enableP1Sidelink=true --p1SlotUs={s}") for s in slot_list
 ]
+cfg = f"{num_nodes} UAVs | simTime {sim_time}s | P1 TX {tx_power:g} dBm | CCA {cca_dbm:g} dBm | lock {lock_db:g} dB"
 
 print(f"NS3_DIR = {NS3_DIR}")
-print(f"P1 CSMA vs Sidelink | {num_nodes} UAVs | simTime {sim_time}s | slot {slot_us} us | lock {lock_db} dB\n")
+print(f"P1 CSMA vs Sidelink | {cfg}\n")
 
 results = {}
 for label, tag, flags in MODES:
@@ -56,7 +58,7 @@ for label, tag, flags in MODES:
 
     args = (f"scratch/lr-wpan-swarm --numNodes={num_nodes} --simTime={sim_time} "
             f"--p1Duration=10 {flags} --preambleLockDb={lock_db} "
-            f"--p1TxPower=0 --p2TxPower=-2 --p1CcaThresholdDbm=-96.58 --nodeSpeed=10.0 "
+            f"--p1TxPower={tx_power} --p2TxPower=-2 --p1CcaThresholdDbm={cca_dbm} --nodeSpeed=10.0 "
             f"--numSlots=13 --dataSlotUs=750 --p2Duration=9.75 --numChannels=6 "
             f"--spaceSize=200 --spaceZ=80 --rngRun=1 --autoPush=false")
     print(f"▶ Running {label} ...", flush=True)
@@ -85,18 +87,17 @@ for label, tag, flags in MODES:
     print(f"  saved {saved}")
 
 labels = [m[0] for m in MODES]
-lines = [f"P1 CSMA vs Sidelink | {num_nodes} UAVs | simTime {sim_time}s | slot {slot_us} us | "
-         f"lock {lock_db} dB | rngRun=1", "=" * 72]
-header = f"{'Metric':34s}" + "".join(f"{l:>16s}" for l in labels)
+lines = [f"P1 CSMA vs Sidelink | {cfg} | rngRun=1", "=" * (34 + 14 * len(MODES))]
+header = f"{'Metric':34s}" + "".join(f"{l:>14s}" for l in labels)
 lines += [header, "-" * len(header)]
-lines.append(f"{'Target links (Top-K in 50m)':34s}" + "".join(f"{results[l]['TOTAL']:>16d}" for l in labels))
-lines.append(f"{'P1 PRR (%)':34s}" + "".join(f"{results[l]['PRR']:>16.2f}" for l in labels))
+lines.append(f"{'Target links (Top-K in 50m)':34s}" + "".join(f"{results[l]['TOTAL']:>14d}" for l in labels))
+lines.append(f"{'P1 PRR (%)':34s}" + "".join(f"{results[l]['PRR']:>14.2f}" for l in labels))
 for r in REASONS:
-    lines.append(f"{r:34s}" + "".join(f"{results[l][r]:>16d}" for l in labels))
+    lines.append(f"{r:34s}" + "".join(f"{results[l][r]:>14d}" for l in labels))
 lines.append("-" * len(header))
 for b in BRACKETS:
-    lines.append(f"{'PRR ' + b + ' (%)':34s}" + "".join(f"{results[l][b]:>16.1f}" for l in labels))
-lines.append("=" * 72)
+    lines.append(f"{'PRR ' + b + ' (%)':34s}" + "".join(f"{results[l][b]:>14.1f}" for l in labels))
+lines.append("=" * (34 + 14 * len(MODES)))
 summary = "\n".join(lines) + "\n"
 print("\n" + summary)
 
@@ -108,7 +109,7 @@ result_files = ["p1_csma_vs_sidelink_summary.txt"] + [f"p1_report_{m[1]}.txt" fo
 try:
     subprocess.run(["git", "pull", "--rebase", "--autostash", "origin", "main"], cwd=PROJECT_DIR, check=True)
     subprocess.run(["git", "add", "-f"] + result_files, cwd=PROJECT_DIR, check=True)
-    msg = f"data: P1 CSMA vs Sidelink ({num_nodes} UAVs, {sim_time}s, slot {slot_us}us, lock {lock_db}dB)"
+    msg = f"data: P1 CSMA vs Sidelink ({cfg}, slots {slot_list})"
     subprocess.run(["git", "commit", "-m", msg], cwd=PROJECT_DIR, check=True)
     subprocess.run(["git", "push", "origin", "HEAD:main"], cwd=PROJECT_DIR, check=True)
     print("✓ Results pushed to GitHub")

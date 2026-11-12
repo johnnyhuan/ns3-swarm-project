@@ -51,7 +51,7 @@ for lock in lock_values:
 
     args = (f"scratch/lr-wpan-swarm --numNodes={num_nodes} --simTime={sim_time} "
             f"--p1Duration=10 --enableP1Sidelink=false --preambleLockDb={lock} "
-            f"--p1TxPower=0 --p2TxPower=-2 --p1CcaThresholdDbm=-96.58 --nodeSpeed=10.0 "
+            f"--p1TxPower=4 --p2TxPower=-2 --p1CcaThresholdDbm=-97 --nodeSpeed=10.0 "
             f"--numSlots=13 --dataSlotUs=750 --p2Duration=9.75 --numChannels=6 "
             f"--spaceSize=200 --spaceZ=80 --rngRun=1 --autoPush=false")
     print(f"▶ Running preambleLockDb={lock} ...", flush=True)

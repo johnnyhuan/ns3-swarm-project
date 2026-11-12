@@ -27,7 +27,7 @@ NS_LOG_COMPONENT_DEFINE("LrWpanSwarm");
 const uint32_t MINI_BEACON_SIZE = 4; 
 const uint32_t DATA_PACKET_SIZE = 50;
 double g_p2TxPower = -2.0; // Phase 2 TX Power (configurable via cmd line, optimal at -2 dBm)
-double g_p1TxPower = 0.0;  // Phase 1 TX Power (configurable via cmd line)
+double g_p1TxPower = 4.0;  // Phase 1 TX Power in dBm (+4 dBm: BLE decode range ~55 m at -95 dBm sensitivity, covers the 50 m target radius)
 double g_p1AvoidDist = 50.0; // RX Deafness defense distance in meters
 double g_p1AvoidRssi = -999.0; // Specific defense RSSI threshold in dBm (-106 to -90, overrides p1AvoidDist if set)
 bool g_enableDefense = true; // Defense design switch: true = spatial slot exclusion, false = exact cell avoidance only
@@ -48,7 +48,7 @@ const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels
 // Sidelink S-SPS (Semi-Persistent Scheduling) for Phase 1
 bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
 double g_p1SlotUs = 300.0;       // Phase 1 Sidelink slot duration in us (default 300 us -> 33 slots in 10ms; slot start -> TX end = CCA 20 + turnaround 40 + BLE air time 88 = 148 us)
-double g_p1CcaThresholdDbm = -96.58; // Phase 1 CSMA CCA Energy Detection Threshold in dBm (default: -96.58, standard 802.15.4)
+double g_p1CcaThresholdDbm = -97.0; // Phase 1 CCA RSSI threshold in dBm (signal + noise; -97 = noise floor -101 + 4 dB margin for RSSI error)
 double g_rxSensitivityDbm = -95.0;   // BLE 5.4 LE 2M receiver sensitivity in dBm (noise floor = sensitivity - lock threshold)
 double g_preambleLockDb = 6.0;        // Preamble / sync-word lock SINR threshold in dB (BLE 5.4 LE 2M C/I: +6.0 dB)
 bool g_verboseLog = false;       // Verbose per-packet log switch (default: false for high-speed simulation at scale)
@@ -298,8 +298,11 @@ public:
             status = IEEE_802_15_4_PHY_IDLE;
         } else if (g_droneCurrentChannel[m_id] == BROADCAST_CHANNEL && g_p1CcaThresholdDbm > -900.0) {
             if (status == IEEE_802_15_4_PHY_IDLE) {
-                double currentPsdDbm = m_device->GetPhy()->GetCurrentSignalPsd();
-                if (currentPsdDbm >= g_p1CcaThresholdDbm) {
+                // A real RSSI reading contains the receiver noise floor as well
+                double signalW = std::pow(10.0, (m_device->GetPhy()->GetCurrentSignalPsd() - 30.0) / 10.0);
+                double noiseW = std::pow(10.0, (g_rxSensitivityDbm - g_preambleLockDb - 30.0) / 10.0);
+                double rssiDbm = 10.0 * std::log10(signalW + noiseW) + 30.0;
+                if (rssiDbm >= g_p1CcaThresholdDbm) {
                     status = IEEE_802_15_4_PHY_BUSY;
                 }
             }
@@ -600,7 +603,8 @@ private:
             g_p1DroneClaimedSlot[m_epoch][m_id] = m_p1ClaimedSlot;
 
             // Micro-jitter inside the claimed slot bounded so that transmission + PLL turnaround (284us) does not spill past slot
-            double maxJitterUs = std::max(0.0, std::min(15.0, g_p1SlotUs - 285.0));
+            // Slot budget: CCA 20 + turnaround 40 + BLE air time 88 + TX->RX turnaround 40 = 188 us
+            double maxJitterUs = std::max(0.0, std::min(15.0, g_p1SlotUs - 188.0));
             double jitterUs = (maxJitterUs > 0.0) ? uv->GetValue(0.0, maxJitterUs) : 0.0;
             double txDelayUs = m_p1ClaimedSlot * g_p1SlotUs + jitterUs;
 
@@ -1682,8 +1686,8 @@ int main(int argc, char *argv[]) {
     CommandLine cmd;
     cmd.AddValue("verboseLog", "Enable verbose per-packet log to run.log (default: false)", g_verboseLog);
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
-    cmd.AddValue("p1TxPower", "Phase 1 TX Power in dBm (e.g., 0, 1, 3)", g_p1TxPower);
-    cmd.AddValue("p1CcaThresholdDbm", "Phase 1 CSMA CCA Energy Detection Threshold in dBm (-106.58 to -80.0, default -96.58)", g_p1CcaThresholdDbm);
+    cmd.AddValue("p1TxPower", "Phase 1 TX Power in dBm (default 4)", g_p1TxPower);
+    cmd.AddValue("p1CcaThresholdDbm", "Phase 1 CCA RSSI threshold in dBm, signal + noise (default -97.0)", g_p1CcaThresholdDbm);
     cmd.AddValue("rxSensitivityDbm", "BLE receiver sensitivity in dBm (default: -95.0; noise floor = sensitivity - preambleLockDb)", g_rxSensitivityDbm);
     cmd.AddValue("preambleLockDb", "Preamble lock SINR threshold in dB (BLE 5.4 LE 2M C/I, default: 6.0; old 802.15.4 behaviour: -5.0)", g_preambleLockDb);
     // Legacy capture flags: post-lock re-sync was removed (BLE chips cannot do it).

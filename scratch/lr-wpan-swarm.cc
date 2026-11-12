@@ -316,9 +316,14 @@ public:
         g_droneReceivingUid[m_id] = uid;
 
         if (g_enableP1Sidelink && g_droneCurrentChannel[m_id] == BROADCAST_CHANNEL) {
-            double timeInP1Us = (Simulator::Now() - m_epochStartTime).GetMicroSeconds();
+            // RxBegin fires at preamble lock, i.e. a fixed latency after the sender's slot start:
+            // CCA (8 symbols) + RX->TX turnaround (40 us) + preamble (8 symbols) = 296 us.
+            // Map back to the sender's slot; without this, every packet was booked into slot s+1.
+            double symbolUs = 1e6 / m_device->GetPhy()->GetDataOrSymbolRate(false);
+            double rxLatencyUs = 8.0 * symbolUs + 40.0 + 8.0 * symbolUs;
+            double timeInP1Us = (Simulator::Now() - m_epochStartTime).GetMicroSeconds() - rxLatencyUs;
             int numP1Slots = std::max(1, (int)(g_phase1DurationUs / g_p1SlotUs));
-            int slotIdx = (int)(timeInP1Us / g_p1SlotUs);
+            int slotIdx = (timeInP1Us < 0.0) ? -1 : (int)(timeInP1Us / g_p1SlotUs);
             if (slotIdx >= 0 && slotIdx < numP1Slots) {
                 m_p1OccupiedSlotsThisEpoch.insert(slotIdx);
                 if ((int)m_slotSensedEnergy.size() != numP1Slots) {
@@ -922,16 +927,8 @@ private:
 
         if (p->GetSize() == MINI_BEACON_SIZE) {
             g_p1RxSuccess++;
-            if (g_enableP1Sidelink) {
-                double timeInP1Us = (Simulator::Now() - m_epochStartTime).GetMicroSeconds();
-                int numP1Slots = std::max(1, (int)(g_phase1DurationUs / g_p1SlotUs));
-                if (timeInP1Us >= 0 && timeInP1Us < g_phase1DurationUs) {
-                    int slotIdx = (int)(timeInP1Us / g_p1SlotUs);
-                    if (slotIdx < numP1Slots) {
-                        m_p1OccupiedSlotsThisEpoch.insert(slotIdx);
-                    }
-                }
-            }
+            // (Sidelink slot occupancy is booked in NotifyPhyRxBegin with the correct slot;
+            //  booking it here at packet end used to mark the wrong slot.)
             uint8_t buffer[4];
             p->CopyData(buffer, 4);
             uint32_t payload = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);

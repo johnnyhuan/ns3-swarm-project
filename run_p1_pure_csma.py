@@ -77,12 +77,32 @@ for lock in lock_values:
     results[lock] = row
     print(f"  saved {saved}")
 
-print("\n" + "=" * 78)
+lines = []
+lines.append(f"P1 pure CSMA-CA | {num_nodes} UAVs | simTime {sim_time}s | rngRun=1")
+lines.append("=" * 78)
 header = f"{'Metric':34s}" + "".join(f"{('lock ' + format(l, 'g') + ' dB'):>14s}" for l in lock_values)
-print(header)
-print("-" * len(header))
-print(f"{'Target links (Top-K in 50m)':34s}" + "".join(f"{results[l]['TOTAL']:>14d}" for l in lock_values))
-print(f"{'P1 PRR (%)':34s}" + "".join(f"{results[l]['PRR']:>14.2f}" for l in lock_values))
+lines.append(header)
+lines.append("-" * len(header))
+lines.append(f"{'Target links (Top-K in 50m)':34s}" + "".join(f"{results[l]['TOTAL']:>14d}" for l in lock_values))
+lines.append(f"{'P1 PRR (%)':34s}" + "".join(f"{results[l]['PRR']:>14.2f}" for l in lock_values))
 for r in REASONS:
-    print(f"{r:34s}" + "".join(f"{results[l][r]:>14d}" for l in lock_values))
-print("=" * 78)
+    lines.append(f"{r:34s}" + "".join(f"{results[l][r]:>14d}" for l in lock_values))
+lines.append("=" * 78)
+summary = "\n".join(lines) + "\n"
+print("\n" + summary)
+
+summary_path = os.path.join(PROJECT_DIR, "p1_pure_csma_summary.txt")
+with open(summary_path, "w", encoding="utf-8") as f:
+    f.write(summary)
+
+# Upload results to GitHub so they can be read back for analysis
+result_files = ["p1_pure_csma_summary.txt"] + [f"p1_report_lock{l:g}dB.txt" for l in lock_values]
+try:
+    subprocess.run(["git", "pull", "--rebase", "--autostash", "origin", "main"], cwd=PROJECT_DIR, check=True)
+    subprocess.run(["git", "add", "-f"] + result_files, cwd=PROJECT_DIR, check=True)
+    msg = f"data: P1 pure CSMA results ({num_nodes} UAVs, {sim_time}s, lock {lock_values} dB)"
+    subprocess.run(["git", "commit", "-m", msg], cwd=PROJECT_DIR, check=True)
+    subprocess.run(["git", "push", "origin", "HEAD:main"], cwd=PROJECT_DIR, check=True)
+    print("✓ Results pushed to GitHub")
+except subprocess.CalledProcessError as e:
+    print(f"⚠ Git upload failed ({e}); results are still saved locally in {PROJECT_DIR}")

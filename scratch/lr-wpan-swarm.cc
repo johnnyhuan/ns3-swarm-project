@@ -47,6 +47,11 @@ const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels
 
 // Sidelink S-SPS (Semi-Persistent Scheduling) for Phase 1
 bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
+int g_p1ReselMin = 5;            // Sidelink reselection counter lower bound (cycles)
+int g_p1ReselMax = 15;           // Sidelink reselection counter upper bound (cycles)
+double g_p1PoolFrac = 0.25;      // Sidelink: pick randomly among this fraction of lowest-RSSI slots
+double g_p1SlotGuardUs = 20.0;   // Sidelink: guard at slot end; a TX still running at (slot end - guard) is cut
+static uint32_t g_p1SlotCutoffCount = 0; // Sidelink P1 transmissions forcibly cut at the slot deadline
 double g_p1SenseDecay = 0.8;     // Sidelink RSSI sensing: per-cycle decay of slot energy history (1.0 = equal weights, halved at reselection)
 double g_p1SlotUs = 300.0;       // Phase 1 Sidelink slot duration in us (default 300 us -> 33 slots in 10ms; slot start -> TX end = CCA 20 + turnaround 40 + BLE air time 88 = 148 us)
 double g_p1CcaThresholdDbm = -97.0; // Phase 1 CCA RSSI threshold in dBm (signal + noise; -97 = noise floor -101 + 4 dB margin for RSSI error)
@@ -535,6 +540,21 @@ private:
         m_device->GetMac()->McpsDataRequest(params, p);
     }
 
+    void EnforceP1SlotDeadline(uint32_t epoch) {
+        if (epoch != m_epoch) return;
+        PhyEnumeration st = g_dronePhyState[m_id];
+        if (st == IEEE_802_15_4_PHY_BUSY_TX || st == IEEE_802_15_4_PHY_TX_ON) {
+            g_p1SlotCutoffCount++;
+            if (g_verboseLog) {
+                std::cout << "[P1_SLOT_CUTOFF] Time: " << Simulator::Now().GetMicroSeconds() << "us, Drone: " << (int)m_id
+                          << " slot " << m_p1ClaimedSlot << " deadline reached, cutting TX\n";
+            }
+            if (m_csma) m_csma->Cancel();
+            m_device->GetPhy()->PlmeSetTRXStateRequest(IEEE_802_15_4_PHY_FORCE_TRX_OFF);
+            m_device->GetPhy()->PlmeSetTRXStateRequest(IEEE_802_15_4_PHY_RX_ON);
+        }
+    }
+
     void SampleP1SlotEnergy(int slot, uint32_t epoch) {
         if (epoch != m_epoch || g_droneCurrentChannel[m_id] != BROADCAST_CHANNEL) return;
         if (slot < 0 || slot >= (int)m_slotSensedEnergy.size()) return;
@@ -580,7 +600,7 @@ private:
                 // First time: pick any slot randomly
                 m_p1ClaimedSlot = uv->GetInteger(0, numP1Slots - 1);
                 // Draw initial reselection counter: uniform [5, 15] cycles
-                m_p1ReselCounter = uv->GetInteger(5, 15);
+                m_p1ReselCounter = uv->GetInteger(g_p1ReselMin, g_p1ReselMax);
             } else if (m_p1ReselCounter <= 0) {
                 // Reselection period reached: pick from the other slots with lowest sensed signal strength/energy
                 std::vector<std::pair<double, int>> candidateSlots;
@@ -592,14 +612,14 @@ private:
                 if (!candidateSlots.empty()) {
                     std::sort(candidateSlots.begin(), candidateSlots.end());
                     // Candidate pool: lowest 25% of energy slots (at least 1)
-                    int poolSize = std::max(1, (int)(candidateSlots.size() * 0.25));
+                    int poolSize = std::max(1, (int)(candidateSlots.size() * g_p1PoolFrac));
                     if (poolSize > (int)candidateSlots.size()) poolSize = candidateSlots.size();
                     int chosenIdx = uv->GetInteger(0, poolSize - 1);
                     m_p1ClaimedSlot = candidateSlots[chosenIdx].second;
                 }
                 
                 // Draw new reselection counter: uniform [5, 15] cycles
-                m_p1ReselCounter = uv->GetInteger(5, 15);
+                m_p1ReselCounter = uv->GetInteger(g_p1ReselMin, g_p1ReselMax);
 
                 // Legacy mode (decay = 1.0): equal weights inside the window, history halved here
                 if (g_p1SenseDecay >= 1.0) {
@@ -638,6 +658,12 @@ private:
                 if (s == m_p1ClaimedSlot) continue; // half-duplex: cannot sense while transmitting
                 Simulator::Schedule(MicroSeconds(s * g_p1SlotUs + 84.0), &SwarmSchedulerApp::SampleP1SlotEnergy, this, s, m_epoch);
             }
+
+            // Hard slot deadline: nothing of this node's beacon may remain on air after
+            // (slot end - guard). Normally TX ends at slot start + 128 us, so this only fires
+            // if a transmission was delayed; it is counted to verify nobody overruns its slot.
+            double deadlineUs = (m_p1ClaimedSlot + 1) * g_p1SlotUs - g_p1SlotGuardUs;
+            Simulator::Schedule(MicroSeconds(deadlineUs), &SwarmSchedulerApp::EnforceP1SlotDeadline, this, m_epoch);
         }
         if (m_id == 0) {
             Simulator::Schedule(MicroSeconds(g_phase1DurationUs), &SwarmSchedulerApp::EvaluatePhase1Epoch, this, m_epoch);
@@ -1435,6 +1461,9 @@ void PrintGroundTruthReport() {
     if (g_enableP1Sidelink) {
         int numP1Slots = std::max(1, (int)(g_phase1DurationUs / g_p1SlotUs));
         ss << "Slotted Configuration                             : Slot " << g_p1SlotUs << " us (" << numP1Slots << " slots in " << g_p1DurationMs << "ms)\n";
+        ss << "Sidelink Sensing / Reselection                    : decay " << g_p1SenseDecay << ", pool " << g_p1PoolFrac
+           << ", counter " << g_p1ReselMin << "-" << g_p1ReselMax << " cycles\n";
+        ss << "P1 Slot Deadline Cutoffs                          : " << g_p1SlotCutoffCount << " (guard " << g_p1SlotGuardUs << " us)\n";
     }
     ss << "Total Expected P1 Neighbor Links (Epochs x Top-K) : " << g_p1TotalTargetLinks << "\n";
     double succPct = (g_p1TotalTargetLinks > 0) ? (100.0 * g_p1ReasonCounts[REASON_SUCCESS] / g_p1TotalTargetLinks) : 0;
@@ -1734,6 +1763,10 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);
     cmd.AddValue("simTime", "Total simulation duration in seconds (default 10.0)", g_simTime);
     cmd.AddValue("enableP1Sidelink", "Enable Sidelink-inspired Semi-Persistent Scheduling for Phase 1 (default false)", g_enableP1Sidelink);
+    cmd.AddValue("p1ReselMin", "Sidelink reselection counter min cycles (default 5)", g_p1ReselMin);
+    cmd.AddValue("p1ReselMax", "Sidelink reselection counter max cycles (default 15)", g_p1ReselMax);
+    cmd.AddValue("p1PoolFrac", "Sidelink candidate pool: fraction of lowest-RSSI slots (default 0.25)", g_p1PoolFrac);
+    cmd.AddValue("p1SlotGuardUs", "Sidelink slot-end guard; TX still on air at slot end - guard is cut (default 20)", g_p1SlotGuardUs);
     cmd.AddValue("p1SenseDecay", "Sidelink per-cycle decay of sensed slot energy (default 0.8; 1.0 = equal weights)", g_p1SenseDecay);
     cmd.AddValue("p1SlotUs", "Phase 1 Sidelink slot duration in microseconds (default 300.0)", g_p1SlotUs);
     cmd.AddValue("p1AvoidDist", "RX Deafness defense distance in meters", g_p1AvoidDist);

@@ -27,6 +27,7 @@ ap.add_argument("--slots", type=float, nargs="+", default=[150.0])
 ap.add_argument("--seeds", type=int, nargs="+", default=[1, 2, 3])
 ap.add_argument("--decays", type=float, nargs="+", default=[1.0, 0.8],
                 help="Sidelink per-cycle sensing decay values (1.0 = equal weights)")
+ap.add_argument("--no-csma", action="store_true", help="skip the CSMA baseline")
 a = ap.parse_args()
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -50,7 +51,7 @@ REASONS = ["SUCCESS", "SENDER_CSMA_ABORT", "RX_DEAFNESS_BUSY_TX",
            "RADIO_TURNAROUND_BUSY", "PAYLOAD_INTERFERENCE_CORRUPTION"]
 BRACKETS = ["0-10m", "10-20m", "20-30m", "30-40m", "40-50m"]
 
-MODES = [("CSMA", "csma", "--enableP1Sidelink=false")] + [
+MODES = ([] if a.no_csma else [("CSMA", "csma", "--enableP1Sidelink=false")]) + [
     (f"SL{s:g} d{d:g}", f"sidelink_{s:g}us_decay{d:g}",
      f"--enableP1Sidelink=true --p1SlotUs={s} --p1SenseDecay={d}")
     for s in a.slots for d in a.decays
@@ -71,6 +72,8 @@ def parse(text):
     for r in REASONS[1:]:
         m = re.search(rf"\b{r}\s*:\s*(\d+)", text)
         row[r] = int(m.group(1)) if m else 0
+    m = re.search(r"P1 Slot Deadline Cutoffs\s*:\s*(\d+)", text)
+    row["CUTOFF"] = int(m.group(1)) if m else 0
     for b in BRACKETS:
         m = re.search(rf"^\s*{b}\s*\|\s*(\d+)\s*\|\s*(\d+)", text, re.M)
         row[b] = (100.0 * int(m.group(2)) / int(m.group(1))) if m and int(m.group(1)) else float("nan")
@@ -123,6 +126,7 @@ lines.append(f"{'P1 PRR (%) min..max':34s}" + "".join(
 lines.append(f"{'Target links / seed':34s}" + "".join(f"{mean(l, 'TOTAL'):>{W}.0f}" for l in labels))
 for r in REASONS:
     lines.append(f"{r:34s}" + "".join(f"{mean(l, r):>{W}.0f}" for l in labels))
+lines.append(f"{'P1 slot deadline cutoffs (total)':34s}" + "".join(f"{sum(r['CUTOFF'] for r in runs[l]):>{W}d}" for l in labels))
 lines.append("-" * len(header))
 for b in BRACKETS:
     lines.append(f"{'PRR ' + b + ' (%)':34s}" + "".join(f"{mean(l, b):>{W}.1f}" for l in labels))

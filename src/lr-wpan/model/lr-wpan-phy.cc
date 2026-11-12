@@ -998,20 +998,29 @@ LrWpanPhy::PlmeSetTRXStateRequest(PhyEnumeration state)
                 m_currentRxPacket.second = true;
                 m_isRxCanceled = true;
             }
+            bool txTerminated = false;
             if (m_trxState == IEEE_802_15_4_PHY_BUSY_TX)
             {
                 NS_LOG_DEBUG("force TRX_OFF, terminate transmission");
                 m_currentTxPacket.second = true;
                 m_pdDataRequest.Cancel();
                 m_currentTxPacket.first = nullptr;
-                if (!m_pdDataConfirmCallback.IsNull())
-                {
-                    m_pdDataConfirmCallback(IEEE_802_15_4_PHY_UNSPECIFIED);
-                }
+                txTerminated = true;
             }
             ChangeTrxState(IEEE_802_15_4_PHY_TRX_OFF);
             // Clear any other state
             m_trxStatePending = IEEE_802_15_4_PHY_IDLE;
+            if (txTerminated)
+            {
+                // The MAC learns about the aborted frame through PdDataConfirm and returns to
+                // MAC_IDLE by itself. Do NOT also send a SUCCESS TRX confirm: the MAC is still in
+                // MAC_SENDING with its packet already released and would hit NS_ASSERT(m_txPkt).
+                if (!m_pdDataConfirmCallback.IsNull())
+                {
+                    m_pdDataConfirmCallback(IEEE_802_15_4_PHY_UNSPECIFIED);
+                }
+                return;
+            }
         }
         if (!m_plmeSetTRXStateConfirmCallback.IsNull())
         {

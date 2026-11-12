@@ -53,6 +53,12 @@ double g_p1PoolFrac = 0.25;      // Sidelink: pick randomly among this fraction 
 double g_p1SlotGuardUs = 0.0;    // Sidelink: cutoff at (slot end - guard); default 0 = exactly at the slot boundary
 double g_p1SenseDecay = 0.8;     // Sidelink RSSI sensing: per-cycle decay of slot energy history (1.0 = equal weights, halved at reselection)
 double g_p1SlotUs = 300.0;       // Phase 1 Sidelink slot duration in us (default 300 us -> 33 slots in 10ms; slot start -> TX end = CCA 20 + turnaround 40 + BLE air time 88 = 148 us)
+// Sidelink slot grid starts after the radio is back in RX on the broadcast channel:
+// the channel switch at cycle start turns the radio off, RX_ON takes 40 us.
+const double P1_SLOT_OFFSET_US = 40.0;
+static int NumP1Slots() {
+    return std::max(1, (int)((g_phase1DurationUs - P1_SLOT_OFFSET_US) / g_p1SlotUs));
+}
 double g_p1CcaThresholdDbm = -97.0; // Phase 1 CCA RSSI threshold in dBm (signal + noise; -97 = noise floor -101 + 4 dB margin for RSSI error)
 double g_rxSensitivityDbm = -95.0;   // BLE 5.4 LE 2M receiver sensitivity in dBm (noise floor = sensitivity - lock threshold)
 double g_preambleLockDb = 6.0;        // Preamble / sync-word lock SINR threshold in dB (BLE 5.4 LE 2M C/I: +6.0 dB)
@@ -338,9 +344,9 @@ public:
             // RxBegin fires at preamble lock, i.e. a fixed latency after the sender's slot start:
             // RX->TX turnaround (40 us) + BLE sync window (24 us) = 64 us (Sidelink skips CCA).
             // Map back to the sender's slot; without this, packets were booked into slot s+1.
-            double rxLatencyUs = 40.0 + m_device->GetPhy()->GetSyncDuration().GetMicroSeconds();
+            double rxLatencyUs = P1_SLOT_OFFSET_US + 40.0 + m_device->GetPhy()->GetSyncDuration().GetMicroSeconds();
             double timeInP1Us = (Simulator::Now() - m_epochStartTime).GetMicroSeconds() - rxLatencyUs;
-            int numP1Slots = std::max(1, (int)(g_phase1DurationUs / g_p1SlotUs));
+            int numP1Slots = NumP1Slots();
             int slotIdx = (timeInP1Us < 0.0) ? -1 : (int)(timeInP1Us / g_p1SlotUs);
             if (slotIdx >= 0 && slotIdx < numP1Slots) {
                 m_p1OccupiedSlotsThisEpoch.insert(slotIdx);
@@ -612,7 +618,7 @@ private:
             Simulator::Schedule(MicroSeconds(randomDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
         } else {
             // Sidelink S-SPS mode for Phase 1
-            int numP1Slots = std::max(1, (int)(g_phase1DurationUs / g_p1SlotUs));
+            int numP1Slots = NumP1Slots();
 
             // Ensure slot statistics vectors are properly sized
             if ((int)m_slotSensedEnergy.size() != numP1Slots) {
@@ -675,19 +681,19 @@ private:
             // before the next slot. Jitter may only use what is left above that guard.
             double maxJitterUs = std::max(0.0, std::min(15.0, g_p1SlotUs - 148.0));
             double jitterUs = (maxJitterUs > 0.0) ? uv->GetValue(0.0, maxJitterUs) : 0.0;
-            double txDelayUs = m_p1ClaimedSlot * g_p1SlotUs + jitterUs;
+            double txDelayUs = P1_SLOT_OFFSET_US + m_p1ClaimedSlot * g_p1SlotUs + jitterUs;
 
             Simulator::Schedule(MicroSeconds(txDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
 
             // Hard slot boundary: whatever is still on air at the end of my slot is cut off
-            Simulator::Schedule(MicroSeconds((m_p1ClaimedSlot + 1) * g_p1SlotUs - g_p1SlotGuardUs),
+            Simulator::Schedule(MicroSeconds(P1_SLOT_OFFSET_US + (m_p1ClaimedSlot + 1) * g_p1SlotUs - g_p1SlotGuardUs),
                                 &SwarmSchedulerApp::EndP1SlotCutoff, this, m_epoch, m_p1ClaimedSlot);
 
             // RSSI sensing (3GPP S-SPS style): sample the received energy in the middle of every
             // other slot's transmission window (40 + 44 us after slot start).
             for (int s = 0; s < numP1Slots; s++) {
                 if (s == m_p1ClaimedSlot) continue; // half-duplex: cannot sense while transmitting
-                Simulator::Schedule(MicroSeconds(s * g_p1SlotUs + 84.0), &SwarmSchedulerApp::SampleP1SlotEnergy, this, s, m_epoch);
+                Simulator::Schedule(MicroSeconds(P1_SLOT_OFFSET_US + s * g_p1SlotUs + 84.0), &SwarmSchedulerApp::SampleP1SlotEnergy, this, s, m_epoch);
             }
 
         }
@@ -957,9 +963,9 @@ private:
                     }
                     
                     // Attempt immediate migration to a later free slot in current epoch
-                    int numP1Slots = std::max(1, (int)(g_phase1DurationUs / g_p1SlotUs));
+                    int numP1Slots = NumP1Slots();
                     double timeInP1Us = (Simulator::Now() - m_epochStartTime).GetMicroSeconds();
-                    int currentSlot = (int)(timeInP1Us / g_p1SlotUs);
+                    int currentSlot = (int)((timeInP1Us - P1_SLOT_OFFSET_US) / g_p1SlotUs);
                     
                     std::vector<int> laterFreeSlots;
                     for (int s = currentSlot + 1; s < numP1Slots; s++) {
@@ -973,7 +979,7 @@ private:
                         m_p1ClaimedSlot = laterFreeSlots[idx];
                         m_p1ConflictOccurred = false;
                         
-                        double nextTxUs = m_p1ClaimedSlot * g_p1SlotUs;
+                        double nextTxUs = P1_SLOT_OFFSET_US + m_p1ClaimedSlot * g_p1SlotUs;
                         double delayUs = nextTxUs - timeInP1Us;
                         if (delayUs > 50.0) {
                             if (g_verboseLog) {
@@ -1495,7 +1501,7 @@ void PrintGroundTruthReport() {
         ss << "P1 Beacons Not Started Within Slot                : " << g_p1LateStartCount << "\n";
     }
     if (g_enableP1Sidelink) {
-        int numP1Slots = std::max(1, (int)(g_phase1DurationUs / g_p1SlotUs));
+        int numP1Slots = NumP1Slots();
         ss << "Slotted Configuration                             : Slot " << g_p1SlotUs << " us (" << numP1Slots << " slots in " << g_p1DurationMs << "ms)\n";
         ss << "Sidelink Sensing / Reselection                    : decay " << g_p1SenseDecay << ", pool " << g_p1PoolFrac
            << ", counter " << g_p1ReselMin << "-" << g_p1ReselMax << " cycles\n";

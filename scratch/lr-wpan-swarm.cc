@@ -556,8 +556,13 @@ private:
         auto uidsIt = g_p1TxUidsInEpoch.find({epoch, m_id});
         uint64_t lastUid = (uidsIt != g_p1TxUidsInEpoch.end() && !uidsIt->second.empty()) ? uidsIt->second.back() : 0;
 
-        if (st == IEEE_802_15_4_PHY_BUSY_TX || st == IEEE_802_15_4_PHY_TX_ON) {
-            // Still transmitting (or about to) at the slot boundary: cut it off and go back to RX
+        // Only a beacon that is really on air counts. After a normal TX (ends at 128 us) the radio
+        // is still in TX_ON for the 40 us TX->RX turnaround, which must NOT be treated as an overrun
+        // (forcing the PHY there broke the MAC state machine).
+        bool onAir = (st == IEEE_802_15_4_PHY_BUSY_TX) && lastUid != 0 &&
+                     g_packetTxStartTime.count(lastUid) > 0;
+        if (onAir) {
+            // Still transmitting at the slot boundary: cut it off and go back to RX
             g_p1SlotCutoffCount++;
             g_p1DroneCutoffInEpoch[epoch][m_id] = true;
             if (lastUid != 0) g_p1CutoffUids.insert(lastUid);
@@ -565,7 +570,6 @@ private:
                 std::cout << "[P1_SLOT_CUTOFF] Time: " << now << "ms, Drone: " << (int)m_id
                           << " slot " << slot << " ended while still transmitting -> forced TRX_OFF\n";
             }
-            if (m_csma) m_csma->Cancel();
             m_device->GetPhy()->PlmeSetTRXStateRequest(IEEE_802_15_4_PHY_FORCE_TRX_OFF);
             m_device->GetPhy()->PlmeSetTRXStateRequest(IEEE_802_15_4_PHY_RX_ON);
         } else if (lastUid != 0 && !g_p1TxStartedUids.count(lastUid)) {

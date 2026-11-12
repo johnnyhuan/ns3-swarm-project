@@ -1,0 +1,14 @@
+P1 pure CSMA-CA | 100 UAVs | simTime 3.0s | rngRun=1
+==============================================================================
+Metric                                 lock 6 dB    lock -5 dB
+--------------------------------------------------------------
+Target links (Top-K in 50m)                72009         72009
+P1 PRR (%)                                 69.10         75.90
+SUCCESS                                    49791         54645
+SENDER_CSMA_ABORT                           1506          1791
+RX_DEAFNESS_BUSY_TX                         1399          1525
+PREAMBLE_COLLISION_BUSY_RX                  1869         13502
+PREAMBLE_LOW_SINR                          17442           544
+RADIO_TURNAROUND_BUSY                          0             0
+PAYLOAD_INTERFERENCE_CORRUPTION                2             2
+==============================================================================

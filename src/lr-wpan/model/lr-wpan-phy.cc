@@ -203,6 +203,12 @@ LrWpanPhy::GetTypeId()
                           DoubleValue(6.0),
                           MakeDoubleAccessor(&LrWpanPhy::m_captureMarginDbm),
                           MakeDoubleChecker<double>())
+            .AddAttribute("PreambleLockThreshold",
+                          "SINR in dB required at the end of the preamble to lock onto a "
+                          "signal (BLE 5.4 LE 2M co-channel C/I).",
+                          DoubleValue(6.0),
+                          MakeDoubleAccessor(&LrWpanPhy::m_preambleLockThresholdDb),
+                          MakeDoubleChecker<double>())
             .AddTraceSource("PhyRxCapture",
                             "Trace source indicating a packet has captured the receiver, "
                             "preempting an ongoing weaker packet reception.",
@@ -215,7 +221,8 @@ LrWpanPhy::LrWpanPhy()
     : m_edRequest(),
       m_setTRXState(),
       m_enableCapture(true),
-      m_captureMarginDbm(6.0)
+      m_captureMarginDbm(6.0),
+      m_preambleLockThresholdDb(6.0)
 {
     m_trxState = IEEE_802_15_4_PHY_TRX_OFF;
     m_trxStatePending = IEEE_802_15_4_PHY_IDLE;
@@ -496,8 +503,9 @@ LrWpanPhy::EndPreamble(Ptr<LrWpanSpectrumSignalParameters> lrWpanRxParams)
                                                      m_phyPIBAttributes.phyCurrentChannel);
 
         // Figure out if packet is decodable based on SINR.
-        // Preamble & Sync Word Correlator acquisition threshold (Access Address correlation sensitivity: > -5 dB)
-        if (10 * log10(sinr) > -5)
+        // Preamble & Sync Word lock: SINR must exceed the BLE 5.4 LE 2M co-channel C/I
+        // (default +6 dB). A weaker signal can no longer lock while a stronger one overlaps.
+        if (10 * log10(sinr) > m_preambleLockThresholdDb)
         {
             ChangeTrxState(IEEE_802_15_4_PHY_BUSY_RX);
 
@@ -550,7 +558,7 @@ LrWpanPhy::EndPreamble(Ptr<LrWpanSpectrumSignalParameters> lrWpanRxParams)
                     LrWpanSpectrumValueHelper::TotalAvgPower(interferenceAndNoise,
                                                              m_phyPIBAttributes.phyCurrentChannel);
 
-                if (diffDbm >= m_captureMarginDbm && 10.0 * log10(sinr) > -5.0)
+                if (diffDbm >= m_captureMarginDbm && 10.0 * log10(sinr) > m_preambleLockThresholdDb)
                 {
                     captured = true;
                     Ptr<Packet> currPacket = m_currentRxPacket.first->packetBurst->GetPackets().front();
@@ -2111,6 +2119,18 @@ double
 LrWpanPhy::GetCaptureMargin() const
 {
     return m_captureMarginDbm;
+}
+
+void
+LrWpanPhy::SetPreambleLockThreshold(double thresholdDb)
+{
+    m_preambleLockThresholdDb = thresholdDb;
+}
+
+double
+LrWpanPhy::GetPreambleLockThreshold() const
+{
+    return m_preambleLockThresholdDb;
 }
 
 } // namespace lrwpan

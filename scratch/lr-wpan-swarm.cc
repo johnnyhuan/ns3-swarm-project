@@ -51,6 +51,7 @@ double g_p1SlotUs = 300.0;       // Phase 1 Sidelink slot duration in microsecon
 double g_p1CcaThresholdDbm = -96.58; // Phase 1 CSMA CCA Energy Detection Threshold in dBm (default: -96.58, standard 802.15.4)
 double g_p1CaptureThresholdDb = 6.0; // Phase 1 Sidelink Slotted SINR demodulation threshold in dB (Strict Bluetooth 5.4 LE 2M C/I: +6.0 dB)
 double g_phyCaptureMarginDb = 6.0;    // PHY layer capture margin in dB (Strict Bluetooth 5.4 LE 2M: +6.0 dB)
+double g_preambleLockDb = 6.0;        // Preamble / sync-word lock SINR threshold in dB (BLE 5.4 LE 2M C/I: +6.0 dB)
 bool g_enablePhyCapture = true;      // Phase 1 physical layer capture effect switch (default: true)
 bool g_enableP2Capture = false;      // Phase 2 physical layer capture effect switch (default: false)
 bool g_verboseLog = false;       // Verbose per-packet log switch (default: false for high-speed simulation at scale)
@@ -284,6 +285,7 @@ public:
         Ptr<LrWpanPhy> phy = m_device->GetPhy();
         phy->SetCaptureEnabled(g_enablePhyCapture);
         phy->SetCaptureMargin(g_phyCaptureMarginDb);
+        phy->SetPreambleLockThreshold(g_preambleLockDb);
         g_dronePhyState[m_id] = IEEE_802_15_4_PHY_TRX_OFF;
         g_droneReceivingUid[m_id] = 0;
         g_droneCurrentChannel[m_id] = BROADCAST_CHANNEL;
@@ -1431,6 +1433,7 @@ void PrintGroundTruthReport() {
     ss << "MAC Scheme                                        : " << (g_enableP1Sidelink ? "Autonomous Slotted MAC (No CSMA)" : "Continuous Random Delay + CSMA-CA") << "\n";
     ss << "Phase 1 PHY Capture                               : " << (g_enablePhyCapture ? ("ENABLED (Margin: " + std::to_string((int)g_phyCaptureMarginDb) + " dB)") : "DISABLED (Pure Collision)") << "\n";
     ss << "Phase 2 PHY Capture                               : " << (g_enableP2Capture ? ("ENABLED (Margin: " + std::to_string((int)g_phyCaptureMarginDb) + " dB)") : "DISABLED (No Capture Event)") << "\n";
+    ss << "Preamble Lock SINR Threshold                      : " << g_preambleLockDb << " dB\n";
     if (g_enableP1Sidelink) {
         int numP1Slots = std::max(1, (int)(g_phase1DurationUs / g_p1SlotUs));
         ss << "Slotted Configuration                             : Slot " << g_p1SlotUs << " us (" << numP1Slots << " slots in " << g_p1DurationMs << "ms)\n";
@@ -1721,7 +1724,8 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p1CcaThresholdDbm", "Phase 1 CSMA CCA Energy Detection Threshold in dBm (-106.58 to -80.0, default -96.58)", g_p1CcaThresholdDbm);
     cmd.AddValue("p1CaptureThresholdDb", "Phase 1 Sidelink Slotted SINR capture threshold in dB (e.g. -5.0, 0.0, 3.0, 6.0, default: 6.0)", g_p1CaptureThresholdDb);
     cmd.AddValue("phyCaptureMarginDb", "PHY layer capture margin in dB (power difference needed to preempt, default: 6.0)", g_phyCaptureMarginDb);
-    cmd.AddValue("enableCapture", "Enable physical layer capture effect (default: true)", g_enablePhyCapture);
+    cmd.AddValue("preambleLockDb", "Preamble lock SINR threshold in dB (BLE 5.4 LE 2M C/I, default: 6.0; old behaviour: -5.0)", g_preambleLockDb);
+    cmd.AddValue("enableCapture","Enable physical layer capture effect (default: true)", g_enablePhyCapture);
     cmd.AddValue("enablePhyCapture", "Enable physical layer capture effect (default: true)", g_enablePhyCapture);
     cmd.AddValue("enableP2Capture", "Enable capture effect in Phase 2 (default: false)", g_enableP2Capture);
     cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);

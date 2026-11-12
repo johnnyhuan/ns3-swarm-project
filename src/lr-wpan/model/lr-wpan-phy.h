@@ -375,6 +375,20 @@ class LrWpanPhy : public SpectrumPhy
     double GetCaptureMargin() const;
 
     /**
+     * Set the preamble / sync-word lock threshold in dB.
+     * At the end of the preamble the receiver locks onto a signal only if its
+     * SINR (against all other concurrent signals + noise) exceeds this value.
+     * @param thresholdDb SINR lock threshold in dB
+     */
+    void SetPreambleLockThreshold(double thresholdDb);
+
+    /**
+     * Get the preamble / sync-word lock threshold in dB.
+     * @return SINR lock threshold in dB
+     */
+    double GetPreambleLockThreshold() const;
+
+    /**
      * Notify the SpectrumPhy instance of an incoming waveform.
      *
      * @param params the SpectrumSignalParameters associated with the incoming waveform
@@ -1041,6 +1055,11 @@ class LrWpanPhy : public SpectrumPhy
      * margin above the currently received packet will preempt and capture the receiver.
      */
     double m_captureMarginDbm;
+
+    /**
+     * Preamble / sync-word lock SINR threshold in dB (BLE 5.4 LE 2M co-channel C/I).
+     */
+    double m_preambleLockThresholdDb;
 };
 
 } // namespace lrwpan

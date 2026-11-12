@@ -1,0 +1,59 @@
+
+========================================================================================
+       🔬 PHASE 1 PHYSICAL & MAC GROUND TRUTH ANALYSIS (Top-K within 50m) 🔬           
+========================================================================================
+MAC Scheme                                        : Continuous Random Delay + CSMA-CA
+Post-lock Re-sync (Capture)                       : REMOVED (BLE chips never re-sync after Access Address lock)
+Preamble Lock SINR Threshold                      : 6 dB
+Rx Sensitivity / Noise Floor                      : -95 dBm / -101 dBm
+Total Expected P1 Neighbor Links (Epochs x Top-K) : 72009
+  ✅ Successfully Received (Delivered)            : 60463 (84.0%)
+  ❌ Failed Link Receptions (Dropped/Missed)      : 11546 (16.0%)
+----------------------------------------------------------------------------------------
+EXACT PHYSICAL ROOT CAUSE BREAKDOWN (Zero Estimation / Direct From ns-3 State Machine):
+  SENDER_CSMA_ABORT                      :   243 (  2.1% of fails |   0.3% of all links)
+  RX_DEAFNESS_BUSY_TX                    :   782 (  6.8% of fails |   1.1% of all links)
+  PREAMBLE_COLLISION_BUSY_RX             :  3437 ( 29.8% of fails |   4.8% of all links)
+  PREAMBLE_LOW_SINR                      :  7084 ( 61.4% of fails |   9.8% of all links)
+  RADIO_TURNAROUND_BUSY                  :     0 (  0.0% of fails |   0.0% of all links)
+  PAYLOAD_INTERFERENCE_CORRUPTION        :     0 (  0.0% of fails |   0.0% of all links)
+========================================================================================
+
+--- Distance Bracket Breakdown (0-10m, 10-20m, 20-30m, 30-40m, 40-50m) ---
+Bracket   | Total | Success | CSMA Abort | RX Deafness | Preamble Coll | Low SINR | Turnaround | Payload Drop
+--------------------------------------------------------------------------------------------------------
+ 0-10m    |  3026 |    2893 |          9 |          31 |            74 |       19 |          0 |            0
+10-20m    | 17227 |   16040 |         73 |         179 |           467 |      468 |          0 |            0
+20-30m    | 28617 |   24822 |         96 |         336 |          1052 |     2311 |          0 |            0
+30-40m    | 17369 |   13260 |         51 |         190 |          1181 |     2687 |          0 |            0
+40-50m    |  5770 |    3448 |         14 |          46 |           663 |     1599 |          0 |            0
+========================================================================================================
+
+📡 PHYSICAL RF SIGNAL PROOFS & SWARM DENSITY (Averages & Evidence) [PHASE 1]:
+  • Airspace Dimensions & Topology      : 200.0m x 200.0m x 80.0m
+  • Mean 50m Neighbors per UAV (Density): 13.04 UAVs
+  • UAVs with >= 5 Neighbors in 50m     : 97.0%
+  • Preamble Lock SINR Threshold         : 6.0 dB
+  • Total Power Capture Events Triggered : 0 (post-lock re-sync removed)
+  • Delivered Links Mean SINR           : 14.5 dB (Threshold: >= 6.0 dB)
+  • Low SINR Dropped Links Mean SINR    : 2.3 dB (Threshold: < 6.0 dB)
+  • Low SINR Mean Received Power (Prx)  : -87.6 dBm
+  • Low SINR Mean Interference Power (I): -90.7 dBm
+========================================================================================================
+
+========================================================================================
+       🎯 STEADY-STATE CONVERGED ANALYSIS (Last 2.0s: t = 1.0s ~ 3.0s) 🎯
+========================================================================================
+Steady-State P1 Target Links (Epoch 49+)           : 48335
+  ✅ Successfully Received (Delivered)            : 40521 (83.8%)
+  ❌ Failed Link Receptions (Dropped/Missed)      : 7814 (16.2%)
+----------------------------------------------------------------------------------------
+STEADY-STATE EXACT PHYSICAL ROOT CAUSE BREAKDOWN:
+  SENDER_CSMA_ABORT                      :   141 (  1.8% of fails |   0.3% of all links)
+  RX_DEAFNESS_BUSY_TX                    :   554 (  7.1% of fails |   1.1% of all links)
+  PREAMBLE_COLLISION_BUSY_RX             :  2253 ( 28.8% of fails |   4.7% of all links)
+  PREAMBLE_LOW_SINR                      :  4866 ( 62.3% of fails |  10.1% of all links)
+  RADIO_TURNAROUND_BUSY                  :     0 (  0.0% of fails |   0.0% of all links)
+  PAYLOAD_INTERFERENCE_CORRUPTION        :     0 (  0.0% of fails |   0.0% of all links)
+========================================================================================
+

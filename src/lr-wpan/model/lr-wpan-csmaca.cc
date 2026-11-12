@@ -439,7 +439,20 @@ LrWpanCsmaCa::RequestCCA()
 {
     NS_LOG_FUNCTION(this);
     m_ccaRequestRunning = true;
+    if (m_skipCca)
+    {
+        // No listen-before-talk: report an idle channel right away (no CCA time spent)
+        m_requestCcaEvent =
+            Simulator::ScheduleNow(&LrWpanCsmaCa::PlmeCcaConfirm, this, IEEE_802_15_4_PHY_IDLE);
+        return;
+    }
     m_mac->GetPhy()->PlmeCcaRequest();
+}
+
+void
+LrWpanCsmaCa::SetSkipCca(bool skip)
+{
+    m_skipCca = skip;
 }
 
 void

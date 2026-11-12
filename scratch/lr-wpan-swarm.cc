@@ -322,10 +322,9 @@ public:
 
         if (g_enableP1Sidelink && g_droneCurrentChannel[m_id] == BROADCAST_CHANNEL) {
             // RxBegin fires at preamble lock, i.e. a fixed latency after the sender's slot start:
-            // CCA (20 us) + RX->TX turnaround (40 us) + BLE sync window (24 us) = 84 us.
+            // RX->TX turnaround (40 us) + BLE sync window (24 us) = 64 us (Sidelink skips CCA).
             // Map back to the sender's slot; without this, packets were booked into slot s+1.
-            double rxLatencyUs = m_device->GetPhy()->GetCcaDuration().GetMicroSeconds() + 40.0 +
-                                 m_device->GetPhy()->GetSyncDuration().GetMicroSeconds();
+            double rxLatencyUs = 40.0 + m_device->GetPhy()->GetSyncDuration().GetMicroSeconds();
             double timeInP1Us = (Simulator::Now() - m_epochStartTime).GetMicroSeconds() - rxLatencyUs;
             int numP1Slots = std::max(1, (int)(g_phase1DurationUs / g_p1SlotUs));
             int slotIdx = (timeInP1Us < 0.0) ? -1 : (int)(timeInP1Us / g_p1SlotUs);
@@ -336,7 +335,7 @@ public:
                     m_slotPacketCount.assign(numP1Slots, 0);
                 }
                 m_slotPacketCount[slotIdx]++;
-                m_slotSensedEnergy[slotIdx] += 1.0;
+                // (slot energy is now measured by RSSI sampling in SampleP1SlotEnergy)
             }
         }
     }
@@ -535,6 +534,17 @@ private:
         m_device->GetMac()->McpsDataRequest(params, p);
     }
 
+    void SampleP1SlotEnergy(int slot, uint32_t epoch) {
+        if (epoch != m_epoch || g_droneCurrentChannel[m_id] != BROADCAST_CHANNEL) return;
+        if (slot < 0 || slot >= (int)m_slotSensedEnergy.size()) return;
+        PhyEnumeration st = g_dronePhyState[m_id];
+        if (st != IEEE_802_15_4_PHY_RX_ON && st != IEEE_802_15_4_PHY_BUSY_RX) return; // radio not listening
+        // RSSI = all received signals + noise floor (linear mW); accumulated per slot
+        double signalMw = std::pow(10.0, m_device->GetPhy()->GetCurrentSignalPsd() / 10.0);
+        double noiseMw = std::pow(10.0, (g_rxSensitivityDbm - g_preambleLockDb) / 10.0);
+        m_slotSensedEnergy[slot] += signalMw + noiseMw;
+    }
+
     void ScheduleCycle() {
         m_epoch++;
         m_monitorList.clear();
@@ -544,6 +554,8 @@ private:
 
         // Phase 1 (Broadcast): Configurable range
         SwitchChannelAndPower(BROADCAST_CHANNEL, (int8_t)g_p1TxPower);
+        // Sidelink S-SPS transmits in its slot without listen-before-talk
+        if (m_csma) m_csma->SetSkipCca(g_enableP1Sidelink);
         
         if (!g_enableP1Sidelink) {
             Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
@@ -602,13 +614,20 @@ private:
             // Record claimed slot in global registry for Phase 1 Sidelink
             g_p1DroneClaimedSlot[m_epoch][m_id] = m_p1ClaimedSlot;
 
-            // Micro-jitter inside the claimed slot bounded so that transmission + PLL turnaround (284us) does not spill past slot
-            // Slot budget: CCA 20 + turnaround 40 + BLE air time 88 + TX->RX turnaround 40 = 188 us
-            double maxJitterUs = std::max(0.0, std::min(15.0, g_p1SlotUs - 188.0));
+            // Slot timeline (no CCA in Sidelink): RX->TX 0-40 us, TX 40-128 us, then >= 20 us guard
+            // before the next slot. Jitter may only use what is left above that guard.
+            double maxJitterUs = std::max(0.0, std::min(15.0, g_p1SlotUs - 148.0));
             double jitterUs = (maxJitterUs > 0.0) ? uv->GetValue(0.0, maxJitterUs) : 0.0;
             double txDelayUs = m_p1ClaimedSlot * g_p1SlotUs + jitterUs;
 
             Simulator::Schedule(MicroSeconds(txDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
+
+            // RSSI sensing (3GPP S-SPS style): sample the received energy in the middle of every
+            // other slot's transmission window (40 + 44 us after slot start).
+            for (int s = 0; s < numP1Slots; s++) {
+                if (s == m_p1ClaimedSlot) continue; // half-duplex: cannot sense while transmitting
+                Simulator::Schedule(MicroSeconds(s * g_p1SlotUs + 84.0), &SwarmSchedulerApp::SampleP1SlotEnergy, this, s, m_epoch);
+            }
         }
         if (m_id == 0) {
             Simulator::Schedule(MicroSeconds(g_phase1DurationUs), &SwarmSchedulerApp::EvaluatePhase1Epoch, this, m_epoch);
@@ -711,6 +730,9 @@ private:
     }
 
     void ComputeSchedule() {
+        // Phase 2 keeps its normal CCA behaviour
+        if (m_csma) m_csma->SetSkipCca(false);
+
         // 第一步：過濾出 50m 避撞安全監控半徑內的鄰機 (固定以 50m / -98 dBm 評估或最近鄰居)
         double safetyRssi = g_p1TxPower - 46.6777 - 30.0 * std::log10(50.0); // -97.65 dBm ~ -98 dBm
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();

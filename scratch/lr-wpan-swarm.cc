@@ -122,6 +122,7 @@ enum P1DropCategory {
     REASON_PREAMBLE_LOW_SINR,
     REASON_RADIO_TURNAROUND_BUSY,
     REASON_PAYLOAD_INTERFERENCE_CORRUPTION,
+    REASON_SLOT_BOUNDARY_CUTOFF,
     NUM_P1_REASONS
 };
 
@@ -132,8 +133,16 @@ static const char* P1ReasonStrings[] = {
     "PREAMBLE_COLLISION_BUSY_RX",
     "PREAMBLE_LOW_SINR",
     "RADIO_TURNAROUND_BUSY",
-    "PAYLOAD_INTERFERENCE_CORRUPTION"
+    "PAYLOAD_INTERFERENCE_CORRUPTION",
+    "SLOT_BOUNDARY_CUTOFF"
 };
+
+// Phase 1 Sidelink slot-boundary enforcement
+static uint32_t g_p1SlotCutoffCount = 0;   // transmissions still on air at slot end -> forcibly cut
+static uint32_t g_p1LateStartCount = 0;    // beacons that had not even started by slot end
+static std::set<uint64_t> g_p1CutoffUids;
+static std::set<uint64_t> g_p1TxStartedUids;  // P1 beacons that actually started on air
+static std::map<uint32_t, std::map<uint16_t, bool>> g_p1DroneCutoffInEpoch;
 
 struct P1PacketMeta {
     uint16_t senderId;
@@ -415,6 +424,7 @@ public:
     void NotifyPhyTxBegin(Ptr<const Packet> p) {
         uint64_t uid = p->GetUid();
         g_packetTxStartTime[uid] = Simulator::Now();
+        if (g_enableP1Sidelink && g_p1PacketsMeta.count(uid)) g_p1TxStartedUids.insert(uid);
 
         auto it = g_p1PacketsMeta.find(uid);
         if (it != g_p1PacketsMeta.end()) {
@@ -555,6 +565,35 @@ private:
         }
     }
 
+    void EndP1SlotCutoff(uint32_t epoch, int slot) {
+        if (epoch != m_epoch) return;
+        PhyEnumeration st = g_dronePhyState[m_id];
+        double now = Simulator::Now().GetSeconds() * 1000.0;
+        auto uidsIt = g_p1TxUidsInEpoch.find({epoch, m_id});
+        uint64_t lastUid = (uidsIt != g_p1TxUidsInEpoch.end() && !uidsIt->second.empty()) ? uidsIt->second.back() : 0;
+
+        if (st == IEEE_802_15_4_PHY_BUSY_TX || st == IEEE_802_15_4_PHY_TX_ON) {
+            // Still transmitting (or about to) at the slot boundary: cut it off and go back to RX
+            g_p1SlotCutoffCount++;
+            g_p1DroneCutoffInEpoch[epoch][m_id] = true;
+            if (lastUid != 0) g_p1CutoffUids.insert(lastUid);
+            if (g_verboseLog) {
+                std::cout << "[P1_SLOT_CUTOFF] Time: " << now << "ms, Drone: " << (int)m_id
+                          << " slot " << slot << " ended while still transmitting -> forced TRX_OFF\n";
+            }
+            if (m_csma) m_csma->Cancel();
+            m_device->GetPhy()->PlmeSetTRXStateRequest(IEEE_802_15_4_PHY_FORCE_TRX_OFF);
+            m_device->GetPhy()->PlmeSetTRXStateRequest(IEEE_802_15_4_PHY_RX_ON);
+        } else if (lastUid != 0 && !g_p1TxStartedUids.count(lastUid)) {
+            // Beacon never got on air inside its slot (diagnostic only)
+            g_p1LateStartCount++;
+            if (g_verboseLog) {
+                std::cout << "[P1_LATE_START] Time: " << now << "ms, Drone: " << (int)m_id
+                          << " slot " << slot << " ended before the beacon started\n";
+            }
+        }
+    }
+
     void SampleP1SlotEnergy(int slot, uint32_t epoch) {
         if (epoch != m_epoch || g_droneCurrentChannel[m_id] != BROADCAST_CHANNEL) return;
         if (slot < 0 || slot >= (int)m_slotSensedEnergy.size()) return;
@@ -651,6 +690,10 @@ private:
             double txDelayUs = m_p1ClaimedSlot * g_p1SlotUs + jitterUs;
 
             Simulator::Schedule(MicroSeconds(txDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
+
+            // Hard slot boundary: whatever is still on air at the end of my slot is cut off
+            Simulator::Schedule(MicroSeconds((m_p1ClaimedSlot + 1) * g_p1SlotUs),
+                                &SwarmSchedulerApp::EndP1SlotCutoff, this, m_epoch, m_p1ClaimedSlot);
 
             // RSSI sensing (3GPP S-SPS style): sample the received energy in the middle of every
             // other slot's transmission window (40 + 44 us after slot start).
@@ -990,6 +1033,10 @@ private:
         double now = Simulator::Now().GetSeconds() * 1000.0;
 
         if (p->GetSize() == MINI_BEACON_SIZE) {
+            // A beacon cut off at its slot boundary is truncated on air -> CRC fails
+            if (g_p1CutoffUids.count(p->GetUid())) {
+                return;
+            }
             g_p1RxSuccess++;
             // (Sidelink slot occupancy is booked in NotifyPhyRxBegin with the correct slot;
             //  booking it here at packet end used to mark the wrong slot.)
@@ -1152,7 +1199,9 @@ private:
                         }
                     }
 
-                    if (txSucc == 0) {
+                    if (g_p1DroneCutoffInEpoch[epoch][sender]) {
+                        cat = REASON_SLOT_BOUNDARY_CUTOFF;
+                    } else if (txSucc == 0) {
                         cat = REASON_SENDER_CSMA_ABORT;
                     } else {
                         PhyEnumeration rStateAtTx = g_p1RxStateAtTxStart[sender][r];
@@ -1458,6 +1507,10 @@ void PrintGroundTruthReport() {
     ss << "Post-lock Re-sync (Capture)                       : REMOVED (BLE chips never re-sync after Access Address lock)\n";
     ss << "Preamble Lock SINR Threshold                      : " << g_preambleLockDb << " dB\n";
     ss << "Rx Sensitivity / Noise Floor                      : " << g_rxSensitivityDbm << " dBm / " << (g_rxSensitivityDbm - g_preambleLockDb) << " dBm\n";
+    if (g_enableP1Sidelink) {
+        ss << "P1 Slot Boundary Force Cutoffs                    : " << g_p1SlotCutoffCount << "\n";
+        ss << "P1 Beacons Not Started Within Slot                : " << g_p1LateStartCount << "\n";
+    }
     if (g_enableP1Sidelink) {
         int numP1Slots = std::max(1, (int)(g_phase1DurationUs / g_p1SlotUs));
         ss << "Slotted Configuration                             : Slot " << g_p1SlotUs << " us (" << numP1Slots << " slots in " << g_p1DurationMs << "ms)\n";

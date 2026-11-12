@@ -48,7 +48,7 @@ for rel_path in ["scratch/lr-wpan-swarm.cc",
 
 REASONS = ["SUCCESS", "SENDER_CSMA_ABORT", "RX_DEAFNESS_BUSY_TX",
            "PREAMBLE_COLLISION_BUSY_RX", "PREAMBLE_LOW_SINR",
-           "RADIO_TURNAROUND_BUSY", "PAYLOAD_INTERFERENCE_CORRUPTION"]
+           "RADIO_TURNAROUND_BUSY", "PAYLOAD_INTERFERENCE_CORRUPTION", "SLOT_BOUNDARY_CUTOFF"]
 BRACKETS = ["0-10m", "10-20m", "20-30m", "30-40m", "40-50m"]
 
 MODES = ([] if a.no_csma else [("CSMA", "csma", "--enableP1Sidelink=false")]) + [
@@ -74,6 +74,10 @@ def parse(text):
         row[r] = int(m.group(1)) if m else 0
     m = re.search(r"P1 Slot Deadline Cutoffs\s*:\s*(\d+)", text)
     row["CUTOFF"] = int(m.group(1)) if m else 0
+    m = re.search(r"P1 Slot Boundary Force Cutoffs\s*:\s*(\d+)", text)
+    row["CUTOFFS"] = int(m.group(1)) if m else 0
+    m = re.search(r"P1 Beacons Not Started Within Slot\s*:\s*(\d+)", text)
+    row["LATE"] = int(m.group(1)) if m else 0
     for b in BRACKETS:
         m = re.search(rf"^\s*{b}\s*\|\s*(\d+)\s*\|\s*(\d+)", text, re.M)
         row[b] = (100.0 * int(m.group(2)) / int(m.group(1))) if m and int(m.group(1)) else float("nan")
@@ -127,6 +131,8 @@ lines.append(f"{'Target links / seed':34s}" + "".join(f"{mean(l, 'TOTAL'):>{W}.0
 for r in REASONS:
     lines.append(f"{r:34s}" + "".join(f"{mean(l, r):>{W}.0f}" for l in labels))
 lines.append(f"{'P1 slot deadline cutoffs (total)':34s}" + "".join(f"{sum(r['CUTOFF'] for r in runs[l]):>{W}d}" for l in labels))
+lines.append(f"{'Slot-end force cutoffs (TX)':34s}" + "".join(f"{mean(l, 'CUTOFFS'):>{W}.1f}" for l in labels))
+lines.append(f"{'Beacons not started in slot':34s}" + "".join(f"{mean(l, 'LATE'):>{W}.1f}" for l in labels))
 lines.append("-" * len(header))
 for b in BRACKETS:
     lines.append(f"{'PRR ' + b + ' (%)':34s}" + "".join(f"{mean(l, b):>{W}.1f}" for l in labels))

@@ -47,6 +47,7 @@ const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels
 
 // Sidelink S-SPS (Semi-Persistent Scheduling) for Phase 1
 bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
+double g_p1SenseDecay = 0.8;     // Sidelink RSSI sensing: per-cycle decay of slot energy history (1.0 = equal weights, halved at reselection)
 double g_p1SlotUs = 300.0;       // Phase 1 Sidelink slot duration in us (default 300 us -> 33 slots in 10ms; slot start -> TX end = CCA 20 + turnaround 40 + BLE air time 88 = 148 us)
 double g_p1CcaThresholdDbm = -97.0; // Phase 1 CCA RSSI threshold in dBm (signal + noise; -97 = noise floor -101 + 4 dB margin for RSSI error)
 double g_rxSensitivityDbm = -95.0;   // BLE 5.4 LE 2M receiver sensitivity in dBm (noise floor = sensitivity - lock threshold)
@@ -600,10 +601,19 @@ private:
                 // Draw new reselection counter: uniform [5, 15] cycles
                 m_p1ReselCounter = uv->GetInteger(5, 15);
 
-                // Decay sensed energy history for the next observation window
+                // Legacy mode (decay = 1.0): equal weights inside the window, history halved here
+                if (g_p1SenseDecay >= 1.0) {
+                    for (int s = 0; s < numP1Slots; s++) {
+                        m_slotSensedEnergy[s] *= 0.5;
+                        m_slotPacketCount[s] = (int)(m_slotPacketCount[s] * 0.5);
+                    }
+                }
+            }
+            // Exponential moving average: every cycle, older RSSI samples lose weight
+            // (decay 0.8 -> a sample k cycles old weighs 0.8^k), so recent occupancy dominates.
+            if (g_p1SenseDecay < 1.0) {
                 for (int s = 0; s < numP1Slots; s++) {
-                    m_slotSensedEnergy[s] *= 0.5;
-                    m_slotPacketCount[s] = (int)(m_slotPacketCount[s] * 0.5);
+                    m_slotSensedEnergy[s] *= g_p1SenseDecay;
                 }
             }
             m_p1OccupiedSlotsThisEpoch.clear();
@@ -1724,6 +1734,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);
     cmd.AddValue("simTime", "Total simulation duration in seconds (default 10.0)", g_simTime);
     cmd.AddValue("enableP1Sidelink", "Enable Sidelink-inspired Semi-Persistent Scheduling for Phase 1 (default false)", g_enableP1Sidelink);
+    cmd.AddValue("p1SenseDecay", "Sidelink per-cycle decay of sensed slot energy (default 0.8; 1.0 = equal weights)", g_p1SenseDecay);
     cmd.AddValue("p1SlotUs", "Phase 1 Sidelink slot duration in microseconds (default 300.0)", g_p1SlotUs);
     cmd.AddValue("p1AvoidDist", "RX Deafness defense distance in meters", g_p1AvoidDist);
     cmd.AddValue("p1AvoidRssi", "Defense RSSI threshold in dBm (-106 to -90)", g_p1AvoidRssi);

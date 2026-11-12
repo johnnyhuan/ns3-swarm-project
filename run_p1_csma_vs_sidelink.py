@@ -7,7 +7,7 @@ Every (mode, seed) runs on the same topology for that seed; results are averaged
 and pushed to GitHub main.
 
 Usage:
-    python3 run_p1_csma_vs_sidelink.py                       # 100 UAVs, 3 s, +4 dBm, CCA -97, SL 150 us, seeds 1 2 3
+    python3 run_p1_csma_vs_sidelink.py                       # 100 UAVs, 3 s, +4 dBm, CCA -97, SL 150 us x decay 1.0/0.8, seeds 1 2 3
     python3 run_p1_csma_vs_sidelink.py --slots 150 160 --seeds 1 2 3 4 5
 """
 import argparse
@@ -25,6 +25,8 @@ ap.add_argument("--txpower", type=float, default=4.0)
 ap.add_argument("--cca", type=float, default=-97.0)
 ap.add_argument("--slots", type=float, nargs="+", default=[150.0])
 ap.add_argument("--seeds", type=int, nargs="+", default=[1, 2, 3])
+ap.add_argument("--decays", type=float, nargs="+", default=[1.0, 0.8],
+                help="Sidelink per-cycle sensing decay values (1.0 = equal weights)")
 a = ap.parse_args()
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -49,7 +51,9 @@ REASONS = ["SUCCESS", "SENDER_CSMA_ABORT", "RX_DEAFNESS_BUSY_TX",
 BRACKETS = ["0-10m", "10-20m", "20-30m", "30-40m", "40-50m"]
 
 MODES = [("CSMA", "csma", "--enableP1Sidelink=false")] + [
-    (f"SL {s:g}us", f"sidelink_{s:g}us", f"--enableP1Sidelink=true --p1SlotUs={s}") for s in a.slots
+    (f"SL{s:g} d{d:g}", f"sidelink_{s:g}us_decay{d:g}",
+     f"--enableP1Sidelink=true --p1SlotUs={s} --p1SenseDecay={d}")
+    for s in a.slots for d in a.decays
 ]
 cfg = (f"{a.nodes} UAVs | simTime {a.simtime}s | P1 TX {a.txpower:g} dBm | CCA {a.cca:g} dBm | "
        f"lock 6 dB | seeds {a.seeds}")
@@ -137,7 +141,7 @@ result_files = ["p1_csma_vs_sidelink_summary.txt"] + saved_files
 try:
     subprocess.run(["git", "pull", "--rebase", "--autostash", "origin", "main"], cwd=PROJECT_DIR, check=True)
     subprocess.run(["git", "add", "-f"] + result_files, cwd=PROJECT_DIR, check=True)
-    msg = f"data: P1 CSMA vs Sidelink ({cfg}, slots {a.slots})"
+    msg = f"data: P1 CSMA vs Sidelink ({cfg}, slots {a.slots}, decays {a.decays})"
     subprocess.run(["git", "commit", "-m", msg], cwd=PROJECT_DIR, check=True)
     subprocess.run(["git", "push", "origin", "HEAD:main"], cwd=PROJECT_DIR, check=True)
     print("✓ Results pushed to GitHub")

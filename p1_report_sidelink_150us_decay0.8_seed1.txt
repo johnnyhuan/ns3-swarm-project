@@ -6,28 +6,32 @@ MAC Scheme                                        : Autonomous Slotted MAC (No C
 Post-lock Re-sync (Capture)                       : REMOVED (BLE chips never re-sync after Access Address lock)
 Preamble Lock SINR Threshold                      : 6 dB
 Rx Sensitivity / Noise Floor                      : -95 dBm / -101 dBm
+P1 Slot Boundary Force Cutoffs                    : 20 (cut at slot end - 0 us)
+P1 Beacons Not Started Within Slot                : 18
 Slotted Configuration                             : Slot 150 us (66 slots in 10ms)
+Sidelink Sensing / Reselection                    : decay 0.8, pool 0.25, counter 5-15 cycles
 Total Expected P1 Neighbor Links (Epochs x Top-K) : 72009
-  ✅ Successfully Received (Delivered)            : 65809 (91.4%)
-  ❌ Failed Link Receptions (Dropped/Missed)      : 6200 (8.6%)
+  ✅ Successfully Received (Delivered)            : 65976 (91.6%)
+  ❌ Failed Link Receptions (Dropped/Missed)      : 6033 (8.4%)
 ----------------------------------------------------------------------------------------
 EXACT PHYSICAL ROOT CAUSE BREAKDOWN (Zero Estimation / Direct From ns-3 State Machine):
   SENDER_CSMA_ABORT                      :     0 (  0.0% of fails |   0.0% of all links)
-  RX_DEAFNESS_BUSY_TX                    :   465 (  7.5% of fails |   0.6% of all links)
-  PREAMBLE_COLLISION_BUSY_RX             :   288 (  4.6% of fails |   0.4% of all links)
-  PREAMBLE_LOW_SINR                      :  5447 ( 87.9% of fails |   7.6% of all links)
+  RX_DEAFNESS_BUSY_TX                    :   387 (  6.4% of fails |   0.5% of all links)
+  PREAMBLE_COLLISION_BUSY_RX             :   242 (  4.0% of fails |   0.3% of all links)
+  PREAMBLE_LOW_SINR                      :  5330 ( 88.3% of fails |   7.4% of all links)
   RADIO_TURNAROUND_BUSY                  :     0 (  0.0% of fails |   0.0% of all links)
   PAYLOAD_INTERFERENCE_CORRUPTION        :     0 (  0.0% of fails |   0.0% of all links)
+  SLOT_BOUNDARY_CUTOFF                   :    74 (  1.2% of fails |   0.1% of all links)
 ========================================================================================
 
 --- Distance Bracket Breakdown (0-10m, 10-20m, 20-30m, 30-40m, 40-50m) ---
 Bracket   | Total | Success | CSMA Abort | RX Deafness | Preamble Coll | Low SINR | Turnaround | Payload Drop
 --------------------------------------------------------------------------------------------------------
- 0-10m    |  3026 |    2964 |          0 |          32 |            10 |       20 |          0 |            0
-10-20m    | 17227 |   16770 |          0 |         111 |            45 |      301 |          0 |            0
-20-30m    | 28617 |   27138 |          0 |         140 |           119 |     1220 |          0 |            0
-30-40m    | 17369 |   14716 |          0 |         140 |            78 |     2435 |          0 |            0
-40-50m    |  5770 |    4221 |          0 |          42 |            36 |     1471 |          0 |            0
+ 0-10m    |  3026 |    3005 |          0 |           0 |             3 |       12 |          0 |            0
+10-20m    | 17227 |   16779 |          0 |         174 |            42 |      211 |          0 |            0
+20-30m    | 28617 |   27118 |          0 |          98 |           108 |     1263 |          0 |            0
+30-40m    | 17369 |   14962 |          0 |          97 |            60 |     2235 |          0 |            0
+40-50m    |  5770 |    4112 |          0 |          18 |            29 |     1609 |          0 |            0
 ========================================================================================================
 
 📡 PHYSICAL RF SIGNAL PROOFS & SWARM DENSITY (Averages & Evidence) [PHASE 1]:
@@ -36,25 +40,26 @@ Bracket   | Total | Success | CSMA Abort | RX Deafness | Preamble Coll | Low SIN
   • UAVs with >= 5 Neighbors in 50m     : 97.0%
   • Preamble Lock SINR Threshold         : 6.0 dB
   • Total Power Capture Events Triggered : 0 (post-lock re-sync removed)
-  • Delivered Links Mean SINR           : 14.9 dB (Threshold: >= 6.0 dB)
-  • Low SINR Dropped Links Mean SINR    : 2.8 dB (Threshold: < 6.0 dB)
-  • Low SINR Mean Received Power (Prx)  : -88.4 dBm
-  • Low SINR Mean Interference Power (I): -92.1 dBm
+  • Delivered Links Mean SINR           : 15.0 dB (Threshold: >= 6.0 dB)
+  • Low SINR Dropped Links Mean SINR    : 2.9 dB (Threshold: < 6.0 dB)
+  • Low SINR Mean Received Power (Prx)  : -88.5 dBm
+  • Low SINR Mean Interference Power (I): -92.3 dBm
 ========================================================================================================
 
 ========================================================================================
        🎯 STEADY-STATE CONVERGED ANALYSIS (Last 2.0s: t = 1.0s ~ 3.0s) 🎯
 ========================================================================================
 Steady-State P1 Target Links (Epoch 49+)           : 48335
-  ✅ Successfully Received (Delivered)            : 43964 (91.0%)
-  ❌ Failed Link Receptions (Dropped/Missed)      : 4371 (9.0%)
+  ✅ Successfully Received (Delivered)            : 44392 (91.8%)
+  ❌ Failed Link Receptions (Dropped/Missed)      : 3943 (8.2%)
 ----------------------------------------------------------------------------------------
 STEADY-STATE EXACT PHYSICAL ROOT CAUSE BREAKDOWN:
   SENDER_CSMA_ABORT                      :     0 (  0.0% of fails |   0.0% of all links)
-  RX_DEAFNESS_BUSY_TX                    :   340 (  7.8% of fails |   0.7% of all links)
-  PREAMBLE_COLLISION_BUSY_RX             :   197 (  4.5% of fails |   0.4% of all links)
-  PREAMBLE_LOW_SINR                      :  3834 ( 87.7% of fails |   7.9% of all links)
+  RX_DEAFNESS_BUSY_TX                    :   230 (  5.8% of fails |   0.5% of all links)
+  PREAMBLE_COLLISION_BUSY_RX             :   148 (  3.8% of fails |   0.3% of all links)
+  PREAMBLE_LOW_SINR                      :  3516 ( 89.2% of fails |   7.3% of all links)
   RADIO_TURNAROUND_BUSY                  :     0 (  0.0% of fails |   0.0% of all links)
   PAYLOAD_INTERFERENCE_CORRUPTION        :     0 (  0.0% of fails |   0.0% of all links)
+  SLOT_BOUNDARY_CUTOFF                   :    49 (  1.2% of fails |   0.1% of all links)
 ========================================================================================
 

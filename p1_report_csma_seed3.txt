@@ -17,6 +17,7 @@ EXACT PHYSICAL ROOT CAUSE BREAKDOWN (Zero Estimation / Direct From ns-3 State Ma
   PREAMBLE_LOW_SINR                      :  7726 ( 62.0% of fails |  10.9% of all links)
   RADIO_TURNAROUND_BUSY                  :     0 (  0.0% of fails |   0.0% of all links)
   PAYLOAD_INTERFERENCE_CORRUPTION        :     0 (  0.0% of fails |   0.0% of all links)
+  SLOT_BOUNDARY_CUTOFF                   :     0 (  0.0% of fails |   0.0% of all links)
 ========================================================================================
 
 --- Distance Bracket Breakdown (0-10m, 10-20m, 20-30m, 30-40m, 40-50m) ---
@@ -55,5 +56,6 @@ STEADY-STATE EXACT PHYSICAL ROOT CAUSE BREAKDOWN:
   PREAMBLE_LOW_SINR                      :  5124 ( 62.3% of fails |  10.7% of all links)
   RADIO_TURNAROUND_BUSY                  :     0 (  0.0% of fails |   0.0% of all links)
   PAYLOAD_INTERFERENCE_CORRUPTION        :     0 (  0.0% of fails |   0.0% of all links)
+  SLOT_BOUNDARY_CUTOFF                   :     0 (  0.0% of fails |   0.0% of all links)
 ========================================================================================
 

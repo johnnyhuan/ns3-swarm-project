@@ -193,35 +193,18 @@ LrWpanPhy::GetTypeId()
                             "dropped by the device during reception",
                             MakeTraceSourceAccessor(&LrWpanPhy::m_phyRxDropTrace),
                             "ns3::Packet::TracedCallback")
-            .AddAttribute("EnableCapture",
-                          "Enable frame capture effect.",
-                          BooleanValue(true),
-                          MakeBooleanAccessor(&LrWpanPhy::m_enableCapture),
-                          MakeBooleanChecker())
-            .AddAttribute("CaptureMargin",
-                          "Power difference in dB needed to capture the receiver.",
-                          DoubleValue(6.0),
-                          MakeDoubleAccessor(&LrWpanPhy::m_captureMarginDbm),
-                          MakeDoubleChecker<double>())
             .AddAttribute("PreambleLockThreshold",
                           "SINR in dB required at the end of the preamble to lock onto a "
                           "signal (BLE 5.4 LE 2M co-channel C/I).",
                           DoubleValue(6.0),
                           MakeDoubleAccessor(&LrWpanPhy::m_preambleLockThresholdDb),
-                          MakeDoubleChecker<double>())
-            .AddTraceSource("PhyRxCapture",
-                            "Trace source indicating a packet has captured the receiver, "
-                            "preempting an ongoing weaker packet reception.",
-                            MakeTraceSourceAccessor(&LrWpanPhy::m_phyRxCaptureTrace),
-                            "ns3::LrWpanPhy::RxCaptureTracedCallback");
+                          MakeDoubleChecker<double>());
     return tid;
 }
 
 LrWpanPhy::LrWpanPhy()
     : m_edRequest(),
       m_setTRXState(),
-      m_enableCapture(true),
-      m_captureMarginDbm(6.0),
       m_preambleLockThresholdDb(6.0)
 {
     m_trxState = IEEE_802_15_4_PHY_TRX_OFF;
@@ -383,6 +366,13 @@ LrWpanPhy::StartRx(Ptr<SpectrumSignalParameters> spectrumRxParams)
 {
     NS_LOG_FUNCTION(this << spectrumRxParams);
 
+    // 0- If a packet is being received, evaluate the chunk received so far with the
+    // interference that existed *before* this new signal starts.
+    if (m_trxState == IEEE_802_15_4_PHY_BUSY_RX)
+    {
+        CheckInterference();
+    }
+
     // 1- Add the signal to the spectrum to keep track of the transmission regardless
     // of the origin or the state of the receiving radio.
     m_signal->AddSignal(spectrumRxParams->psd);
@@ -390,7 +380,7 @@ LrWpanPhy::StartRx(Ptr<SpectrumSignalParameters> spectrumRxParams)
     // 2- Update peak power if CCA or ED if it is in progress.
     UpdateEnergyTracking();
 
-    // 3- Check the radio is on the right state to receive (RX_ON or BUSY_RX with capture) and that the signal
+    // 3- Check the radio is on the right state to receive (RX_ON) and that the signal
     // is a lr-wpan signal, otherwise proceed to the end of the packet to be removed from
     // the accumulated signals in the spectrum tracker.
     Ptr<LrWpanSpectrumSignalParameters> lrWpanRxParams =
@@ -418,58 +408,13 @@ LrWpanPhy::StartRx(Ptr<SpectrumSignalParameters> spectrumRxParams)
 
     if (m_trxState == IEEE_802_15_4_PHY_BUSY_RX)
     {
-        bool canCapture = false;
-        if (m_enableCapture && m_currentRxPacket.first)
-        {
-            double pCurr = LrWpanSpectrumValueHelper::TotalAvgPower(
-                m_currentRxPacket.first->psd, m_phyPIBAttributes.phyCurrentChannel);
-            double pNew = LrWpanSpectrumValueHelper::TotalAvgPower(
-                lrWpanRxParams->psd, m_phyPIBAttributes.phyCurrentChannel);
-
-            if (pCurr > 0.0 && pNew > 0.0)
-            {
-                double diffDbm = 10.0 * log10(pNew / pCurr);
-                if (diffDbm >= m_captureMarginDbm)
-                {
-                    canCapture = true;
-                }
-            }
-        }
-
-        if (canCapture)
-        {
-            Ptr<Packet> currPacket = m_currentRxPacket.first->packetBurst->GetPackets().front();
-            Ptr<Packet> newPacket = lrWpanRxParams->packetBurst->GetPackets().front();
-            NS_LOG_INFO(this << " Capture Effect in StartRx: preempting weaker ongoing packet "
-                             << currPacket->GetUid() << " for stronger packet "
-                             << newPacket->GetUid());
-
-            // Fire capture trace
-            m_phyRxCaptureTrace(newPacket, currPacket);
-
-            // Abort ongoing weaker packet
-            m_currentRxPacket.second = true;
-            m_phyRxDropTrace(currPacket);
-            m_currentRxPacket = std::make_pair(nullptr, true);
-
-            // Re-arm receiver to RX_ON to synchronize onto the stronger packet's preamble
-            ChangeTrxState(IEEE_802_15_4_PHY_RX_ON);
-
-            Simulator::Schedule(lrWpanRxParams->preambleDuration,
-                                &LrWpanPhy::EndPreamble,
-                                this,
-                                lrWpanRxParams);
-            return;
-        }
-        else
-        {
-            // Cannot capture: new packet is dropped as collision
-            CheckInterference();
-            Ptr<Packet> p = lrWpanRxParams->packetBurst->GetPackets().front();
-            m_phyRxDropTrace(p);
-            Simulator::Schedule(spectrumRxParams->duration, &LrWpanPhy::EndRx, this, spectrumRxParams);
-            return;
-        }
+        // Already locked onto a packet: like a real BLE receiver, never re-synchronize.
+        // The new packet is dropped and only acts as interference on the locked one
+        // (its chunk up to now was already evaluated in step 0 above).
+        Ptr<Packet> p = lrWpanRxParams->packetBurst->GetPackets().front();
+        m_phyRxDropTrace(p);
+        Simulator::Schedule(spectrumRxParams->duration, &LrWpanPhy::EndRx, this, spectrumRxParams);
+        return;
     }
 
     // Radio is not in RX_ON or BUSY_RX (e.g. TX_ON, BUSY_TX, TRX_OFF)
@@ -538,64 +483,11 @@ LrWpanPhy::EndPreamble(Ptr<LrWpanSpectrumSignalParameters> lrWpanRxParams)
     }
     else if (m_trxState == IEEE_802_15_4_PHY_BUSY_RX)
     {
-        bool captured = false;
-        if (m_enableCapture && m_currentRxPacket.first)
-        {
-            double pCurr = LrWpanSpectrumValueHelper::TotalAvgPower(
-                m_currentRxPacket.first->psd, m_phyPIBAttributes.phyCurrentChannel);
-            double pNew = LrWpanSpectrumValueHelper::TotalAvgPower(
-                lrWpanRxParams->psd, m_phyPIBAttributes.phyCurrentChannel);
-
-            if (pCurr > 0.0 && pNew > 0.0)
-            {
-                double diffDbm = 10.0 * log10(pNew / pCurr);
-                Ptr<SpectrumValue> interferenceAndNoise = m_signal->GetSignalPsd();
-                *interferenceAndNoise -= *lrWpanRxParams->psd;
-                *interferenceAndNoise += *m_noise;
-                double sinr =
-                    LrWpanSpectrumValueHelper::TotalAvgPower(lrWpanRxParams->psd,
-                                                             m_phyPIBAttributes.phyCurrentChannel) /
-                    LrWpanSpectrumValueHelper::TotalAvgPower(interferenceAndNoise,
-                                                             m_phyPIBAttributes.phyCurrentChannel);
-
-                if (diffDbm >= m_captureMarginDbm && 10.0 * log10(sinr) > m_preambleLockThresholdDb)
-                {
-                    captured = true;
-                    Ptr<Packet> currPacket = m_currentRxPacket.first->packetBurst->GetPackets().front();
-                    NS_LOG_INFO(this << " Capture Effect in EndPreamble: preempting ongoing packet "
-                                     << currPacket->GetUid() << " for stronger packet "
-                                     << p->GetUid());
-
-                    // Fire capture trace
-                    m_phyRxCaptureTrace(p, currPacket);
-
-                    // Abort ongoing weaker packet
-                    m_currentRxPacket.second = true;
-                    m_phyRxDropTrace(currPacket);
-
-                    // Switch reception to the new stronger packet
-                    m_currentRxPacket = std::make_pair(lrWpanRxParams, false);
-                    m_phyRxBeginTrace(p);
-                    m_rxLastUpdate = Simulator::Now();
-                    m_rssi = static_cast<int8_t>(10 * log10(LrWpanSpectrumValueHelper::TotalAvgPower(
-                                                          m_signal->GetSignalPsd(),
-                                                          m_phyPIBAttributes.phyCurrentChannel)) +
-                                                 30);
-                }
-            }
-        }
-
-        if (!captured)
-        {
-            // We are already receiving a packet, drop the new packet.
-            NS_LOG_INFO(this << " Packet collision detected, dropping packet");
-            m_phyRxDropTrace(p);
-
-            // Another lr-wpan packet is being transmitted in the vicinity while we are receiving
-            // another packet. This affects the reception of the first packet, therefore,
-            // check interference and its impact on this packet.
-            CheckInterference();
-        }
+        // Another packet locked first (its preamble ended earlier). No re-synchronization:
+        // drop this one; it keeps acting as interference on the locked packet.
+        NS_LOG_INFO(this << " Packet collision detected, dropping packet");
+        m_phyRxDropTrace(p);
+        CheckInterference();
     }
     else
     {
@@ -2095,30 +1987,6 @@ LrWpanPhy::SetPostReceptionErrorModel(const Ptr<ErrorModel> em)
 {
     NS_LOG_FUNCTION(this << em);
     m_postReceptionErrorModel = em;
-}
-
-void
-LrWpanPhy::SetCaptureEnabled(bool enable)
-{
-    m_enableCapture = enable;
-}
-
-bool
-LrWpanPhy::IsCaptureEnabled() const
-{
-    return m_enableCapture;
-}
-
-void
-LrWpanPhy::SetCaptureMargin(double marginDbm)
-{
-    m_captureMarginDbm = marginDbm;
-}
-
-double
-LrWpanPhy::GetCaptureMargin() const
-{
-    return m_captureMarginDbm;
 }
 
 void

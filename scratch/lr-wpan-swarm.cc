@@ -49,11 +49,7 @@ const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels
 bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
 double g_p1SlotUs = 300.0;       // Phase 1 Sidelink slot duration in microseconds (default 300 us -> 33 slots in 10ms, accommodating 244us air time + 40us PLL turnaround)
 double g_p1CcaThresholdDbm = -96.58; // Phase 1 CSMA CCA Energy Detection Threshold in dBm (default: -96.58, standard 802.15.4)
-double g_p1CaptureThresholdDb = 6.0; // Phase 1 Sidelink Slotted SINR demodulation threshold in dB (Strict Bluetooth 5.4 LE 2M C/I: +6.0 dB)
-double g_phyCaptureMarginDb = 6.0;    // PHY layer capture margin in dB (Strict Bluetooth 5.4 LE 2M: +6.0 dB)
 double g_preambleLockDb = 6.0;        // Preamble / sync-word lock SINR threshold in dB (BLE 5.4 LE 2M C/I: +6.0 dB)
-bool g_enablePhyCapture = true;      // Phase 1 physical layer capture effect switch (default: true)
-bool g_enableP2Capture = false;      // Phase 2 physical layer capture effect switch (default: false)
 bool g_verboseLog = false;       // Verbose per-packet log switch (default: false for high-speed simulation at scale)
 
 const uint8_t BROADCAST_CHANNEL = 11;
@@ -102,9 +98,6 @@ static int g_p1TxAttempts = 0;
 static int g_p1TxAbort = 0;
 static int g_p1TxSuccess = 0;
 static int g_p1RxSuccess = 0;
-static int g_totalCaptureEvents = 0;
-static int g_p1CaptureEvents = 0;
-static int g_p2CaptureEvents = 0;
 
 // 空間拓撲與 50m 鄰居密度統計
 static double g_spaceSize = 200.0;
@@ -283,8 +276,6 @@ public:
         
         // Connect PHY Traces for exact physical ground truth
         Ptr<LrWpanPhy> phy = m_device->GetPhy();
-        phy->SetCaptureEnabled(g_enablePhyCapture);
-        phy->SetCaptureMargin(g_phyCaptureMarginDb);
         phy->SetPreambleLockThreshold(g_preambleLockDb);
         g_dronePhyState[m_id] = IEEE_802_15_4_PHY_TRX_OFF;
         g_droneReceivingUid[m_id] = 0;
@@ -293,7 +284,6 @@ public:
         phy->TraceConnectWithoutContext("PhyRxBegin", MakeCallback(&SwarmSchedulerApp::NotifyPhyRxBegin, this));
         phy->TraceConnectWithoutContext("PhyRxEnd", MakeCallback(&SwarmSchedulerApp::NotifyPhyRxEnd, this));
         phy->TraceConnectWithoutContext("PhyRxDrop", MakeCallback(&SwarmSchedulerApp::NotifyPhyRxDrop, this));
-        phy->TraceConnectWithoutContext("PhyRxCapture", MakeCallback(&SwarmSchedulerApp::NotifyPhyRxCapture, this));
         phy->TraceConnectWithoutContext("PhyTxBegin", MakeCallback(&SwarmSchedulerApp::NotifyPhyTxBegin, this));
         phy->TraceConnectWithoutContext("PhyTxEnd", MakeCallback(&SwarmSchedulerApp::NotifyPhyTxEnd, this));
 
@@ -404,29 +394,6 @@ public:
                               << " | Preamble Sync Word SINR <= -5 dB\n";
                 }
             }
-        }
-    }
-
-    void NotifyPhyRxCapture(Ptr<const Packet> capP, Ptr<const Packet> preP) {
-        g_totalCaptureEvents++;
-        if (capP && capP->GetSize() == DATA_PACKET_SIZE) {
-            g_p2CaptureEvents++;
-        } else {
-            g_p1CaptureEvents++;
-        }
-        uint64_t capUid = capP->GetUid();
-        uint64_t preUid = preP->GetUid();
-        double now = Simulator::Now().GetMilliSeconds();
-        uint16_t capSender = 65535;
-        uint16_t preSender = 65535;
-        auto itCap = g_p1PacketsMeta.find(capUid);
-        if (itCap != g_p1PacketsMeta.end()) capSender = itCap->second.senderId;
-        auto itPre = g_p1PacketsMeta.find(preUid);
-        if (itPre != g_p1PacketsMeta.end()) preSender = itPre->second.senderId;
-        if (g_verboseLog) {
-            std::cout << "[PHY_CAPTURE] Time: " << now << "ms, Rx: " << (int)m_id
-                      << " CAPTURED Tx: " << (int)capSender << " (Uid: " << capUid << ")"
-                      << ", PREEMPTED Tx: " << (int)preSender << " (Uid: " << preUid << ")" << "\n";
         }
     }
 
@@ -566,7 +533,6 @@ private:
         double now = Simulator::Now().GetSeconds() * 1000.0;
 
         // Phase 1 (Broadcast): Configurable range
-        m_device->GetPhy()->SetCaptureEnabled(g_enablePhyCapture);
         SwitchChannelAndPower(BROADCAST_CHANNEL, (int8_t)g_p1TxPower);
         
         if (!g_enableP1Sidelink) {
@@ -734,9 +700,6 @@ private:
     }
 
     void ComputeSchedule() {
-        // Entering Phase 2: toggle capture to Phase 2 setting
-        m_device->GetPhy()->SetCaptureEnabled(g_enableP2Capture);
-
         // 第一步：過濾出 50m 避撞安全監控半徑內的鄰機 (固定以 50m / -98 dBm 評估或最近鄰居)
         double safetyRssi = g_p1TxPower - 46.6777 - 30.0 * std::log10(50.0); // -97.65 dBm ~ -98 dBm
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
@@ -1143,9 +1106,9 @@ private:
                             if (g_p1RxDropEvent[sender][r] != 0) {
                                 cat = (P1DropCategory)g_p1RxDropEvent[sender][r];
                             } else {
-                                if (coChannelCount > 0 && sinrDb < g_phyCaptureMarginDb) {
+                                if (coChannelCount > 0 && sinrDb < g_preambleLockDb) {
                                     cat = REASON_PREAMBLE_LOW_SINR;
-                                } else if (coChannelCount > 0 && sinrDb >= g_phyCaptureMarginDb) {
+                                } else if (coChannelCount > 0 && sinrDb >= g_preambleLockDb) {
                                     cat = REASON_PREAMBLE_COLLISION_BUSY_RX;
                                 } else {
                                     cat = REASON_PREAMBLE_LOW_SINR;
@@ -1327,9 +1290,9 @@ private:
                             } else if (rStateAtTx == IEEE_802_15_4_PHY_TRX_OFF) {
                                 cat = P2_REASON_RADIO_TURNAROUND_BUSY;
                             } else {
-                                if (coChannelCount > 0 && sinrDb < g_phyCaptureMarginDb) {
+                                if (coChannelCount > 0 && sinrDb < g_preambleLockDb) {
                                     cat = P2_REASON_PREAMBLE_LOW_SINR;
-                                } else if (coChannelCount > 0 && sinrDb >= g_phyCaptureMarginDb) {
+                                } else if (coChannelCount > 0 && sinrDb >= g_preambleLockDb) {
                                     cat = P2_REASON_PREAMBLE_COLLISION_BUSY_RX;
                                 } else {
                                     cat = P2_REASON_PREAMBLE_LOW_SINR;
@@ -1431,8 +1394,7 @@ void PrintGroundTruthReport() {
     ss << "       🔬 PHASE 1 PHYSICAL & MAC GROUND TRUTH ANALYSIS (Top-K within 50m) 🔬           \n";
     ss << "========================================================================================\n";
     ss << "MAC Scheme                                        : " << (g_enableP1Sidelink ? "Autonomous Slotted MAC (No CSMA)" : "Continuous Random Delay + CSMA-CA") << "\n";
-    ss << "Phase 1 PHY Capture                               : " << (g_enablePhyCapture ? ("ENABLED (Margin: " + std::to_string((int)g_phyCaptureMarginDb) + " dB)") : "DISABLED (Pure Collision)") << "\n";
-    ss << "Phase 2 PHY Capture                               : " << (g_enableP2Capture ? ("ENABLED (Margin: " + std::to_string((int)g_phyCaptureMarginDb) + " dB)") : "DISABLED (No Capture Event)") << "\n";
+    ss << "Post-lock Re-sync (Capture)                       : REMOVED (BLE chips never re-sync after Access Address lock)\n";
     ss << "Preamble Lock SINR Threshold                      : " << g_preambleLockDb << " dB\n";
     if (g_enableP1Sidelink) {
         int numP1Slots = std::max(1, (int)(g_phase1DurationUs / g_p1SlotUs));
@@ -1508,13 +1470,13 @@ void PrintGroundTruthReport() {
     ss << "  • Airspace Dimensions & Topology      : " << g_spaceSize << "m x " << g_spaceSize << "m x " << g_spaceZ << "m\n";
     ss << "  • Mean 50m Neighbors per UAV (Density): " << std::fixed << std::setprecision(2) << meanNeighbors << " UAVs\n";
     ss << "  • UAVs with >= 5 Neighbors in 50m     : " << std::fixed << std::setprecision(1) << pctGe5 << "%\n";
-    ss << "  • Capture SINR Threshold Configured    : " << std::fixed << std::setprecision(1) << g_p1CaptureThresholdDb << " dB\n";
-    ss << "  • Total Power Capture Events Triggered : " << g_p1CaptureEvents << " (rescued Phase 1 packets from closer neighbors)\n";
+    ss << "  • Preamble Lock SINR Threshold         : " << std::fixed << std::setprecision(1) << g_preambleLockDb << " dB\n";
+    ss << "  • Total Power Capture Events Triggered : 0 (post-lock re-sync removed)\n";
     if (cntSucc > 0) {
-        ss << "  • Delivered Links Mean SINR           : " << std::fixed << std::setprecision(1) << (sumSinrSucc / cntSucc) << " dB (Threshold: >= " << g_p1CaptureThresholdDb << " dB)\n";
+        ss << "  • Delivered Links Mean SINR           : " << std::fixed << std::setprecision(1) << (sumSinrSucc / cntSucc) << " dB (Threshold: >= " << g_preambleLockDb << " dB)\n";
     }
     if (cntLowSinr > 0) {
-        ss << "  • Low SINR Dropped Links Mean SINR    : " << std::fixed << std::setprecision(1) << (sumSinrDrop / cntLowSinr) << " dB (Threshold: < " << g_p1CaptureThresholdDb << " dB)\n";
+        ss << "  • Low SINR Dropped Links Mean SINR    : " << std::fixed << std::setprecision(1) << (sumSinrDrop / cntLowSinr) << " dB (Threshold: < " << g_preambleLockDb << " dB)\n";
         ss << "  • Low SINR Mean Received Power (Prx)  : " << std::fixed << std::setprecision(1) << (sumPrx / cntLowSinr) << " dBm\n";
         ss << "  • Low SINR Mean Interference Power (I): " << std::fixed << std::setprecision(1) << (sumInterf / cntLowSinr) << " dBm\n";
     }
@@ -1671,13 +1633,13 @@ void PrintPhase2GroundTruthReport() {
     ss << "  • Airspace Dimensions & Topology      : " << g_spaceSize << "m x " << g_spaceSize << "m x " << g_spaceZ << "m\n";
     ss << "  • Mean 50m Neighbors per UAV (Density): " << std::fixed << std::setprecision(2) << meanNeighbors << " UAVs\n";
     ss << "  • UAVs with >= 5 Neighbors in 50m     : " << std::fixed << std::setprecision(1) << pctGe5 << "%\n";
-    ss << "  • Phase 2 Capture Enabled             : " << (g_enableP2Capture ? ("YES (Margin: " + std::to_string((int)g_phyCaptureMarginDb) + " dB)") : "DISABLED (No Capture Event)") << "\n";
-    ss << "  • Total Power Capture Events Triggered : " << g_p2CaptureEvents << " (rescued Phase 2 packets from closer neighbors)\n";
+    ss << "  • Preamble Lock SINR Threshold         : " << std::fixed << std::setprecision(1) << g_preambleLockDb << " dB (post-lock re-sync removed)\n";
+    ss << "  • Total Power Capture Events Triggered : 0 (post-lock re-sync removed)\n";
     if (cntSucc > 0) {
-        ss << "  • Delivered Links Mean SINR           : " << std::fixed << std::setprecision(1) << (sumSinrSucc / cntSucc) << " dB (BLE 5.4 C/I Threshold: >= " << g_phyCaptureMarginDb << " dB)\n";
+        ss << "  • Delivered Links Mean SINR           : " << std::fixed << std::setprecision(1) << (sumSinrSucc / cntSucc) << " dB (BLE 5.4 C/I Threshold: >= " << g_preambleLockDb << " dB)\n";
     }
     if (cntLowSinr > 0) {
-        ss << "  • Low SINR Dropped Links Mean SINR    : " << std::fixed << std::setprecision(1) << (sumSinrDrop / cntLowSinr) << " dB (BLE 5.4 C/I Threshold: < " << g_phyCaptureMarginDb << " dB)\n";
+        ss << "  • Low SINR Dropped Links Mean SINR    : " << std::fixed << std::setprecision(1) << (sumSinrDrop / cntLowSinr) << " dB (BLE 5.4 C/I Threshold: < " << g_preambleLockDb << " dB)\n";
         ss << "  • Low SINR Mean Received Power (Prx)  : " << std::fixed << std::setprecision(1) << (sumPrx / cntLowSinr) << " dBm\n";
         ss << "  • Low SINR Mean Interference Power (I): " << std::fixed << std::setprecision(1) << (sumInterf / cntLowSinr) << " dBm\n";
     }
@@ -1722,12 +1684,16 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
     cmd.AddValue("p1TxPower", "Phase 1 TX Power in dBm (e.g., 0, 1, 3)", g_p1TxPower);
     cmd.AddValue("p1CcaThresholdDbm", "Phase 1 CSMA CCA Energy Detection Threshold in dBm (-106.58 to -80.0, default -96.58)", g_p1CcaThresholdDbm);
-    cmd.AddValue("p1CaptureThresholdDb", "Phase 1 Sidelink Slotted SINR capture threshold in dB (e.g. -5.0, 0.0, 3.0, 6.0, default: 6.0)", g_p1CaptureThresholdDb);
-    cmd.AddValue("phyCaptureMarginDb", "PHY layer capture margin in dB (power difference needed to preempt, default: 6.0)", g_phyCaptureMarginDb);
-    cmd.AddValue("preambleLockDb", "Preamble lock SINR threshold in dB (BLE 5.4 LE 2M C/I, default: 6.0; old behaviour: -5.0)", g_preambleLockDb);
-    cmd.AddValue("enableCapture","Enable physical layer capture effect (default: true)", g_enablePhyCapture);
-    cmd.AddValue("enablePhyCapture", "Enable physical layer capture effect (default: true)", g_enablePhyCapture);
-    cmd.AddValue("enableP2Capture", "Enable capture effect in Phase 2 (default: false)", g_enableP2Capture);
+    cmd.AddValue("preambleLockDb", "Preamble lock SINR threshold in dB (BLE 5.4 LE 2M C/I, default: 6.0; old 802.15.4 behaviour: -5.0)", g_preambleLockDb);
+    // Legacy capture flags: post-lock re-sync was removed (BLE chips cannot do it).
+    // Still accepted so old sweep scripts keep running, but they have no effect.
+    double legacyCaptureDb = 0.0;
+    bool legacyCaptureFlag = false;
+    cmd.AddValue("p1CaptureThresholdDb", "[REMOVED, ignored] use --preambleLockDb", legacyCaptureDb);
+    cmd.AddValue("phyCaptureMarginDb", "[REMOVED, ignored] post-lock re-sync no longer exists", legacyCaptureDb);
+    cmd.AddValue("enableCapture", "[REMOVED, ignored] post-lock re-sync no longer exists", legacyCaptureFlag);
+    cmd.AddValue("enablePhyCapture", "[REMOVED, ignored] post-lock re-sync no longer exists", legacyCaptureFlag);
+    cmd.AddValue("enableP2Capture", "[REMOVED, ignored] post-lock re-sync no longer exists", legacyCaptureFlag);
     cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);
     cmd.AddValue("simTime", "Total simulation duration in seconds (default 10.0)", g_simTime);
     cmd.AddValue("enableP1Sidelink", "Enable Sidelink-inspired Semi-Persistent Scheduling for Phase 1 (default false)", g_enableP1Sidelink);
@@ -1752,8 +1718,6 @@ int main(int argc, char *argv[]) {
     RngSeedManager::SetSeed(1);
     RngSeedManager::SetRun(rngRun);
 
-    // Keep all physical capture and demodulation thresholds strictly unified
-    g_p1CaptureThresholdDb = g_phyCaptureMarginDb;
 
     if (g_verboseLog) {
         g_runLogFile.open("run.log");

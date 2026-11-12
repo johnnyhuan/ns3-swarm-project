@@ -372,6 +372,12 @@ class LrWpanPhy : public SpectrumPhy
     Time GetSyncDuration() const;
 
     /**
+     * Get the CCA observation time used for listen-before-talk (BLE custom MAC: 20 us).
+     * @return CCA duration
+     */
+    Time GetCcaDuration() const;
+
+    /**
      * Notify the SpectrumPhy instance of an incoming waveform.
      *
      * @param params the SpectrumSignalParameters associated with the incoming waveform

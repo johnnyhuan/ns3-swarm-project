@@ -94,6 +94,18 @@ constexpr double kBleSyncUs = 24.0;
 constexpr double kBlePduHeaderUs = 8.0;
 constexpr double kBleCrcExtraUs = 4.0;
 
+/*
+ * BLE listen-before-talk (custom MAC; BLE itself has no CSMA):
+ * CCA observation time 20 us (ETSI EN 300 328 LBT minimum, instead of 8 symbols = 128 us).
+ */
+constexpr double kBleCcaUs = 20.0;
+
+/*
+ * BLE 5.4 LE 2M receiver sensitivity (typical SoC, e.g. nRF52/nRF53 class: -92..-96 dBm).
+ * The noise floor is derived from it: noise = sensitivity - preamble lock threshold (C/I).
+ */
+constexpr double kBleDefaultSensitivityDbm = -95.0;
+
 std::ostream&
 operator<<(std::ostream& os, const PhyEnumeration& state)
 {
@@ -754,7 +766,7 @@ LrWpanPhy::PlmeCcaRequest()
     if (m_trxState == IEEE_802_15_4_PHY_RX_ON || m_trxState == IEEE_802_15_4_PHY_BUSY_RX)
     {
         m_ccaPeakPower = 0.0;
-        Time ccaTime = Seconds(8.0 / GetDataOrSymbolRate(false));
+        Time ccaTime = GetCcaDuration(); // BLE LBT: 20 us
         m_ccaRequest = Simulator::Schedule(ccaTime, &LrWpanPhy::EndCca, this);
     }
     else
@@ -1247,10 +1259,8 @@ LrWpanPhy::PlmeSetAttributeRequest(PhyPibAttributeIdentifier id, Ptr<PhyPibAttri
 
             m_phyPIBAttributes.phyCurrentPage = attribute->phyCurrentPage;
 
-            // TODO: Set the maximum possible sensitivity by default.
-            //       This maximum sensitivity depends on the modulation used.
-            //       Currently Only O-QPSK 250kbps is supported so we use its max sensitivity.
-            SetRxSensitivity(-106.58);
+            // BLE 5.4 LE 2M default receiver sensitivity
+            SetRxSensitivity(kBleDefaultSensitivityDbm);
         }
         break;
     }
@@ -1710,6 +1720,12 @@ LrWpanPhy::GetSyncDuration() const
     return MicroSeconds(kBleSyncUs);
 }
 
+Time
+LrWpanPhy::GetCcaDuration() const
+{
+    return MicroSeconds(kBleCcaUs);
+}
+
 void
 LrWpanPhy::SetPhyOption(PhyOption phyOption)
 {
@@ -1800,10 +1816,8 @@ LrWpanPhy::SetPhyOption(PhyOption phyOption)
     m_edPower.lastUpdate = Seconds(0);
     m_edPower.measurementLength = Seconds(0);
 
-    // TODO: Change the limits  Rx sensitivity when other modulations are supported
-    // Currently, only O-QPSK 250kbps is supported and its maximum possible sensitivity is
-    // equal to -106.58 dBm and its minimum sensitivity is defined as -85 dBm
-    SetRxSensitivity(-106.58);
+    // BLE 5.4 LE 2M default receiver sensitivity
+    SetRxSensitivity(kBleDefaultSensitivityDbm);
 
     m_rxLastUpdate = Seconds(0);
     m_currentRxPacket = std::make_pair(nullptr, true);
@@ -1832,24 +1846,20 @@ LrWpanPhy::SetRxSensitivity(double dbmSensitivity)
         }
     }
 
-    // Calculate the noise factor required to reduce the Rx sensitivity.
-    // The maximum possible sensitivity in the current modulation is used as a reference
-    // to calculate the noise factor (F). The noise factor is a dimensionless ratio.
-    // Currently only one PHY modulation is supported:
-    // O-QPSK 250kpps which has a Max Rx sensitivity: -106.58 dBm (Noise factor = 1).
-    // After Rx sensitivity is set, this becomes the new point where PER < 1 % for a
-    // PSDU of 20 bytes as described by the standard.
-
-    // TODO: recalculate maxRxSensitivity (Noise factor = 1) when additional modulations are
-    // supported.
-    double maxRxSensitivityW = DbmToW(-106.58);
+    // BLE 5.4 LE 2M model: the sensitivity is the weakest signal that still reaches the
+    // GFSK lock/C/I threshold over thermal noise, so
+    //   noise floor = sensitivity - preamble lock threshold
+    // e.g. -95 dBm sensitivity, 6 dB threshold -> -101 dBm noise floor.
+    // Thermal noise (F = 1) over the 5 x 1 MHz bins of the channel: kT * 5 MHz = -107 dBm.
+    double thermalNoiseW = 1.3803e-23 * 290.0 * 5.0e6;
+    double noiseFloorDbm = dbmSensitivity - m_preambleLockThresholdDb;
 
     LrWpanSpectrumValueHelper psdHelper;
     m_txPsd = psdHelper.CreateTxPowerSpectralDensity(
         GetNominalTxPowerFromPib(m_phyPIBAttributes.phyTransmitPower),
         m_phyPIBAttributes.phyCurrentChannel);
     // Update thermal noise + noise factor added.
-    long double noiseFactor = DbmToW(dbmSensitivity) / maxRxSensitivityW;
+    long double noiseFactor = DbmToW(noiseFloorDbm) / thermalNoiseW;
     psdHelper.SetNoiseFactor(noiseFactor);
     m_noise = psdHelper.CreateNoisePowerSpectralDensity(m_phyPIBAttributes.phyCurrentChannel);
 
@@ -1994,6 +2004,8 @@ void
 LrWpanPhy::SetPreambleLockThreshold(double thresholdDb)
 {
     m_preambleLockThresholdDb = thresholdDb;
+    // The noise floor is derived from sensitivity and threshold: re-apply it.
+    SetRxSensitivity(WToDbm(m_rxSensitivity));
 }
 
 double

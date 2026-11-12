@@ -28,7 +28,8 @@ if not os.path.exists(NS3_DIR):
 # Sync modified sources into the ns-3 tree (same as the sweep scripts)
 for rel_path in ["scratch/lr-wpan-swarm.cc",
                  "src/lr-wpan/model/lr-wpan-phy.cc",
-                 "src/lr-wpan/model/lr-wpan-phy.h"]:
+                 "src/lr-wpan/model/lr-wpan-phy.h",
+                 "src/lr-wpan/model/lr-wpan-csmaca.cc"]:
     src_f = os.path.join(PROJECT_DIR, rel_path)
     dst_f = os.path.join(NS3_DIR, rel_path)
     if os.path.exists(src_f) and os.path.abspath(src_f) != os.path.abspath(dst_f):

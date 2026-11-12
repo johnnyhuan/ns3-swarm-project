@@ -47,8 +47,9 @@ const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels
 
 // Sidelink S-SPS (Semi-Persistent Scheduling) for Phase 1
 bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
-double g_p1SlotUs = 300.0;       // Phase 1 Sidelink slot duration in us (default 300 us -> 33 slots in 10ms; slot start -> TX end = CCA 128 + turnaround 40 + BLE air time 88 = 256 us)
+double g_p1SlotUs = 300.0;       // Phase 1 Sidelink slot duration in us (default 300 us -> 33 slots in 10ms; slot start -> TX end = CCA 20 + turnaround 40 + BLE air time 88 = 148 us)
 double g_p1CcaThresholdDbm = -96.58; // Phase 1 CSMA CCA Energy Detection Threshold in dBm (default: -96.58, standard 802.15.4)
+double g_rxSensitivityDbm = -95.0;   // BLE 5.4 LE 2M receiver sensitivity in dBm (noise floor = sensitivity - lock threshold)
 double g_preambleLockDb = 6.0;        // Preamble / sync-word lock SINR threshold in dB (BLE 5.4 LE 2M C/I: +6.0 dB)
 bool g_verboseLog = false;       // Verbose per-packet log switch (default: false for high-speed simulation at scale)
 
@@ -277,6 +278,7 @@ public:
         // Connect PHY Traces for exact physical ground truth
         Ptr<LrWpanPhy> phy = m_device->GetPhy();
         phy->SetPreambleLockThreshold(g_preambleLockDb);
+        phy->SetRxSensitivity(g_rxSensitivityDbm);
         g_dronePhyState[m_id] = IEEE_802_15_4_PHY_TRX_OFF;
         g_droneReceivingUid[m_id] = 0;
         g_droneCurrentChannel[m_id] = BROADCAST_CHANNEL;
@@ -317,10 +319,10 @@ public:
 
         if (g_enableP1Sidelink && g_droneCurrentChannel[m_id] == BROADCAST_CHANNEL) {
             // RxBegin fires at preamble lock, i.e. a fixed latency after the sender's slot start:
-            // CCA (8 symbols = 128 us) + RX->TX turnaround (40 us) + BLE sync window (24 us).
+            // CCA (20 us) + RX->TX turnaround (40 us) + BLE sync window (24 us) = 84 us.
             // Map back to the sender's slot; without this, packets were booked into slot s+1.
-            double symbolUs = 1e6 / m_device->GetPhy()->GetDataOrSymbolRate(false);
-            double rxLatencyUs = 8.0 * symbolUs + 40.0 + m_device->GetPhy()->GetSyncDuration().GetMicroSeconds();
+            double rxLatencyUs = m_device->GetPhy()->GetCcaDuration().GetMicroSeconds() + 40.0 +
+                                 m_device->GetPhy()->GetSyncDuration().GetMicroSeconds();
             double timeInP1Us = (Simulator::Now() - m_epochStartTime).GetMicroSeconds() - rxLatencyUs;
             int numP1Slots = std::max(1, (int)(g_phase1DurationUs / g_p1SlotUs));
             int slotIdx = (timeInP1Us < 0.0) ? -1 : (int)(timeInP1Us / g_p1SlotUs);
@@ -1045,7 +1047,7 @@ private:
                     }
                 }
 
-                double noiseLinear = std::pow(10.0, (-106.58 - 30.0) / 10.0);
+                double noiseLinear = std::pow(10.0, (g_rxSensitivityDbm - g_preambleLockDb - 30.0) / 10.0);
                 double interfDbm = (interfLinear > 0) ? (10.0 * std::log10(interfLinear) + 30.0) : -120.0;
                 double sinrDb = 10.0 * std::log10(std::pow(10.0, (sPrxDbm - 30.0) / 10.0) / (interfLinear + noiseLinear));
 
@@ -1213,7 +1215,7 @@ private:
                         coChannelCount++;
                     }
                 }
-                double noiseLinear = std::pow(10.0, (-106.58 - 30.0) / 10.0);
+                double noiseLinear = std::pow(10.0, (g_rxSensitivityDbm - g_preambleLockDb - 30.0) / 10.0);
                 double interfDbm = (interfLinear > 0) ? (10.0 * std::log10(interfLinear) + 30.0) : -120.0;
                 double sinrDb = 10.0 * std::log10(std::pow(10.0, (sPrxDbm - 30.0) / 10.0) / (interfLinear + noiseLinear));
 
@@ -1393,6 +1395,7 @@ void PrintGroundTruthReport() {
     ss << "MAC Scheme                                        : " << (g_enableP1Sidelink ? "Autonomous Slotted MAC (No CSMA)" : "Continuous Random Delay + CSMA-CA") << "\n";
     ss << "Post-lock Re-sync (Capture)                       : REMOVED (BLE chips never re-sync after Access Address lock)\n";
     ss << "Preamble Lock SINR Threshold                      : " << g_preambleLockDb << " dB\n";
+    ss << "Rx Sensitivity / Noise Floor                      : " << g_rxSensitivityDbm << " dBm / " << (g_rxSensitivityDbm - g_preambleLockDb) << " dBm\n";
     if (g_enableP1Sidelink) {
         int numP1Slots = std::max(1, (int)(g_phase1DurationUs / g_p1SlotUs));
         ss << "Slotted Configuration                             : Slot " << g_p1SlotUs << " us (" << numP1Slots << " slots in " << g_p1DurationMs << "ms)\n";
@@ -1681,6 +1684,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
     cmd.AddValue("p1TxPower", "Phase 1 TX Power in dBm (e.g., 0, 1, 3)", g_p1TxPower);
     cmd.AddValue("p1CcaThresholdDbm", "Phase 1 CSMA CCA Energy Detection Threshold in dBm (-106.58 to -80.0, default -96.58)", g_p1CcaThresholdDbm);
+    cmd.AddValue("rxSensitivityDbm", "BLE receiver sensitivity in dBm (default: -95.0; noise floor = sensitivity - preambleLockDb)", g_rxSensitivityDbm);
     cmd.AddValue("preambleLockDb", "Preamble lock SINR threshold in dB (BLE 5.4 LE 2M C/I, default: 6.0; old 802.15.4 behaviour: -5.0)", g_preambleLockDb);
     // Legacy capture flags: post-lock re-sync was removed (BLE chips cannot do it).
     // Still accepted so old sweep scripts keep running, but they have no effect.

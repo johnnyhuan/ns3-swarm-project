@@ -285,8 +285,9 @@ LrWpanCsmaCa::RandomBackoffDelay()
         m_randomBackoffPeriodsLeft = (uint64_t)m_random->GetValue(0, upperBound + 1);
     }
 
-    randomBackoff =
-        Seconds((double)(m_randomBackoffPeriodsLeft * lrwpan::aUnitBackoffPeriod) / symbolRate);
+    // BLE custom MAC: one backoff unit = CCA (20 us) + RX->TX turnaround (40 us) = 60 us
+    // (802.15.4 used aUnitBackoffPeriod = 20 symbols = 320 us).
+    randomBackoff = MicroSeconds(m_randomBackoffPeriodsLeft * 60);
 
     if (IsUnSlottedCsmaCa())
     {

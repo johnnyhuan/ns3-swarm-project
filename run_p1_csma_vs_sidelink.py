@@ -27,7 +27,8 @@ if not os.path.exists(NS3_DIR):
 
 for rel_path in ["scratch/lr-wpan-swarm.cc",
                  "src/lr-wpan/model/lr-wpan-phy.cc",
-                 "src/lr-wpan/model/lr-wpan-phy.h"]:
+                 "src/lr-wpan/model/lr-wpan-phy.h",
+                 "src/lr-wpan/model/lr-wpan-csmaca.cc"]:
     src_f = os.path.join(PROJECT_DIR, rel_path)
     dst_f = os.path.join(NS3_DIR, rel_path)
     if os.path.exists(src_f) and os.path.abspath(src_f) != os.path.abspath(dst_f):

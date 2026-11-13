@@ -1,0 +1,32 @@
+P1 final comparison | 100 UAVs | simTime 10.0s | seeds [1, 2, 3, 4, 5]
+==============================================================================================
+Metric (mean over seeds)             CSMA default     CSMA tuned     SL default       SL tuned
+----------------------------------------------------------------------------------------------
+P1 PRR (%) mean                             81.00          82.12          92.12          97.20
+P1 PRR (%) stdev                             0.94           0.70           0.62           0.51
+P1 PRR (%) min..max                    79.8..82.0     81.3..82.9     91.1..92.7     96.3..97.5
+SENDER_CSMA_ABORT                            5556            742              0              0
+RX_DEAFNESS_BUSY_TX                          2204           2008            977            482
+PREAMBLE_COLLISION_BUSY_RX                  15869          19851            338            171
+PREAMBLE_LOW_SINR                           21373          19720          17380           6008
+PAYLOAD_INTERFERENCE_CORRUPTION                 0              0              0              0
+SLOT_BOUNDARY_CUTOFF                            0              0              0              0
+Slot-end force cutoffs                        0.0            0.0            0.0            0.0
+----------------------------------------------------------------------------------------------
+PRR 0-10m (%)                                90.8           93.5           99.4           99.9
+PRR 10-20m (%)                               87.1           89.2           97.8           99.4
+PRR 20-30m (%)                               81.3           82.8           93.3           97.8
+PRR 30-40m (%)                               74.6           74.0           85.5           94.2
+PRR 40-50m (%)                               58.9           56.2           68.5           88.5
+----------------------------------------------------------------------------------------------
+PRR seed 1 (%)                              80.70          81.90          92.00          97.40
+PRR seed 2 (%)                              81.90          82.90          92.40          97.30
+PRR seed 3 (%)                              79.80          81.30          91.10          97.50
+PRR seed 4 (%)                              80.60          81.70          92.40          97.50
+PRR seed 5 (%)                              82.00          82.80          92.70          96.30
+==============================================================================================
+Settings:
+  CSMA default  : --enableP1Sidelink=false --p1TxPower=4 --p1CcaThresholdDbm=-97
+  CSMA tuned    : --enableP1Sidelink=false --p1TxPower=4 --p1CcaThresholdDbm=-94 --p1MinBE=0 --p1MaxBackoffs=1 --p1RetryMinMs=0.05 --p1RetryMaxMs=0.2
+  SL default    : --enableP1Sidelink=true --p1SlotUs=150 --p1TxPower=4 --p1SenseDecay=0.8 --p1ReselMin=5 --p1ReselMax=15 --p1PoolFrac=0.25
+  SL tuned      : --enableP1Sidelink=true --p1SlotUs=150 --p1TxPower=8 --p1SenseDecay=0.7 --p1ReselInitMin=2 --p1ReselInitMax=5 --p1ReselMin=30 --p1ReselMax=90 --p1PoolFrac=0.25

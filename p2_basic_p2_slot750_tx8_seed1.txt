@@ -7,18 +7,18 @@ Slot Guard Band (RX Turnaround)                   : 50 us
 P2 Access                                         : scheduled broadcast TDMA, no CCA (BLE), TX power 8 dBm
 Total Slot Boundary Force Cutoffs                 : 0
 Total Expected P2 Neighbor Links (Epochs x Top-K) : 236864
-  ✅ Successfully Received (Delivered)            : 196739 (83.1%)
-  ❌ Failed Link Receptions (Dropped/Missed)      : 40125 (16.9%)
+  ✅ Successfully Received (Delivered)            : 196783 (83.1%)
+  ❌ Failed Link Receptions (Dropped/Missed)      : 40081 (16.9%)
 ----------------------------------------------------------------------------------------
 EXACT PHYSICAL ROOT CAUSE BREAKDOWN (Zero Estimation / Direct From Protocol Pipeline):
-  P1_DISCOVERY_MISS                      :  5706 ( 14.2% of fails |   2.4% of all links)
-  TX_DEAFNESS_SAME_SLOT                  :  1523 (  3.8% of fails |   0.6% of all links)
-  RX_DEAFNESS_SLOT_CONFLICT              :  9644 ( 24.0% of fails |   4.1% of all links)
-  RECEIVER_CHANNEL_MISMATCH              :  6724 ( 16.8% of fails |   2.8% of all links)
+  P1_DISCOVERY_MISS                      :  5707 ( 14.2% of fails |   2.4% of all links)
+  TX_DEAFNESS_SAME_SLOT                  :  1526 (  3.8% of fails |   0.6% of all links)
+  RX_DEAFNESS_SLOT_CONFLICT              :  9613 ( 24.0% of fails |   4.1% of all links)
+  RECEIVER_CHANNEL_MISMATCH              :  6749 ( 16.8% of fails |   2.8% of all links)
   RADIO_TURNAROUND_BUSY                  :     0 (  0.0% of fails |   0.0% of all links)
   SENDER_CSMA_ABORT                      :     0 (  0.0% of fails |   0.0% of all links)
-  PREAMBLE_COLLISION_BUSY_RX             :  8936 ( 22.3% of fails |   3.8% of all links)
-  PREAMBLE_LOW_SINR                      :  7592 ( 18.9% of fails |   3.2% of all links)
+  PREAMBLE_COLLISION_BUSY_RX             :  8901 ( 22.2% of fails |   3.8% of all links)
+  PREAMBLE_LOW_SINR                      :  7585 ( 18.9% of fails |   3.2% of all links)
   PAYLOAD_INTERFERENCE_DROP              :     0 (  0.0% of fails |   0.0% of all links)
   SLOT_BOUNDARY_CUTOFF                   :     0 (  0.0% of fails |   0.0% of all links)
 ========================================================================================
@@ -26,11 +26,11 @@ EXACT PHYSICAL ROOT CAUSE BREAKDOWN (Zero Estimation / Direct From Protocol Pipe
 --- Distance Bracket Breakdown (0-10m, 10-20m, 20-30m, 30-40m, 40-50m) ---
 Bracket   | Total | Success | P1 Miss | TX Deaf | RX Deaf | Ch Mismatch | CSMA Abort | Collision | Low SINR | Payload Drop
 ------------------------------------------------------------------------------------------------------------------------
- 0-10m    | 12886 |   11865 |      81 |     148 |      68 |         148 |          0 |       576 |        0 |            0
-10-20m    | 80285 |   71528 |     341 |     735 |    2549 |        1076 |          0 |      3443 |      613 |            0
-20-30m    | 87580 |   73009 |    1751 |     450 |    3778 |        2582 |          0 |      3253 |     2757 |            0
-30-40m    | 42822 |   31744 |    2222 |     139 |    2399 |        2106 |          0 |      1324 |     2888 |            0
-40-50m    | 13291 |    8593 |    1311 |      51 |     850 |         812 |          0 |       340 |     1334 |            0
+ 0-10m    | 12886 |   11878 |      81 |     148 |      68 |         148 |          0 |       563 |        0 |            0
+10-20m    | 80285 |   71557 |     341 |     735 |    2548 |        1069 |          0 |      3420 |      615 |            0
+20-30m    | 87580 |   73051 |    1753 |     451 |    3754 |        2566 |          0 |      3248 |     2757 |            0
+30-40m    | 42822 |   31706 |    2221 |     140 |    2393 |        2153 |          0 |      1331 |     2878 |            0
+40-50m    | 13291 |    8591 |    1311 |      52 |     850 |         813 |          0 |       339 |     1335 |            0
 ========================================================================================================================
 
 📡 PHYSICAL RF SIGNAL PROOFS & SWARM DENSITY (Averages & Evidence) [PHASE 2]:

@@ -3,15 +3,15 @@ P2 basic BLE TDMA | P1 = SSA tuned | 100 UAVs | simTime 10.0s | seeds [1]
 Metric (mean over seeds)         750us x13 +8dBm   400us x24 +8dBm   400us x24 +4dBm
 ------------------------------------------------------------------------------------
 P1 PRR (%)                                 97.40             97.30             97.30
-P2 PRR (%)                                 83.10             90.00             90.50
+P2 PRR (%)                                 83.10             90.10             90.60
 ------------------------------------------------------------------------------------
 P2 failure share (% of all links):
   P1_DISCOVERY_MISS                         2.41              2.39              2.39
   TX_DEAFNESS_SAME_SLOT                     0.64              0.08              0.08
-  RX_DEAFNESS_SLOT_CONFLICT                 4.07              0.94              0.94
-  RECEIVER_CHANNEL_MISMATCH                 2.84              3.09              3.09
-  PREAMBLE_COLLISION_BUSY_RX                3.77              2.07              1.01
-  PREAMBLE_LOW_SINR                         3.21              1.48              2.00
+  RX_DEAFNESS_SLOT_CONFLICT                 4.06              0.94              0.94
+  RECEIVER_CHANNEL_MISMATCH                 2.85              3.02              3.02
+  PREAMBLE_COLLISION_BUSY_RX                3.76              2.03              0.99
+  PREAMBLE_LOW_SINR                         3.20              1.49              2.01
   PAYLOAD_INTERFERENCE_DROP                 0.00              0.00              0.00
   SLOT_BOUNDARY_CUTOFF                      0.00              0.00              0.00
 Slot-end force cutoffs                         0                 0                 0

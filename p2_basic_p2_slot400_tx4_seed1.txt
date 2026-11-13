@@ -7,18 +7,18 @@ Slot Guard Band (RX Turnaround)                   : 30 us
 P2 Access                                         : scheduled broadcast TDMA, no CCA (BLE), TX power 4 dBm
 Total Slot Boundary Force Cutoffs                 : 0
 Total Expected P2 Neighbor Links (Epochs x Top-K) : 238838
-  ✅ Successfully Received (Delivered)            : 216147 (90.5%)
-  ❌ Failed Link Receptions (Dropped/Missed)      : 22691 (9.5%)
+  ✅ Successfully Received (Delivered)            : 216335 (90.6%)
+  ❌ Failed Link Receptions (Dropped/Missed)      : 22503 (9.4%)
 ----------------------------------------------------------------------------------------
 EXACT PHYSICAL ROOT CAUSE BREAKDOWN (Zero Estimation / Direct From Protocol Pipeline):
-  P1_DISCOVERY_MISS                      :  5714 ( 25.2% of fails |   2.4% of all links)
-  TX_DEAFNESS_SAME_SLOT                  :   191 (  0.8% of fails |   0.1% of all links)
-  RX_DEAFNESS_SLOT_CONFLICT              :  2235 (  9.8% of fails |   0.9% of all links)
-  RECEIVER_CHANNEL_MISMATCH              :  7383 ( 32.5% of fails |   3.1% of all links)
+  P1_DISCOVERY_MISS                      :  5710 ( 25.4% of fails |   2.4% of all links)
+  TX_DEAFNESS_SAME_SLOT                  :   190 (  0.8% of fails |   0.1% of all links)
+  RX_DEAFNESS_SLOT_CONFLICT              :  2237 (  9.9% of fails |   0.9% of all links)
+  RECEIVER_CHANNEL_MISMATCH              :  7203 ( 32.0% of fails |   3.0% of all links)
   RADIO_TURNAROUND_BUSY                  :     0 (  0.0% of fails |   0.0% of all links)
   SENDER_CSMA_ABORT                      :     0 (  0.0% of fails |   0.0% of all links)
-  PREAMBLE_COLLISION_BUSY_RX             :  2402 ( 10.6% of fails |   1.0% of all links)
-  PREAMBLE_LOW_SINR                      :  4766 ( 21.0% of fails |   2.0% of all links)
+  PREAMBLE_COLLISION_BUSY_RX             :  2371 ( 10.5% of fails |   1.0% of all links)
+  PREAMBLE_LOW_SINR                      :  4792 ( 21.3% of fails |   2.0% of all links)
   PAYLOAD_INTERFERENCE_DROP              :     0 (  0.0% of fails |   0.0% of all links)
   SLOT_BOUNDARY_CUTOFF                   :     0 (  0.0% of fails |   0.0% of all links)
 ========================================================================================
@@ -27,10 +27,10 @@ EXACT PHYSICAL ROOT CAUSE BREAKDOWN (Zero Estimation / Direct From Protocol Pipe
 Bracket   | Total | Success | P1 Miss | TX Deaf | RX Deaf | Ch Mismatch | CSMA Abort | Collision | Low SINR | Payload Drop
 ------------------------------------------------------------------------------------------------------------------------
  0-10m    | 12996 |   12768 |      92 |       2 |       2 |           2 |          0 |       129 |        1 |            0
-10-20m    | 80968 |   78782 |     272 |      18 |     172 |         575 |          0 |       855 |      294 |            0
-20-30m    | 88311 |   80192 |    1759 |      54 |     685 |        3350 |          0 |       809 |     1462 |            0
-30-40m    | 43150 |   35185 |    2316 |      71 |     952 |        2464 |          0 |       404 |     1758 |            0
-40-50m    | 13413 |    9220 |    1275 |      46 |     424 |         992 |          0 |       205 |     1251 |            0
+10-20m    | 80968 |   78787 |     269 |      18 |     172 |         577 |          0 |       857 |      288 |            0
+20-30m    | 88311 |   80278 |    1761 |      53 |     686 |        3268 |          0 |       786 |     1479 |            0
+30-40m    | 43150 |   35282 |    2313 |      71 |     953 |        2364 |          0 |       396 |     1771 |            0
+40-50m    | 13413 |    9220 |    1275 |      46 |     424 |         992 |          0 |       203 |     1253 |            0
 ========================================================================================================================
 
 📡 PHYSICAL RF SIGNAL PROOFS & SWARM DENSITY (Averages & Evidence) [PHASE 2]:

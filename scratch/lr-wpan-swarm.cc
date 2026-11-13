@@ -47,6 +47,15 @@ const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels
 
 // Sidelink S-SPS (Semi-Persistent Scheduling) for Phase 1
 bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
+// Phase 1 CSMA tuning (P2 always keeps MinBE 0 / no extra backoffs)
+int g_p1Copies = 1;              // P1 CSMA: independent random transmissions of the beacon per cycle
+int g_p1MinBE = 0;               // CSMA min backoff exponent in P1 (backoff unit 60 us)
+int g_p1MaxBE = 5;               // CSMA max backoff exponent in P1 (>= 3)
+int g_p1MaxBackoffs = 0;         // extra CCA attempts before channel-access failure in P1
+double g_p1RetryMinMs = 0.1;     // app-level retry delay after a P1 channel-access failure
+double g_p1RetryMaxMs = 0.5;
+int g_p1ReselInitMin = -1;       // Sidelink: counter after the first random pick (-1 = same as p1ReselMin/Max)
+int g_p1ReselInitMax = -1;
 int g_p1ReselMin = 5;            // Sidelink reselection counter lower bound (cycles)
 int g_p1ReselMax = 15;           // Sidelink reselection counter upper bound (cycles)
 double g_p1PoolFrac = 0.25;      // Sidelink: pick randomly among this fraction of lowest-RSSI slots
@@ -56,6 +65,19 @@ double g_p1SlotUs = 300.0;       // Phase 1 Sidelink slot duration in us (defaul
 // Sidelink slot grid starts after the radio is back in RX on the broadcast channel:
 // the channel switch at cycle start turns the radio off, RX_ON takes 40 us.
 const double P1_SLOT_OFFSET_US = 40.0;
+// Worst-case time a P1 CSMA attempt can take (all backoffs at their max + CCAs + turnaround
+// + air time). Every attempt is started early enough to finish inside Phase 1, so no CSMA
+// is still running when Phase 2 switches channel.
+static double P1CsmaWorstCaseUs() {
+    int maxBE = std::max(3, g_p1MaxBE);
+    double us = 0.0;
+    for (int k = 0; k <= g_p1MaxBackoffs; k++) {
+        int be = std::min(g_p1MinBE + k, maxBE);
+        us += ((1 << be) - 1) * 60.0 + 20.0;   // backoff periods (60 us) + CCA (20 us)
+    }
+    return us + 40.0 + 88.0 + 20.0;             // RX->TX turnaround + air time + margin
+}
+
 static int NumP1Slots() {
     return std::max(1, (int)((g_phase1DurationUs - P1_SLOT_OFFSET_US) / g_p1SlotUs));
 }
@@ -525,6 +547,7 @@ private:
 
     // Phase 1 Sidelink S-SPS variables
     int m_p1ClaimedSlot;
+    uint32_t m_p1PickedEpoch = 0;   // epoch in which the P2 resource was last picked
     int m_p1ReselCounter;
     bool m_p1ConflictOccurred;
     std::set<int> m_p1OccupiedSlotsThisEpoch;
@@ -609,13 +632,22 @@ private:
         // Phase 1 (Broadcast): Configurable range
         SwitchChannelAndPower(BROADCAST_CHANNEL, (int8_t)g_p1TxPower);
         // Sidelink S-SPS transmits in its slot without listen-before-talk
-        if (m_csma) m_csma->SetSkipCca(g_enableP1Sidelink);
+        if (m_csma) {
+            m_csma->SetSkipCca(g_enableP1Sidelink);
+            if (!g_enableP1Sidelink) {
+                m_csma->SetMacMaxBE(std::max(3, g_p1MaxBE));
+                m_csma->SetMacMinBE(std::min(g_p1MinBE, std::max(3, g_p1MaxBE)));
+                m_csma->SetMacMaxCSMABackoffs(g_p1MaxBackoffs);
+            }
+        }
         
         if (!g_enableP1Sidelink) {
             Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
-            double maxDelayUs = std::max(500.0, g_phase1DurationUs - 500.0);
-            double randomDelayUs = uv->GetValue(100.0, maxDelayUs);
-            Simulator::Schedule(MicroSeconds(randomDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
+            double maxDelayUs = std::max(200.0, g_phase1DurationUs - P1CsmaWorstCaseUs());
+            for (int k = 0; k < std::max(1, g_p1Copies); k++) {
+                double randomDelayUs = uv->GetValue(100.0, maxDelayUs);
+                Simulator::Schedule(MicroSeconds(randomDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
+            }
         } else {
             // Sidelink S-SPS mode for Phase 1
             int numP1Slots = NumP1Slots();
@@ -632,8 +664,12 @@ private:
             if (m_p1ClaimedSlot < 0 || m_p1ClaimedSlot >= numP1Slots) {
                 // First time: pick any slot randomly
                 m_p1ClaimedSlot = uv->GetInteger(0, numP1Slots - 1);
-                // Draw initial reselection counter: uniform [5, 15] cycles
-                m_p1ReselCounter = uv->GetInteger(g_p1ReselMin, g_p1ReselMax);
+                // First pick is blind, so allow a shorter first counter to fix it quickly
+                if (g_p1ReselInitMin > 0 && g_p1ReselInitMax >= g_p1ReselInitMin) {
+                    m_p1ReselCounter = uv->GetInteger(g_p1ReselInitMin, g_p1ReselInitMax);
+                } else {
+                    m_p1ReselCounter = uv->GetInteger(g_p1ReselMin, g_p1ReselMax);
+                }
             } else if (m_p1ReselCounter <= 0) {
                 // Reselection period reached: pick from the other slots with lowest sensed signal strength/energy
                 std::vector<std::pair<double, int>> candidateSlots;
@@ -731,6 +767,13 @@ private:
             return;
         }
         
+        // Repeated copies in the same cycle re-advertise the resource picked by the first copy
+        if (m_p1PickedEpoch == m_epoch) {
+            SendBeaconPacket();
+            return;
+        }
+        m_p1PickedEpoch = m_epoch;
+
         int cost[MAX_DATA_SLOTS][MAX_DATA_CHANNELS] = {0};
         
         Ptr<MobilityModel> myMobility = m_device->GetNode()->GetObject<MobilityModel>();
@@ -776,7 +819,10 @@ private:
         m_myClaimedChannel = bestOptions[pickIdx].second;
         g_droneClaimedSlot[m_epoch][m_id] = m_myClaimedSlot;
         g_droneClaimedChannel[m_epoch][m_id] = m_myClaimedChannel;
+        SendBeaconPacket();
+    }
 
+    void SendBeaconPacket() {
         // 位元封裝 (Bit-packing in 4 bytes): ID(9 bits: 0-511), Slot(8 bits: 0-255), Channel(4 bits: 0-15) -> Total 21 bits in 32 bits
         uint32_t payload = (m_id & 0x01FF) | ((m_myClaimedSlot & 0x00FF) << 9) | ((m_myClaimedChannel & 0x000F) << 17);
         uint8_t buffer[4] = {
@@ -798,8 +844,12 @@ private:
     }
 
     void ComputeSchedule() {
-        // Phase 2 keeps its normal CCA behaviour
-        if (m_csma) m_csma->SetSkipCca(false);
+        // Phase 2 keeps its normal CCA behaviour and the original single-shot CSMA
+        if (m_csma) {
+            m_csma->SetSkipCca(false);
+            m_csma->SetMacMinBE(0);
+            m_csma->SetMacMaxCSMABackoffs(0);
+        }
 
         // 第一步：過濾出 50m 避撞安全監控半徑內的鄰機 (固定以 50m / -98 dBm 評估或最近鄰居)
         double safetyRssi = g_p1TxPower - 46.6777 - 30.0 * std::log10(50.0); // -97.65 dBm ~ -98 dBm
@@ -991,11 +1041,12 @@ private:
                     }
                 } else {
                     // 如果還在 Phase 1 的有效時間內 (保留最後 0.5ms 緩衝)，則安排重新決策
-                    if (Simulator::Now() < m_epochStartTime + MilliSeconds(g_p1DurationMs) - MicroSeconds(500)) {
-                        // 隨機等待 0.1 ~ 0.5 毫秒，讓對方的情報傳達過來，也錯開重試時間
-                        Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
-                        double retryDelay = uv->GetValue(0.1, 0.5);
-                        Simulator::Schedule(MilliSeconds(retryDelay), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
+                    // Retry after a random delay, only if the whole worst-case attempt still fits in P1
+                    Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
+                    double retryDelay = uv->GetValue(g_p1RetryMinMs, g_p1RetryMaxMs);
+                    Time retryAt = Simulator::Now() + MicroSeconds(retryDelay * 1000.0);
+                    if (retryAt + MicroSeconds(P1CsmaWorstCaseUs()) <= m_epochStartTime + MicroSeconds(g_phase1DurationUs)) {
+                        Simulator::Schedule(MicroSeconds(retryDelay * 1000.0), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
                     }
                 }
             } else if (params.m_status == MacStatus::SUCCESS) {
@@ -1804,6 +1855,14 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);
     cmd.AddValue("simTime", "Total simulation duration in seconds (default 10.0)", g_simTime);
     cmd.AddValue("enableP1Sidelink", "Enable Sidelink-inspired Semi-Persistent Scheduling for Phase 1 (default false)", g_enableP1Sidelink);
+    cmd.AddValue("p1Copies", "P1 CSMA: beacon transmissions per cycle (default 1)", g_p1Copies);
+    cmd.AddValue("p1MinBE", "P1 CSMA min backoff exponent (default 0)", g_p1MinBE);
+    cmd.AddValue("p1MaxBE", "P1 CSMA max backoff exponent (default 5, >= 3)", g_p1MaxBE);
+    cmd.AddValue("p1MaxBackoffs", "P1 CSMA extra CCA attempts before failure (default 0)", g_p1MaxBackoffs);
+    cmd.AddValue("p1RetryMinMs", "P1 app retry delay min after CCA failure, ms (default 0.1)", g_p1RetryMinMs);
+    cmd.AddValue("p1RetryMaxMs", "P1 app retry delay max after CCA failure, ms (default 0.5)", g_p1RetryMaxMs);
+    cmd.AddValue("p1ReselInitMin", "Sidelink first counter min after blind pick (default -1 = p1ReselMin)", g_p1ReselInitMin);
+    cmd.AddValue("p1ReselInitMax", "Sidelink first counter max after blind pick (default -1 = p1ReselMax)", g_p1ReselInitMax);
     cmd.AddValue("p1ReselMin", "Sidelink reselection counter min cycles (default 5)", g_p1ReselMin);
     cmd.AddValue("p1ReselMax", "Sidelink reselection counter max cycles (default 15)", g_p1ReselMax);
     cmd.AddValue("p1PoolFrac", "Sidelink candidate pool: fraction of lowest-RSSI slots (default 0.25)", g_p1PoolFrac);

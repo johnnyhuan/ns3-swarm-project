@@ -62,7 +62,7 @@ int g_p1ReselMax = 15;           // SSA reselection counter upper bound (cycles)
 double g_p1PoolFrac = 0.25;      // SSA: pick randomly among this fraction of lowest-RSSI slots
 double g_p1SlotGuardUs = 0.0;    // SSA: cutoff at (slot end - guard); default 0 = exactly at the slot boundary
 double g_p1SenseDecay = 0.8;     // SSA RSSI sensing: per-cycle decay of slot energy history (1.0 = equal weights, halved at reselection)
-double g_p1SlotUs = 300.0;       // Phase 1 SSA slot duration in us (default 300 us -> 33 slots in 10ms; slot start -> TX end = CCA 20 + turnaround 40 + BLE air time 88 = 148 us)
+double g_p1SlotUs = 300.0;       // Phase 1 SSA slot duration in us (default 300 us -> 33 slots in 10ms; slot start -> TX end = turnaround 40 + BLE air time 96 = 136 us, no CCA in SSA)
 // SSA slot grid starts after the radio is back in RX on the broadcast channel:
 // the channel switch at cycle start turns the radio off, RX_ON takes 40 us.
 const double P1_SLOT_OFFSET_US = 40.0;
@@ -76,7 +76,7 @@ static double P1CsmaWorstCaseUs() {
         int be = std::min(g_p1MinBE + k, maxBE);
         us += ((1 << be) - 1) * 60.0 + 20.0;   // backoff periods (60 us) + CCA (20 us)
     }
-    return us + 40.0 + 88.0 + 20.0;             // RX->TX turnaround + air time + margin
+    return us + 40.0 + 88.0 + 20.0;             // RX->TX turnaround + ~air time + margin (kept as used in all runs)
 }
 
 static int NumP1Slots() {
@@ -725,7 +725,7 @@ private:
             // Record claimed slot in global registry for Phase 1 SSA
             g_p1DroneClaimedSlot[m_epoch][m_id] = m_p1ClaimedSlot;
 
-            // Slot timeline (no CCA in SSA): RX->TX 0-40 us, TX 40-128 us, then >= 20 us guard
+            // Slot timeline (no CCA in SSA): RX->TX 0-40 us, TX 40-136 us (96 us on air), rest is guard
             // before the next slot. Jitter may only use what is left above that guard.
             double maxJitterUs = std::max(0.0, std::min(15.0, g_p1SlotUs - 148.0));
             double jitterUs = (maxJitterUs > 0.0) ? uv->GetValue(0.0, maxJitterUs) : 0.0;
@@ -1189,7 +1189,7 @@ private:
                 uint64_t txUid = sTxUids[sender];
                 double sTxTime = sTxTimes[sender];
 
-                // Check other concurrent transmissions during sender's mini-beacon (BLE 2M air time ~0.088 ms)
+                // Check other concurrent transmissions during sender's mini-beacon (BLE 2M air time 0.096 ms)
                 double interfLinear = 0.0;
                 int coChannelCount = 0;
                 if (txUid != 0) {
@@ -1197,7 +1197,7 @@ private:
                         if (other == sender || other == r) continue;
                         if (sTxTimes[other] >= 0.0) {
                             double diff = std::abs(sTxTimes[other] - sTxTime);
-                            if (diff < 0.088) { // Overlaps on Broadcast Channel 11 (BLE 5.4 LE 2M air time: 24+8+52+4 = 88 us)
+                            if (diff < 0.096) { // Overlaps on Broadcast Channel 11 (BLE 5.4 LE 2M air time: 24+8+60+4 = 96 us)
                                 Ptr<MobilityModel> otherMob = mobs[other];
                                 double otherDist = rMob->GetDistanceFrom(otherMob);
                                 double otherPrxDbm = g_p1TxPower - 46.6777 - 30.0 * std::log10(std::max(0.1, otherDist));

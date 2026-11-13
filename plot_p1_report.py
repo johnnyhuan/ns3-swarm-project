@@ -133,8 +133,8 @@ finish(ax, fig, "fig2_prr_vs_density.png",
 fig, ax = plt.subplots(figsize=(8, 5))
 errs = [0, 10, 20, 30, 40, 60]
 ms = [mean_sd([prr(t) for t in seeds(f"p1_robust_ssa_n100_e{e}_seed*.txt")]) for e in errs]
-ax.axvspan(0, 22, color=SSA, alpha=0.07, lw=0)
-ax.text(1, 75.6, "within slot guard (22 µs)", color=INK2, fontsize=10)
+ax.axvspan(0, 14, color=SSA, alpha=0.07, lw=0)
+ax.text(1, 75.6, "within slot guard (14 µs)", color=INK2, fontsize=10)
 ax.errorbar(errs, [m for m, _ in ms], yerr=[s for _, s in ms], color=SSA, marker="o",
             capsize=4, elinewidth=1.2, label="SSA (tuned)")
 csma_vals = [prr(t) for e in (0, 60) for t in seeds(f"p1_robust_csma_n100_e{e}_seed*.txt")]

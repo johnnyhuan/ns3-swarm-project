@@ -119,7 +119,7 @@ if ("decay", "SSA") in data:
     ax.set_ylim(min(m) - 2, 100.5)
     mark(ax, 0.7, "used: 0.7")
     ax.set_title("SSA: weight of older sensing samples")
-    finish(fig, "s3_decay.png", f"{NOTE}; {TUNED}")
+    finish(fig, "s3_decay.png", f"{NOTE.replace('3 seeds', '8 seeds')}; {TUNED}")
 
 # 4) slot width / slot count
 if ("slot", "perfect sync") in data:

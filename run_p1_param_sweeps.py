@@ -76,7 +76,7 @@ def frange(lo, hi, step):
 # exp -> list of (line, x, flags)
 EXPS = {
     "pool": [("SSA", x, ssa(p1PoolFrac=x)) for x in [0.05, 0.10, 0.15, 0.25, 0.35, 0.45, 0.60]],
-    "decay": [("SSA", x, ssa(p1SenseDecay=x)) for x in [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]],
+    "decay": [("SSA", x, ssa(p1SenseDecay=x)) for x in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]],
     "counter": ([("two-stage (first 2-5)", n, ssa(p1ReselMin=n, p1ReselMax=3 * n))
                  for n in [1, 2, 5, 10, 20, 30, 50, 100]] +
                 [("single-stage", n, ssa(p1ReselMin=n, p1ReselMax=3 * n, p1ReselInitMin=-1, p1ReselInitMax=-1))

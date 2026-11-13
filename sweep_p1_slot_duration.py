@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Phase 1 Sidelink Slot Duration Sweep Benchmark
+Phase 1 SSA Slot Duration Sweep Benchmark
 Evaluates physical limits: How short can a slot be?
 Sweeps p1SlotUs from 150us to 1000us.
 """
@@ -12,7 +12,7 @@ import re
 from datetime import datetime
 
 print("=========================================================================")
-print("🔬 PHASE 1 SIDELINK SLOT DURATION SWEEP: MINIMUM SLOT LIMIT ANALYSIS 🔬")
+print("🔬 PHASE 1 SSA SLOT DURATION SWEEP: MINIMUM SLOT LIMIT ANALYSIS 🔬")
 print("=========================================================================")
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -68,7 +68,7 @@ def run_point(slot_us):
         "./ns3", "run",
         f"scratch/lr-wpan-swarm --numNodes={num_nodes} --p1Duration={p1_duration} "
         f"--simTime={sim_time} --spaceSize={space_size} --spaceZ={space_z} "
-        f"--enableP1Sidelink=true --p1SlotUs={slot_us} --autoPush=false"
+        f"--enableP1Ssa=true --p1SlotUs={slot_us} --autoPush=false"
     ]
     proc = subprocess.run(cmd, cwd=NS3_DIR, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     out = proc.stdout
@@ -154,7 +154,7 @@ for s_us in slot_durations:
     print(f"  ==> PRR: {res['prr']:.1f}% | Deafness: {res['rx_deafness']} | Coll: {res['preamble_coll']} | Captures: {res['captures']}")
 
 print("\n" + "=" * 105)
-print("📊 SIDELINK SLOT DURATION SWEEP: HIGH-RESOLUTION 75µs - 105µs BOUNDARY ANALYSIS")
+print("📊 SSA SLOT DURATION SWEEP: HIGH-RESOLUTION 75µs - 105µs BOUNDARY ANALYSIS")
 print("=" * 105)
 print(f"{'Slot (µs)':<10} | {'Slots':<6} | {'UAVs/Slot':<10} | {'P1 PRR':<10} | {'Deafness':<10} | {'Collision':<10} | {'Low SINR':<10} | {'Captures':<10} | {'Physical State / Phenomenon':<22}")
 print("-" * 105)
@@ -165,7 +165,7 @@ for r in results:
     elif r['slot_us'] <= 85.0:
         phys_note = "🚀 Optimal Micro-Slot Region"
     elif r['slot_us'] <= 100.0:
-        phys_note = "🔥 Peak S-SPS Spatial Reuse"
+        phys_note = "🔥 Peak SSA Spatial Reuse"
     else:
         phys_note = "✅ Baseline Micro-Slot"
     
@@ -175,7 +175,7 @@ print("=" * 105)
 # Save text report
 summary_path = os.path.join(PROJECT_DIR, "exp_slot_sweep_results.txt")
 with open(summary_path, "w", encoding="utf-8") as f:
-    f.write("# Phase 1 Sidelink Slot Duration Sweep Summary (High-Resolution 70µs - 105µs)\n")
+    f.write("# Phase 1 SSA Slot Duration Sweep Summary (High-Resolution 70µs - 105µs)\n")
     f.write(f"- Swarm Scale: {num_nodes} UAVs in {space_size}m x {space_size}m x {space_z}m\n")
     f.write(f"- Phase 1 Duration: {p1_duration} ms\n")
     f.write(f"- Packet Airtime Limit: 244 µs (192µs Header + 52µs Payload @ 2 Mbps)\n\n")
@@ -184,7 +184,7 @@ with open(summary_path, "w", encoding="utf-8") as f:
     for r in results:
         if r['slot_us'] < 75.0: note = "Sub-75µs Boundary"
         elif r['slot_us'] <= 85.0: note = "Optimal Micro-Slot Region"
-        elif r['slot_us'] <= 100.0: note = "Peak S-SPS Spatial Reuse"
+        elif r['slot_us'] <= 100.0: note = "Peak SSA Spatial Reuse"
         else: note = "Baseline Micro-Slot"
         f.write(f"| {r['slot_us']:.1f} | {r['slots_avail']} | {r['density']:.2f} | {r['prr']:.1f}% | {r['rx_deafness']} | {r['preamble_coll']} | {r['low_sinr']} | {r['captures']} | {note} |\n")
 
@@ -220,7 +220,7 @@ try:
     labels[-1] = 'Physical Airtime Limit (244 µs)'
     ax1.legend(lines, labels, loc='center right', frameon=True)
 
-    plt.title(f'Sidelink Mode 4: Slot Duration Sweep & Minimum Slot Physical Bound\n(75 UAVs, 10ms Window, 2 Mbps PHY)', fontsize=13, fontweight='bold')
+    plt.title(f'SSA: Slot Duration Sweep & Minimum Slot Physical Bound\n(75 UAVs, 10ms Window, 2 Mbps PHY)', fontsize=13, fontweight='bold')
     plot_path = os.path.join(PROJECT_DIR, "exp_slot_sweep_prr.png")
     plt.savefig(plot_path, dpi=300, bbox_inches='tight')
     plt.close()

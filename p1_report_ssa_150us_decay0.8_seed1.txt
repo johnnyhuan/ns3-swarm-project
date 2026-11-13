@@ -1,0 +1,65 @@
+
+========================================================================================
+       🔬 PHASE 1 PHYSICAL & MAC GROUND TRUTH ANALYSIS (Top-K within 50m) 🔬           
+========================================================================================
+MAC Scheme                                        : Autonomous Slotted MAC (No CSMA)
+Post-lock Re-sync (Capture)                       : REMOVED (BLE chips never re-sync after Access Address lock)
+Preamble Lock SINR Threshold                      : 6 dB
+Rx Sensitivity / Noise Floor                      : -95 dBm / -101 dBm
+P1 Slot Boundary Force Cutoffs                    : 0 (cut at slot end - 0 us)
+P1 Beacons Not Started Within Slot                : 0
+Slotted Configuration                             : Slot 150 us (66 slots in 10ms)
+SSA Sensing / Reselection                    : decay 0.8, pool 0.25, counter 5-15 cycles
+Total Expected P1 Neighbor Links (Epochs x Top-K) : 72009
+  ✅ Successfully Received (Delivered)            : 66566 (92.4%)
+  ❌ Failed Link Receptions (Dropped/Missed)      : 5443 (7.6%)
+----------------------------------------------------------------------------------------
+EXACT PHYSICAL ROOT CAUSE BREAKDOWN (Zero Estimation / Direct From ns-3 State Machine):
+  SENDER_CSMA_ABORT                      :     0 (  0.0% of fails |   0.0% of all links)
+  RX_DEAFNESS_BUSY_TX                    :   429 (  7.9% of fails |   0.6% of all links)
+  PREAMBLE_COLLISION_BUSY_RX             :   201 (  3.7% of fails |   0.3% of all links)
+  PREAMBLE_LOW_SINR                      :  4813 ( 88.4% of fails |   6.7% of all links)
+  RADIO_TURNAROUND_BUSY                  :     0 (  0.0% of fails |   0.0% of all links)
+  PAYLOAD_INTERFERENCE_CORRUPTION        :     0 (  0.0% of fails |   0.0% of all links)
+  SLOT_BOUNDARY_CUTOFF                   :     0 (  0.0% of fails |   0.0% of all links)
+========================================================================================
+
+--- Distance Bracket Breakdown (0-10m, 10-20m, 20-30m, 30-40m, 40-50m) ---
+Bracket   | Total | Success | CSMA Abort | RX Deafness | Preamble Coll | Low SINR | Turnaround | Payload Drop
+--------------------------------------------------------------------------------------------------------
+ 0-10m    |  3026 |    3015 |          0 |           6 |             4 |        1 |          0 |            0
+10-20m    | 17227 |   16802 |          0 |         146 |            32 |      247 |          0 |            0
+20-30m    | 28617 |   27238 |          0 |         163 |            87 |     1129 |          0 |            0
+30-40m    | 17369 |   15146 |          0 |          86 |            63 |     2074 |          0 |            0
+40-50m    |  5770 |    4365 |          0 |          28 |            15 |     1362 |          0 |            0
+========================================================================================================
+
+📡 PHYSICAL RF SIGNAL PROOFS & SWARM DENSITY (Averages & Evidence) [PHASE 1]:
+  • Airspace Dimensions & Topology      : 200.0m x 200.0m x 80.0m
+  • Mean 50m Neighbors per UAV (Density): 13.04 UAVs
+  • UAVs with >= 5 Neighbors in 50m     : 97.0%
+  • Preamble Lock SINR Threshold         : 6.0 dB
+  • Total Power Capture Events Triggered : 0 (post-lock re-sync removed)
+  • Delivered Links Mean SINR           : 15.0 dB (Threshold: >= 6.0 dB)
+  • Low SINR Dropped Links Mean SINR    : 2.8 dB (Threshold: < 6.0 dB)
+  • Low SINR Mean Received Power (Prx)  : -88.5 dBm
+  • Low SINR Mean Interference Power (I): -92.2 dBm
+========================================================================================================
+
+========================================================================================
+       🎯 STEADY-STATE CONVERGED ANALYSIS (Last 2.0s: t = 1.0s ~ 3.0s) 🎯
+========================================================================================
+Steady-State P1 Target Links (Epoch 49+)           : 48335
+  ✅ Successfully Received (Delivered)            : 44945 (93.0%)
+  ❌ Failed Link Receptions (Dropped/Missed)      : 3390 (7.0%)
+----------------------------------------------------------------------------------------
+STEADY-STATE EXACT PHYSICAL ROOT CAUSE BREAKDOWN:
+  SENDER_CSMA_ABORT                      :     0 (  0.0% of fails |   0.0% of all links)
+  RX_DEAFNESS_BUSY_TX                    :   256 (  7.6% of fails |   0.5% of all links)
+  PREAMBLE_COLLISION_BUSY_RX             :   132 (  3.9% of fails |   0.3% of all links)
+  PREAMBLE_LOW_SINR                      :  3002 ( 88.6% of fails |   6.2% of all links)
+  RADIO_TURNAROUND_BUSY                  :     0 (  0.0% of fails |   0.0% of all links)
+  PAYLOAD_INTERFERENCE_CORRUPTION        :     0 (  0.0% of fails |   0.0% of all links)
+  SLOT_BOUNDARY_CUTOFF                   :     0 (  0.0% of fails |   0.0% of all links)
+========================================================================================
+

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Phase 1 final comparison: CSMA vs Sidelink, each at its default and at its tuned (best) setting.
+Phase 1 final comparison: CSMA vs SSA, each at its default and at its tuned (best) setting.
 
 All runs: 100 UAVs, 200x200x80 m, 10 m/s, P1 = 10 ms, BLE 5.4 LE 2M model, simTime 10 s.
 Runs are executed in parallel (one working directory per run) and the results are
@@ -50,15 +50,15 @@ BASE = (f"--numNodes={a.nodes} --simTime={a.simtime} --p1Duration=10 --preambleL
 # name, tag, flags
 MODES = [
     ("CSMA default", "csma_default",
-     "--enableP1Sidelink=false --p1TxPower=4 --p1CcaThresholdDbm=-97"),
+     "--enableP1Ssa=false --p1TxPower=4 --p1CcaThresholdDbm=-97"),
     ("CSMA tuned", "csma_tuned",
-     "--enableP1Sidelink=false --p1TxPower=4 --p1CcaThresholdDbm=-94 "
+     "--enableP1Ssa=false --p1TxPower=4 --p1CcaThresholdDbm=-94 "
      "--p1MinBE=0 --p1MaxBackoffs=1 --p1RetryMinMs=0.05 --p1RetryMaxMs=0.2"),
-    ("SL default", "sl_default",
-     "--enableP1Sidelink=true --p1SlotUs=150 --p1TxPower=4 --p1SenseDecay=0.8 "
+    ("SSA default", "ssa_default",
+     "--enableP1Ssa=true --p1SlotUs=150 --p1TxPower=4 --p1SenseDecay=0.8 "
      "--p1ReselMin=5 --p1ReselMax=15 --p1PoolFrac=0.25"),
-    ("SL tuned", "sl_tuned",
-     "--enableP1Sidelink=true --p1SlotUs=150 --p1TxPower=8 --p1SenseDecay=0.7 "
+    ("SSA tuned", "ssa_tuned",
+     "--enableP1Ssa=true --p1SlotUs=150 --p1TxPower=8 --p1SenseDecay=0.7 "
      "--p1ReselInitMin=2 --p1ReselInitMax=5 --p1ReselMin=30 --p1ReselMax=90 --p1PoolFrac=0.25"),
 ]
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate publication-quality plot for Phase 1 Sidelink Slot Duration Sweep
+Generate publication-quality plot for Phase 1 SSA Slot Duration Sweep
 Focused specifically on the 50 µs to 150 µs sweep region, with dual-panel full spectrum view.
 """
 
@@ -22,10 +22,10 @@ data = [
     (82.5,  119,  0.0,   0,   0,     0, "Sub-85µs Boundary"),
     (85.0,  115,  0.0,   0,   0,     0, "Cliff Threshold"),
     (87.5,  112, 92.4, 168, 458, 47454, "Minimum Viable Slot"),
-    (90.0,  109, 92.3, 169, 449, 48458, "S-SPS Active"),
+    (90.0,  109, 92.3, 169, 449, 48458, "SSA Active"),
     (92.5,  106, 93.4, 151, 358, 48623, "Peak Spatial Reuse"),
-    (95.0,  103, 92.3, 181, 412, 46695, "S-SPS Active"),
-    (97.5,  101, 92.2, 176, 396, 45206, "S-SPS Active"),
+    (95.0,  103, 92.3, 181, 412, 46695, "SSA Active"),
+    (97.5,  101, 92.2, 176, 396, 45206, "SSA Active"),
     (100.0,  98, 93.2, 157, 372, 46339, "Selected Standard (100µs)"),
     (105.0,  93, 93.1, 137, 380, 44769, "Micro-Slot Plateau"),
     (125.0,  79, 91.5, 191, 394, 29208, "Medium Micro-Slot"),
@@ -47,7 +47,7 @@ y_sub_slots = [d[1] for d in sub_data]
 fig, ax1 = plt.subplots(figsize=(11, 6.5))
 
 color_prr = '#2980b9'
-ax1.set_xlabel('Phase 1 Sidelink Slot Duration (µs)', fontsize=12, fontweight='bold')
+ax1.set_xlabel('Phase 1 SSA Slot Duration (µs)', fontsize=12, fontweight='bold')
 ax1.set_ylabel('Phase 1 Delivery PRR (%)', color=color_prr, fontsize=12, fontweight='bold')
 line1 = ax1.plot(x_sub, y_sub_prr, color=color_prr, marker='o', linewidth=2.5, markersize=8, label='Phase 1 PRR (%)')
 ax1.tick_params(axis='y', labelcolor=color_prr)
@@ -85,7 +85,7 @@ lines = line1 + line2
 labels = [l.get_label() for l in lines]
 ax1.legend(lines, labels, loc='center right', frameon=True, fontsize=10)
 
-plt.title('Phase 1 Sidelink Micro-Slot Duration Sweep (50 µs to 150 µs)\nDiscovery of Minimum Physical Slot Boundary & 100 µs Standard Selection', fontsize=13, fontweight='bold')
+plt.title('Phase 1 SSA Micro-Slot Duration Sweep (50 µs to 150 µs)\nDiscovery of Minimum Physical Slot Boundary & 100 µs Standard Selection', fontsize=13, fontweight='bold')
 plt.tight_layout()
 
 focused_path = os.path.join(PROJECT_DIR, "exp_slot_sweep_50_150us.png")
@@ -136,7 +136,7 @@ ax_zoom.set_ylim([-5, 105])
 ax_zoom.grid(True, linestyle='--', alpha=0.5)
 ax_zoom.legend(loc='lower right', fontsize=9)
 
-plt.suptitle('3GPP Sidelink Mode 4: Slot Duration Sweep & Selection Rationale (75 UAVs, 10ms Window)', fontsize=14, fontweight='bold', y=0.98)
+plt.suptitle('SSA: Slot Duration Sweep & Selection Rationale (75 UAVs, 10ms Window)', fontsize=14, fontweight='bold', y=0.98)
 plt.tight_layout()
 
 dual_path = os.path.join(PROJECT_DIR, "exp_slot_sweep_dual_panel.png")

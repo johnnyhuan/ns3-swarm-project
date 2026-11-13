@@ -74,7 +74,7 @@ for idx, c in enumerate(cases, 1):
         "./ns3", "run",
         f"scratch/lr-wpan-swarm --numNodes={num_nodes} --nodeSpeed={node_speed} "
         f"--p1Duration=25.0 --p1TxPower={c['p1_power']} --p2TxPower=-2 --simTime={sim_time} "
-        f"--enableP1Sidelink=false --p1CcaThresholdDbm={c['cca_thresh']}"
+        f"--enableP1Ssa=false --p1CcaThresholdDbm={c['cca_thresh']}"
     ]
 
     print(f"=> Executing in {NS3_DIR}:\n   {' '.join(cmd)}\n")

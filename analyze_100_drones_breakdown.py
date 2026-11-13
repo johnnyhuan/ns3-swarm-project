@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Deep Failure Root Cause Analysis for 100 UAVs: CSMA-CA vs 3GPP Sidelink S-SPS (Strict 6.0 dB C/I)
+Deep Failure Root Cause Analysis for 100 UAVs: CSMA-CA vs SSA (Strict 6.0 dB C/I)
 Extracts and compares all physical failure categories, distance breakdowns, and RF metrics.
 """
 
@@ -13,7 +13,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 print("==========================================================================================")
-print("🔬 DEEP FAILURE ROOT CAUSE ANALYSIS AT 100 UAVs (CSMA-CA vs SIDELINK S-SPS) 🔬")
+print("🔬 DEEP FAILURE ROOT CAUSE ANALYSIS AT 100 UAVs (CSMA-CA vs SSA SSA) 🔬")
 print("==========================================================================================")
 
 sim_time = float(sys.argv[1]) if len(sys.argv) > 1 else 1.0
@@ -40,7 +40,7 @@ for rel_path in ["scratch/lr-wpan-swarm.cc", "src/lr-wpan/model/lr-wpan-phy.cc",
         except Exception:
             pass
 
-def run_method(enable_sidelink):
+def run_method(enable_ssa):
     for fname in ["p1_ground_truth_report.txt", "p2_ground_truth_report.txt", "run.log"]:
         fpath = os.path.join(NS3_DIR, fname)
         if os.path.exists(fpath):
@@ -51,7 +51,7 @@ def run_method(enable_sidelink):
         "./ns3", "run",
         f"scratch/lr-wpan-swarm --numNodes={num_nodes} --p1Duration={p1_duration} "
         f"--simTime={sim_time} --spaceSize={space_size} --spaceZ={space_z} "
-        f"--enableP1Sidelink={'true' if enable_sidelink else 'false'} "
+        f"--enableP1Ssa={'true' if enable_ssa else 'false'} "
         f"--p1SlotUs={p1_slot_us} --p1CaptureThresholdDb={capture_thresh_db} "
         f"--phyCaptureMarginDb={capture_thresh_db} --autoPush=false"
     ]
@@ -131,18 +131,18 @@ def parse_full_report(text):
     return data
 
 print("▶️ [1/2] Simulating CSMA-CA Baseline at 100 UAVs ...", flush=True)
-csma = run_method(enable_sidelink=False)
+csma = run_method(enable_ssa=False)
 print(f"   => CSMA PRR: {csma['prr']:.1f}% ({csma['succ']:,} / {csma['links']:,} links)\n")
 
-print("▶️ [2/2] Simulating 3GPP Sidelink S-SPS at 100 UAVs (+6.0 dB C/I) ...", flush=True)
-sps = run_method(enable_sidelink=True)
-print(f"   => S-SPS PRR: {sps['prr']:.1f}% ({sps['succ']:,} / {sps['links']:,} links)\n")
+print("▶️ [2/2] Simulating SSA at 100 UAVs (+6.0 dB C/I) ...", flush=True)
+sps = run_method(enable_ssa=True)
+print(f"   => SSA PRR: {sps['prr']:.1f}% ({sps['succ']:,} / {sps['links']:,} links)\n")
 
 # Print Diagnostic Comparison
 print("=" * 110)
 print(f"📊 100 UAVs PHASE 1 FAILURE ROOT CAUSE COMPARISON (10ms Window, C/I >= +6.0 dB) 📊")
 print("=" * 110)
-print(f"| {'Metric / Failure Category':<35} | {'CSMA-CA Baseline':^22} | {'Sidelink S-SPS (+6dB)':^22} | {'Difference (Δ)':^18} |")
+print(f"| {'Metric / Failure Category':<35} | {'CSMA-CA Baseline':^22} | {'SSA (+6dB)':^22} | {'Difference (Δ)':^18} |")
 print("|" + "-" * 37 + "|" + "-" * 24 + "|" + "-" * 24 + "|" + "-" * 20 + "|")
 
 def fmt_pct(val, total):
@@ -170,11 +170,11 @@ print("=" * 110)
 # Save Report
 report_path = os.path.join(PROJECT_DIR, "exp_100_drones_breakdown_report.txt")
 with open(report_path, "w", encoding="utf-8") as f:
-    f.write("# 100 UAVs Phase 1 Detailed Failure Breakdown: CSMA-CA vs 3GPP Sidelink S-SPS\n")
+    f.write("# 100 UAVs Phase 1 Detailed Failure Breakdown: CSMA-CA vs SSA\n")
     f.write(f"- Scale: 100 UAVs in 200m x 200m x 80m\n")
     f.write(f"- Broadcast Window: 10.0 ms\n")
     f.write(f"- Physical C/I Threshold: +6.0 dB (Strict BLE 5.4)\n\n")
-    f.write(f"| Failure Category | CSMA-CA Baseline | Sidelink S-SPS (+6dB) | Delta Difference |\n")
+    f.write(f"| Failure Category | CSMA-CA Baseline | SSA (+6dB) | Delta Difference |\n")
     f.write(f"| :--- | :--- | :--- | :--- |\n")
     f.write(f"| Total Links | {csma['links']} | {sps['links']} | Baseline |\n")
     f.write(f"| Delivered (PRR) | {csma['succ']} ({csma['prr']:.1f}%) | {sps['succ']} ({sps['prr']:.1f}%) | {sps['prr'] - csma['prr']:+.1f}% |\n")
@@ -190,7 +190,7 @@ print(f"\n✅ Diagnostic report saved to: {report_path}")
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
 
 # Panel 1: PRR and Deliveries Bar Chart
-methods = ['CSMA-CA Baseline', 'Sidelink S-SPS (+6dB)']
+methods = ['CSMA-CA Baseline', 'SSA (+6dB)']
 prrs = [csma['prr'], sps['prr']]
 colors = ['#d62728', '#1f77b4']
 

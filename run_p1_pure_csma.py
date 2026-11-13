@@ -53,7 +53,7 @@ for lock in lock_values:
         os.remove(report)
 
     args = (f"scratch/lr-wpan-swarm --numNodes={num_nodes} --simTime={sim_time} "
-            f"--p1Duration=10 --enableP1Sidelink=false --preambleLockDb={lock} "
+            f"--p1Duration=10 --enableP1Ssa=false --preambleLockDb={lock} "
             f"--p1TxPower=4 --p2TxPower=-2 --p1CcaThresholdDbm=-97 --nodeSpeed=10.0 "
             f"--numSlots=13 --dataSlotUs=750 --p2Duration=9.75 --numChannels=6 "
             f"--spaceSize=200 --spaceZ=80 --rngRun=1 --autoPush=false")

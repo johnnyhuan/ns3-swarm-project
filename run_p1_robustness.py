@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Phase 1 robustness of the tuned CSMA and tuned Sidelink settings.
+Phase 1 robustness of the tuned CSMA and tuned SSA settings.
 
   A) clock-sync error: every node's P1 timing is off by U(-E, +E) us, redrawn each cycle
   B) density: 50 / 100 / 150 / 200 UAVs in the same 200 x 200 x 80 m airspace
@@ -48,21 +48,21 @@ for rel in SYNC:
 BASE = (f"--simTime={a.simtime} --p1Duration=10 --preambleLockDb=6 --p2TxPower=-2 "
         f"--nodeSpeed=10.0 --numSlots=13 --dataSlotUs=750 --p2Duration=9.75 --numChannels=6 "
         f"--spaceSize=200 --spaceZ=80 --autoPush=false")
-CSMA = ("--enableP1Sidelink=false --p1TxPower=4 --p1CcaThresholdDbm=-94 "
+CSMA = ("--enableP1Ssa=false --p1TxPower=4 --p1CcaThresholdDbm=-94 "
         "--p1MinBE=0 --p1MaxBackoffs=1 --p1RetryMinMs=0.05 --p1RetryMaxMs=0.2")
-SL = ("--enableP1Sidelink=true --p1SlotUs=150 --p1TxPower=8 --p1SenseDecay=0.7 "
+SSA = ("--enableP1Ssa=true --p1SlotUs=150 --p1TxPower=8 --p1SenseDecay=0.7 "
       "--p1ReselInitMin=2 --p1ReselInitMax=5 --p1ReselMin=30 --p1ReselMax=90 --p1PoolFrac=0.25")
 
 # config key -> flags (deduplicated across the two experiments)
 configs = {}
 def cfg(method, n, e):
     key = f"{method}_n{n}_e{e:g}"
-    configs[key] = f"{CSMA if method == 'csma' else SL} --numNodes={n} --p1SyncErrUs={e:g}"
+    configs[key] = f"{CSMA if method == 'csma' else SSA} --numNodes={n} --p1SyncErrUs={e:g}"
     return key
 
-syncA = {("SL", e): cfg("sl", 100, e) for e in a.sync}
+syncA = {("SSA", e): cfg("ssa", 100, e) for e in a.sync}
 syncA.update({("CSMA", e): cfg("csma", 100, e) for e in (0, max(a.sync))})
-densB = {(m, n): cfg(m.lower(), n, 0) for m in ("CSMA", "SL") for n in a.nodes}
+densB = {(m, n): cfg(m.lower(), n, 0) for m in ("CSMA", "SSA") for n in a.nodes}
 
 print(f"NS3_DIR = {NS3_DIR}")
 print("▶ Building ...", flush=True)
@@ -132,28 +132,28 @@ def sd(key):
     return statistics.stdev(v) if len(v) > 1 else 0.0
 
 
-L = [f"P1 robustness | simTime {a.simtime}s | seeds {a.seeds} | tuned CSMA vs tuned Sidelink", "=" * 78]
+L = [f"P1 robustness | simTime {a.simtime}s | seeds {a.seeds} | tuned CSMA vs tuned SSA", "=" * 78]
 L.append("A) Clock-sync error, 100 UAVs (P1 PRR %, mean +- stdev over seeds)")
-L.append(f"{'sync error':>12s}{'Sidelink':>18s}{'CSMA':>18s}{'SL collisions':>15s}{'SL low SINR':>13s}")
+L.append(f"{'sync error':>12s}{'SSA':>18s}{'CSMA':>18s}{'SSA collisions':>15s}{'SSA low SINR':>13s}")
 for e in a.sync:
-    k = syncA[("SL", e)]
+    k = syncA[("SSA", e)]
     sl = f"{m(k):6.2f} +- {sd(k):4.2f}"
     ck = syncA.get(("CSMA", e))
     cs = f"{m(ck):6.2f} +- {sd(ck):4.2f}" if ck else "-"
     L.append(f"{'+-' + format(e, 'g') + ' us':>12s}{sl:>18s}{cs:>18s}{m(k, 'COLL'):>15.0f}{m(k, 'LOWSINR'):>13.0f}")
 L.append("")
 L.append("B) Density, perfect sync (P1 PRR %, mean +- stdev over seeds)")
-L.append(f"{'UAVs':>6s}{'50m nbrs':>10s}{'Sidelink':>18s}{'CSMA':>18s}{'gap':>8s}{'CSMA aborts':>13s}")
+L.append(f"{'UAVs':>6s}{'50m nbrs':>10s}{'SSA':>18s}{'CSMA':>18s}{'gap':>8s}{'CSMA aborts':>13s}")
 for n in a.nodes:
-    ks, kc = densB[("SL", n)], densB[("CSMA", n)]
+    ks, kc = densB[("SSA", n)], densB[("CSMA", n)]
     L.append(f"{n:>6d}{m(ks, 'NBR'):>10.1f}{(format(m(ks), '6.2f') + ' +- ' + format(sd(ks), '4.2f')):>18s}"
              f"{(format(m(kc), '6.2f') + ' +- ' + format(sd(kc), '4.2f')):>18s}{m(ks) - m(kc):>8.2f}{m(kc, 'ABORT'):>13.0f}")
 L.append("")
-L.append("Slot-end force cutoffs (Sidelink, all runs): " +
-         str(sum(res[k][s]["CUT"] for k in configs if k.startswith("sl_") for s in a.seeds)))
+L.append("Slot-end force cutoffs (SSA, all runs): " +
+         str(sum(res[k][s]["CUT"] for k in configs if k.startswith("ssa_") for s in a.seeds)))
 L.append("=" * 78)
 L.append(f"CSMA tuned: {CSMA}")
-L.append(f"SL tuned  : {SL}")
+L.append(f"SSA tuned  : {SSA}")
 summary = "\n".join(L) + "\n"
 print("\n" + summary)
 with open(os.path.join(PROJECT_DIR, "p1_robustness_summary.txt"), "w", encoding="utf-8") as f:

@@ -61,7 +61,7 @@ for s_xy, s_z, label in spaces:
         "./ns3", "run",
         f"scratch/lr-wpan-swarm --numNodes={num_nodes} --nodeSpeed={node_speed} "
         f"--p1Duration={p1_duration} --p1TxPower=0 --p2TxPower=-2 --simTime={sim_time} "
-        f"--p1CcaThresholdDbm=-96.58 --spaceSize={s_xy} --spaceZ={s_z} --enableP1Sidelink=false"
+        f"--p1CcaThresholdDbm=-96.58 --spaceSize={s_xy} --spaceZ={s_z} --enableP1Ssa=false"
     ]
 
     process = subprocess.Popen(

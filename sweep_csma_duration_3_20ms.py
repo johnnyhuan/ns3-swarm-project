@@ -64,7 +64,7 @@ def run_simulation(p1_dur):
         "./ns3", "run",
         f"scratch/lr-wpan-swarm --numNodes={num_nodes} --p1Duration={p1_dur} "
         f"--simTime={sim_time} --spaceSize={space_size} --spaceZ={space_z} "
-        f"--enableP1Sidelink=false --p1CaptureThresholdDb={capture_thresh_db} "
+        f"--enableP1Ssa=false --p1CaptureThresholdDb={capture_thresh_db} "
         f"--phyCaptureMarginDb={capture_thresh_db} --autoPush=false"
     ]
 

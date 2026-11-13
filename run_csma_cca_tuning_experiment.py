@@ -56,7 +56,7 @@ def run_simulation(cca_thresh):
         "./ns3", "run",
         f"scratch/lr-wpan-swarm --numNodes={num_nodes} --p1Duration={p1_duration} "
         f"--simTime={sim_time} --spaceSize={space_size} --spaceZ={space_z} "
-        f"--enableP1Sidelink=false --p1CcaThresholdDbm={cca_thresh} "
+        f"--enableP1Ssa=false --p1CcaThresholdDbm={cca_thresh} "
         f"--p1CaptureThresholdDb={capture_thresh_db} --phyCaptureMarginDb={capture_thresh_db} "
         f"--autoPush=false"
     ]

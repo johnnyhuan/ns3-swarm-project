@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Deep Diagnostic Analysis of 10 µs Slot Experiment
-Directly inspects ns-3 execution logs, PHY state transitions, and Sidelink slotted capture mechanics
+Directly inspects ns-3 execution logs, PHY state transitions, and SSA slotted capture mechanics
 to verify if 10 µs micro-slot is physically sound or an artifact of the slotted capture model.
 """
 
@@ -44,7 +44,7 @@ cmd = [
     "./ns3", "run",
     f"scratch/lr-wpan-swarm --numNodes={num_nodes} --p1Duration={p1_duration} "
     f"--simTime={sim_time} --spaceSize={space_size} --spaceZ={space_z} "
-    f"--enableP1Sidelink=true --p1SlotUs={p1_slot_us} --p1CaptureThresholdDb={capture_thresh_db} "
+    f"--enableP1Ssa=true --p1SlotUs={p1_slot_us} --p1CaptureThresholdDb={capture_thresh_db} "
     f"--phyCaptureMarginDb={capture_thresh_db} --autoPush=false"
 ]
 proc = subprocess.run(cmd, cwd=NS3_DIR, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=300)

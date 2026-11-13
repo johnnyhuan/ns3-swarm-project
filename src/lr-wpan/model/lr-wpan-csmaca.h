@@ -160,7 +160,7 @@ class LrWpanCsmaCa : public Object
     void Cancel();
     /**
      * Skip the CCA (no listen-before-talk): the channel is reported idle immediately.
-     * Used by the Sidelink-style S-SPS MAC, which transmits in its slot without sensing.
+     * Used by the SSA (Sensing-based Slotted Access) MAC, which transmits in its slot without sensing.
      * @param skip true to skip the CCA
      */
     void SetSkipCca(bool skip);

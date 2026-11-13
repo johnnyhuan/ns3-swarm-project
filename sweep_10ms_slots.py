@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Phase 1 (10ms Window) Slot Count Sweep: Finding the Optimal Slot Granularity
-Evaluates Sidelink S-SPS performance across different slot counts (from 20 to 115 slots)
+Evaluates SSA performance across different slot counts (from 20 to 115 slots)
 against CSMA-CA Baseline under 100 UAVs in 200m x 200m x 80m airspace.
 Physical Layer: Bluetooth 5.4 LE 2M (+6.0 dB C/I Capture Threshold).
 """
@@ -64,7 +64,7 @@ slot_configs = [
     (10.0,  "976 slots (10 µs)")
 ]
 
-def run_simulation(enable_sidelink, slot_us=100.0):
+def run_simulation(enable_ssa, slot_us=100.0):
     for fname in ["p1_ground_truth_report.txt", "p2_ground_truth_report.txt", "run.log"]:
         fpath = os.path.join(NS3_DIR, fname)
         if os.path.exists(fpath):
@@ -75,7 +75,7 @@ def run_simulation(enable_sidelink, slot_us=100.0):
         "./ns3", "run",
         f"scratch/lr-wpan-swarm --numNodes={num_nodes} --p1Duration={p1_duration} "
         f"--simTime={sim_time} --spaceSize={space_size} --spaceZ={space_z} "
-        f"--enableP1Sidelink={'true' if enable_sidelink else 'false'} "
+        f"--enableP1Ssa={'true' if enable_ssa else 'false'} "
         f"--p1SlotUs={slot_us} --p1CaptureThresholdDb={capture_thresh_db} "
         f"--phyCaptureMarginDb={capture_thresh_db} --autoPush=false"
     ]
@@ -126,41 +126,41 @@ def parse_report(text):
     return data
 
 print("\n[Step 1/2] Running CSMA-CA Baseline (Continuous Random Backoff, No Slots)...")
-csma_res = run_simulation(enable_sidelink=False)
+csma_res = run_simulation(enable_ssa=False)
 print(f"  ==> CSMA-CA PRR: {csma_res['prr']:.1f}% ({csma_res['succ']}/{csma_res['links']}) | Aborts: {csma_res['csma_abort']} | Coll: {csma_res['preamble_coll']} | Captures: {csma_res['captures']}")
 
-print("\n[Step 2/2] Sweeping Sidelink Slot Counts in 10ms Window (100 µs down to 10 µs)...")
-sidelink_results = []
+print("\n[Step 2/2] Sweeping SSA Slot Counts in 10ms Window (100 µs down to 10 µs)...")
+ssa_results = []
 for slot_us, label in slot_configs:
     slots_cnt = max(1, int((p1_duration * 1000.0 - 250.0) / slot_us) + 1)
     density = num_nodes / slots_cnt
     print(f"  ▶️ Testing {label} (Slot {slot_us:.1f} µs, ~{density:.2f} UAVs/slot) ...", end="", flush=True)
-    res = run_simulation(enable_sidelink=True, slot_us=slot_us)
+    res = run_simulation(enable_ssa=True, slot_us=slot_us)
     res["slot_us"] = slot_us
     res["slots_cnt"] = slots_cnt
     res["density"] = density
-    sidelink_results.append(res)
+    ssa_results.append(res)
     print(f" ==> PRR: {res['prr']:.1f}% | Deaf: {res['rx_deafness']} | Coll: {res['preamble_coll']} | Captures: {res['captures']}")
 
 # Print Comparison Table
 print("\n" + "=" * 115)
 print(f"📊 PHASE 1 (10ms) SLOT COUNT SWEEP SUMMARY (100 UAVs, C/I >= +6.0 dB) 📊")
 print("=" * 115)
-print(f"{'Slot Width':<12} | {'Slots':<6} | {'UAVs/Slot':<10} | {'Sidelink PRR':<14} | {'CSMA Baseline':<14} | {'Δ vs CSMA':<12} | {'Deafness':<9} | {'Collisions':<11} | {'Captures':<9}")
+print(f"{'Slot Width':<12} | {'Slots':<6} | {'UAVs/Slot':<10} | {'SSA PRR':<14} | {'CSMA Baseline':<14} | {'Δ vs CSMA':<12} | {'Deafness':<9} | {'Collisions':<11} | {'Captures':<9}")
 print("-" * 115)
 
 best_idx = 0
 best_prr = -1.0
-for i, r in enumerate(sidelink_results):
+for i, r in enumerate(ssa_results):
     if r['prr'] > best_prr:
         best_prr = r['prr']
         best_idx = i
     delta = r['prr'] - csma_res['prr']
     print(f"{r['slot_us']:<12.1f} | {r['slots_cnt']:<6} | {r['density']:<10.2f} | {r['prr']:<13.1f}% | {csma_res['prr']:<13.1f}% | {delta:+11.1f}% | {r['rx_deafness']:<9} | {r['preamble_coll']:<11} | {r['captures']:<9}")
 
-best_slot = sidelink_results[best_idx]
+best_slot = ssa_results[best_idx]
 print("=" * 115)
-print(f"🏆 BEST SIDELINK CONFIGURATION IN 10ms: {best_slot['slots_cnt']} Slots (Slot Width {best_slot['slot_us']:.1f} µs) with PRR = {best_slot['prr']:.1f}%\n")
+print(f"🏆 BEST SSA CONFIGURATION IN 10ms: {best_slot['slots_cnt']} Slots (Slot Width {best_slot['slot_us']:.1f} µs) with PRR = {best_slot['prr']:.1f}%\n")
 
 # Save Text Report
 report_path = os.path.join(PROJECT_DIR, "exp_10ms_slot_sweep_results.txt")
@@ -171,9 +171,9 @@ with open(report_path, "w", encoding="utf-8") as f:
     f.write(f"- Broadcast Window: 10.0 ms\n")
     f.write(f"- Physical C/I Capture Threshold: +6.0 dB (Strict BLE 5.4 LE 2M)\n")
     f.write(f"- CSMA-CA Baseline PRR: {csma_res['prr']:.1f}%\n\n")
-    f.write("| Slot Width (µs) | Total Slots | UAVs/Slot | Sidelink PRR (%) | CSMA PRR (%) | Δ Gain (%) | RX Deafness | Preamble Collisions | Power Captures |\n")
+    f.write("| Slot Width (µs) | Total Slots | UAVs/Slot | SSA PRR (%) | CSMA PRR (%) | Δ Gain (%) | RX Deafness | Preamble Collisions | Power Captures |\n")
     f.write("| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n")
-    for r in sidelink_results:
+    for r in ssa_results:
         delta = r['prr'] - csma_res['prr']
         f.write(f"| {r['slot_us']:.1f} | {r['slots_cnt']} | {r['density']:.2f} | {r['prr']:.1f}% | {csma_res['prr']:.1f}% | {delta:+.1f}% | {r['rx_deafness']} | {r['preamble_coll']} | {r['captures']} |\n")
 
@@ -182,11 +182,11 @@ print(f"📄 Detailed text report saved to: {report_path}")
 # Plotting Charts
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
 
-slots_x = [r['slots_cnt'] for r in sidelink_results]
-prrs_y = [r['prr'] for r in sidelink_results]
+slots_x = [r['slots_cnt'] for r in ssa_results]
+prrs_y = [r['prr'] for r in ssa_results]
 
 # Panel 1: PRR vs Slot Count
-ax1.plot(slots_x, prrs_y, 'o-', color='#1f77b4', linewidth=2.5, markersize=8, label='Sidelink S-SPS (+6dB)')
+ax1.plot(slots_x, prrs_y, 'o-', color='#1f77b4', linewidth=2.5, markersize=8, label='SSA (+6dB)')
 ax1.axhline(y=csma_res['prr'], color='#d62728', linestyle='--', linewidth=2.0, label=f"CSMA-CA Baseline ({csma_res['prr']:.1f}%)")
 ax1.scatter([best_slot['slots_cnt']], [best_slot['prr']], color='#2ca02c', s=160, zorder=5, label=f"Optimal: {best_slot['slots_cnt']} Slots ({best_slot['prr']:.1f}%)")
 
@@ -197,13 +197,13 @@ ax1.set_ylim(50, 100)
 ax1.grid(True, linestyle='--', alpha=0.6)
 ax1.legend(loc='lower right', fontsize=11)
 
-for r in sidelink_results:
+for r in ssa_results:
     ax1.annotate(f"{r['prr']:.1f}%", (r['slots_cnt'], r['prr']), textcoords="offset points", xytext=(0, 8), ha='center', fontsize=9, fontweight='bold')
 
 # Panel 2: Physical Collision and Capture Dynamics
-deafness_y = [r['rx_deafness'] for r in sidelink_results]
-coll_y = [r['preamble_coll'] for r in sidelink_results]
-capt_y = [r['captures'] for r in sidelink_results]
+deafness_y = [r['rx_deafness'] for r in ssa_results]
+coll_y = [r['preamble_coll'] for r in ssa_results]
+capt_y = [r['captures'] for r in ssa_results]
 
 ax2.plot(slots_x, coll_y, 's--', color='#ff7f0e', linewidth=2, label='Collisions (Preamble Collision)')
 ax2.plot(slots_x, capt_y, '^-', color='#2ca02c', linewidth=2, label='Power Capture Rescues')

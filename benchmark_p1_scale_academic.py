@@ -5,7 +5,7 @@ Compares Proposed Autonomous Slotted MAC (Proposed Scheme) vs CSMA-CA Baseline (
 - Physical Layer: BLE 5.4 2M PHY, C/I Capture Threshold = +6.0 dB
 - Swarm Scale: 50 to 150 UAVs (Step 10)
 - Airspace: 200m x 200m x 80m 3D Space, UAV Speed = 10.0 m/s
-- Academic terminology: Zero mention of cellular/3GPP/Sidelink.
+- Academic terminology: Zero mention of cellular terminology.
 """
 
 import subprocess
@@ -65,7 +65,7 @@ def run_simulation(nodes, enable_proposed):
         "./ns3", "run",
         f"scratch/lr-wpan-swarm --numNodes={nodes} --p1Duration={p1_duration} "
         f"--simTime={sim_time} --spaceSize={space_size} --spaceZ={space_z} "
-        f"--enableP1Sidelink={'true' if enable_proposed else 'false'} "
+        f"--enableP1Ssa={'true' if enable_proposed else 'false'} "
         f"--p1SlotUs={p1_slot_us} --p1CaptureThresholdDb={capture_thresh_db} "
         f"--phyCaptureMarginDb={capture_thresh_db} --autoPush=false"
     ]

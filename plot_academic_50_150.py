@@ -2,7 +2,7 @@
 """
 Publication-Quality Academic Plot: 50 to 150 UAV Swarm Scalability
 Compares Proposed Autonomous Slotted MAC (Proposed Scheme) vs CSMA-CA Baseline (BLE 2M PHY).
-STRICTLY adheres to: NO 'Sidelink' terminology.
+STRICTLY adheres to: NO 'SSA' terminology.
 """
 
 import os

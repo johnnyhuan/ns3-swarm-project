@@ -75,7 +75,7 @@ cmd = [
     f"--p2Duration={p2_duration} --dataSlotUs={data_slot_us} --numChannels={num_channels} "
     f"--simTime={sim_time} --spaceSize={space_size} --spaceZ={space_z} "
     f"--p1TxPower=0 --p2TxPower=-2 --p1CcaThresholdDbm=-96.58 --nodeSpeed=10.0 "
-    f"--enableP1Sidelink=false --enablePhyCapture=true --enableP2Capture=false "
+    f"--enableP1Ssa=false --enablePhyCapture=true --enableP2Capture=false "
     f"--p1CaptureThresholdDb=6.0 --phyCaptureMarginDb=6.0 --autoPush=false"
 ]
 

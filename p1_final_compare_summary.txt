@@ -1,6 +1,6 @@
 P1 final comparison | 100 UAVs | simTime 10.0s | seeds [1, 2, 3, 4, 5]
 ==============================================================================================
-Metric (mean over seeds)             CSMA default     CSMA tuned     SL default       SL tuned
+Metric (mean over seeds)             CSMA default     CSMA tuned     SSA default       SSA tuned
 ----------------------------------------------------------------------------------------------
 P1 PRR (%) mean                             81.00          82.12          92.12          97.20
 P1 PRR (%) stdev                             0.94           0.70           0.62           0.51
@@ -26,7 +26,7 @@ PRR seed 4 (%)                              80.60          81.70          92.40 
 PRR seed 5 (%)                              82.00          82.80          92.70          96.30
 ==============================================================================================
 Settings:
-  CSMA default  : --enableP1Sidelink=false --p1TxPower=4 --p1CcaThresholdDbm=-97
-  CSMA tuned    : --enableP1Sidelink=false --p1TxPower=4 --p1CcaThresholdDbm=-94 --p1MinBE=0 --p1MaxBackoffs=1 --p1RetryMinMs=0.05 --p1RetryMaxMs=0.2
-  SL default    : --enableP1Sidelink=true --p1SlotUs=150 --p1TxPower=4 --p1SenseDecay=0.8 --p1ReselMin=5 --p1ReselMax=15 --p1PoolFrac=0.25
-  SL tuned      : --enableP1Sidelink=true --p1SlotUs=150 --p1TxPower=8 --p1SenseDecay=0.7 --p1ReselInitMin=2 --p1ReselInitMax=5 --p1ReselMin=30 --p1ReselMax=90 --p1PoolFrac=0.25
+  CSMA default  : --enableP1Ssa=false --p1TxPower=4 --p1CcaThresholdDbm=-97
+  CSMA tuned    : --enableP1Ssa=false --p1TxPower=4 --p1CcaThresholdDbm=-94 --p1MinBE=0 --p1MaxBackoffs=1 --p1RetryMinMs=0.05 --p1RetryMaxMs=0.2
+  SSA default    : --enableP1Ssa=true --p1SlotUs=150 --p1TxPower=4 --p1SenseDecay=0.8 --p1ReselMin=5 --p1ReselMax=15 --p1PoolFrac=0.25
+  SSA tuned      : --enableP1Ssa=true --p1SlotUs=150 --p1TxPower=8 --p1SenseDecay=0.7 --p1ReselInitMin=2 --p1ReselInitMax=5 --p1ReselMin=30 --p1ReselMax=90 --p1PoolFrac=0.25

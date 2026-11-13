@@ -72,7 +72,7 @@ for fname in ["p1_ground_truth_report.txt", "p2_ground_truth_report.txt", "run.l
 cmd = [
     "./ns3", "run",
     f"scratch/lr-wpan-swarm --numNodes={num_nodes} --p1Duration={p1_duration} "
-    f"--enableP1Sidelink=false --p2Duration={p2_duration} --dataSlotUs={data_slot_us} "
+    f"--enableP1Ssa=false --p2Duration={p2_duration} --dataSlotUs={data_slot_us} "
     f"--numChannels={num_channels} --enableP1Capture=true --enableP2Capture=true "
     f"--phyCaptureMarginDb={capture_thresh_db} --simTime={sim_time} "
     f"--spaceSize={space_size} --spaceZ={space_z} --nodeSpeed=10.0 --autoPush=false"

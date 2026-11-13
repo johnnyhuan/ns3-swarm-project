@@ -45,8 +45,8 @@ const double GAP_US = 1000.0;
 const int MAX_DATA_SLOTS = 64;            // Maximum supported slot array buffer size
 const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels 
 
-// Sidelink S-SPS (Semi-Persistent Scheduling) for Phase 1
-bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
+// SSA (Semi-Persistent Scheduling) for Phase 1
+bool g_enableP1Ssa = false; // Phase 1 SSA mode switch (default: false for baseline compatibility)
 // Phase 1 CSMA tuning (P2 always keeps MinBE 0 / no extra backoffs)
 double g_p1SyncErrUs = 0.0;      // P1 clock sync error: each node's P1 timing is off by U(-E,+E) us, redrawn every cycle
 int g_p1Copies = 1;              // P1 CSMA: independent random transmissions of the beacon per cycle
@@ -55,15 +55,15 @@ int g_p1MaxBE = 5;               // CSMA max backoff exponent in P1 (>= 3)
 int g_p1MaxBackoffs = 0;         // extra CCA attempts before channel-access failure in P1
 double g_p1RetryMinMs = 0.1;     // app-level retry delay after a P1 channel-access failure
 double g_p1RetryMaxMs = 0.5;
-int g_p1ReselInitMin = -1;       // Sidelink: counter after the first random pick (-1 = same as p1ReselMin/Max)
+int g_p1ReselInitMin = -1;       // SSA: counter after the first random pick (-1 = same as p1ReselMin/Max)
 int g_p1ReselInitMax = -1;
-int g_p1ReselMin = 5;            // Sidelink reselection counter lower bound (cycles)
-int g_p1ReselMax = 15;           // Sidelink reselection counter upper bound (cycles)
-double g_p1PoolFrac = 0.25;      // Sidelink: pick randomly among this fraction of lowest-RSSI slots
-double g_p1SlotGuardUs = 0.0;    // Sidelink: cutoff at (slot end - guard); default 0 = exactly at the slot boundary
-double g_p1SenseDecay = 0.8;     // Sidelink RSSI sensing: per-cycle decay of slot energy history (1.0 = equal weights, halved at reselection)
-double g_p1SlotUs = 300.0;       // Phase 1 Sidelink slot duration in us (default 300 us -> 33 slots in 10ms; slot start -> TX end = CCA 20 + turnaround 40 + BLE air time 88 = 148 us)
-// Sidelink slot grid starts after the radio is back in RX on the broadcast channel:
+int g_p1ReselMin = 5;            // SSA reselection counter lower bound (cycles)
+int g_p1ReselMax = 15;           // SSA reselection counter upper bound (cycles)
+double g_p1PoolFrac = 0.25;      // SSA: pick randomly among this fraction of lowest-RSSI slots
+double g_p1SlotGuardUs = 0.0;    // SSA: cutoff at (slot end - guard); default 0 = exactly at the slot boundary
+double g_p1SenseDecay = 0.8;     // SSA RSSI sensing: per-cycle decay of slot energy history (1.0 = equal weights, halved at reselection)
+double g_p1SlotUs = 300.0;       // Phase 1 SSA slot duration in us (default 300 us -> 33 slots in 10ms; slot start -> TX end = CCA 20 + turnaround 40 + BLE air time 88 = 148 us)
+// SSA slot grid starts after the radio is back in RX on the broadcast channel:
 // the channel switch at cycle start turns the radio off, RX_ON takes 40 us.
 const double P1_SLOT_OFFSET_US = 40.0;
 // Worst-case time a P1 CSMA attempt can take (all backoffs at their max + CCAs + turnaround
@@ -165,7 +165,7 @@ static const char* P1ReasonStrings[] = {
     "SLOT_BOUNDARY_CUTOFF"
 };
 
-// Phase 1 Sidelink slot-boundary enforcement
+// Phase 1 SSA slot-boundary enforcement
 static uint32_t g_p1SlotCutoffCount = 0;   // transmissions still on air at slot end -> forcibly cut
 static uint32_t g_p1LateStartCount = 0;    // beacons that had not even started by slot end
 static std::set<uint64_t> g_p1CutoffUids;
@@ -336,8 +336,8 @@ public:
     }
 
     void CustomPlmeCcaConfirm(PhyEnumeration status) {
-        if (g_enableP1Sidelink && g_droneCurrentChannel[m_id] == BROADCAST_CHANNEL) {
-            // Sidelink S-SPS mode: Transmit directly in own slot without CSMA CCA backoff or abort!
+        if (g_enableP1Ssa && g_droneCurrentChannel[m_id] == BROADCAST_CHANNEL) {
+            // SSA mode: Transmit directly in own slot without CSMA CCA backoff or abort!
             status = IEEE_802_15_4_PHY_IDLE;
         } else if (g_droneCurrentChannel[m_id] == BROADCAST_CHANNEL && g_p1CcaThresholdDbm > -900.0) {
             if (status == IEEE_802_15_4_PHY_IDLE) {
@@ -363,9 +363,9 @@ public:
         uint64_t uid = p->GetUid();
         g_droneReceivingUid[m_id] = uid;
 
-        if (g_enableP1Sidelink && g_droneCurrentChannel[m_id] == BROADCAST_CHANNEL) {
+        if (g_enableP1Ssa && g_droneCurrentChannel[m_id] == BROADCAST_CHANNEL) {
             // RxBegin fires at preamble lock, i.e. a fixed latency after the sender's slot start:
-            // RX->TX turnaround (40 us) + BLE sync window (24 us) = 64 us (Sidelink skips CCA).
+            // RX->TX turnaround (40 us) + BLE sync window (24 us) = 64 us (SSA skips CCA).
             // Map back to the sender's slot; without this, packets were booked into slot s+1.
             double rxLatencyUs = m_clockOffsetUs + P1_SLOT_OFFSET_US + 40.0 + m_device->GetPhy()->GetSyncDuration().GetMicroSeconds();
             double timeInP1Us = (Simulator::Now() - m_epochStartTime).GetMicroSeconds() - rxLatencyUs;
@@ -452,7 +452,7 @@ public:
     void NotifyPhyTxBegin(Ptr<const Packet> p) {
         uint64_t uid = p->GetUid();
         g_packetTxStartTime[uid] = Simulator::Now();
-        if (g_enableP1Sidelink && g_p1PacketsMeta.count(uid)) g_p1TxStartedUids.insert(uid);
+        if (g_enableP1Ssa && g_p1PacketsMeta.count(uid)) g_p1TxStartedUids.insert(uid);
 
         auto it = g_p1PacketsMeta.find(uid);
         if (it != g_p1PacketsMeta.end()) {
@@ -546,7 +546,7 @@ private:
     int m_topologyMatchCount;
     int m_topologyCheckCount;
 
-    // Phase 1 Sidelink S-SPS variables
+    // Phase 1 SSA variables
     int m_p1ClaimedSlot;
     uint32_t m_p1PickedEpoch = 0;
     double m_clockOffsetUs = 0.0;   // this cycle's clock-sync error of this node (us)   // epoch in which the P2 resource was last picked
@@ -643,17 +643,17 @@ private:
 
         // Phase 1 (Broadcast): Configurable range
         SwitchChannelAndPower(BROADCAST_CHANNEL, (int8_t)g_p1TxPower);
-        // Sidelink S-SPS transmits in its slot without listen-before-talk
+        // SSA transmits in its slot without listen-before-talk
         if (m_csma) {
-            m_csma->SetSkipCca(g_enableP1Sidelink);
-            if (!g_enableP1Sidelink) {
+            m_csma->SetSkipCca(g_enableP1Ssa);
+            if (!g_enableP1Ssa) {
                 m_csma->SetMacMaxBE(std::max(3, g_p1MaxBE));
                 m_csma->SetMacMinBE(std::min(g_p1MinBE, std::max(3, g_p1MaxBE)));
                 m_csma->SetMacMaxCSMABackoffs(g_p1MaxBackoffs);
             }
         }
         
-        if (!g_enableP1Sidelink) {
+        if (!g_enableP1Ssa) {
             Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
             double maxDelayUs = std::max(200.0, g_phase1DurationUs - P1CsmaWorstCaseUs());
             for (int k = 0; k < std::max(1, g_p1Copies); k++) {
@@ -661,7 +661,7 @@ private:
                 Simulator::Schedule(MicroSeconds(randomDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
             }
         } else {
-            // Sidelink S-SPS mode for Phase 1
+            // SSA mode for Phase 1
             int numP1Slots = NumP1Slots();
 
             // Ensure slot statistics vectors are properly sized
@@ -722,10 +722,10 @@ private:
             // Decrement reselection counter for this cycle
             m_p1ReselCounter--;
 
-            // Record claimed slot in global registry for Phase 1 Sidelink
+            // Record claimed slot in global registry for Phase 1 SSA
             g_p1DroneClaimedSlot[m_epoch][m_id] = m_p1ClaimedSlot;
 
-            // Slot timeline (no CCA in Sidelink): RX->TX 0-40 us, TX 40-128 us, then >= 20 us guard
+            // Slot timeline (no CCA in SSA): RX->TX 0-40 us, TX 40-128 us, then >= 20 us guard
             // before the next slot. Jitter may only use what is left above that guard.
             double maxJitterUs = std::max(0.0, std::min(15.0, g_p1SlotUs - 148.0));
             double jitterUs = (maxJitterUs > 0.0) ? uv->GetValue(0.0, maxJitterUs) : 0.0;
@@ -737,7 +737,7 @@ private:
             Simulator::Schedule(MicroSeconds(m_clockOffsetUs + P1_SLOT_OFFSET_US + (m_p1ClaimedSlot + 1) * g_p1SlotUs - g_p1SlotGuardUs),
                                 &SwarmSchedulerApp::EndP1SlotCutoff, this, m_epoch, m_p1ClaimedSlot);
 
-            // RSSI sensing (3GPP S-SPS style): sample the received energy in the middle of every
+            // RSSI sensing (sensing-based): sample the received energy in the middle of every
             // other slot's transmission window (40 + 44 us after slot start).
             for (int s = 0; s < numP1Slots; s++) {
                 if (s == m_p1ClaimedSlot) continue; // half-duplex: cannot sense while transmitting
@@ -1017,10 +1017,10 @@ private:
                 g_p1TxAbort++;
                 if (g_verboseLog) std::cout << "[P1_ABORT] Time: " << now << "ms, Drone: " << myId << "\n";
                 
-                if (g_enableP1Sidelink) {
+                if (g_enableP1Ssa) {
                     m_p1ConflictOccurred = true;
                     if (g_verboseLog) {
-                        std::cout << "[P1_SIDELINK_CONFLICT] Time: " << now << "ms, Drone: " << myId 
+                        std::cout << "[P1_SSA_CONFLICT] Time: " << now << "ms, Drone: " << myId 
                                   << " lost slot " << m_p1ClaimedSlot << " (sensed busy). Slower node yielding!\n";
                     }
                     
@@ -1045,7 +1045,7 @@ private:
                         double delayUs = nextTxUs - timeInP1Us;
                         if (delayUs > 50.0) {
                             if (g_verboseLog) {
-                                std::cout << "[P1_SIDELINK_MIGRATE] Drone " << myId << " migrating to later slot " 
+                                std::cout << "[P1_SSA_MIGRATE] Drone " << myId << " migrating to later slot " 
                                           << m_p1ClaimedSlot << " in current epoch!\n";
                             }
                             Simulator::Schedule(MicroSeconds(delayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
@@ -1064,7 +1064,7 @@ private:
             } else if (params.m_status == MacStatus::SUCCESS) {
                 g_p1TxSuccess++;
                 g_p1TxSuccessInEpoch[m_epoch][myId]++;
-                if (g_enableP1Sidelink) {
+                if (g_enableP1Ssa) {
                     m_p1ConflictOccurred = false; // Successfully retained
                 }
                 if (g_verboseLog) std::cout << "[P1_SUCCESS] Time: " << now << "ms, Drone: " << myId << "\n";
@@ -1090,7 +1090,7 @@ private:
                 return;
             }
             g_p1RxSuccess++;
-            // (Sidelink slot occupancy is booked in NotifyPhyRxBegin with the correct slot;
+            // (SSA slot occupancy is booked in NotifyPhyRxBegin with the correct slot;
             //  booking it here at packet end used to mark the wrong slot.)
             uint8_t buffer[4];
             p->CopyData(buffer, 4);
@@ -1555,19 +1555,19 @@ void PrintGroundTruthReport() {
     ss << "\n========================================================================================\n";
     ss << "       🔬 PHASE 1 PHYSICAL & MAC GROUND TRUTH ANALYSIS (Top-K within 50m) 🔬           \n";
     ss << "========================================================================================\n";
-    ss << "MAC Scheme                                        : " << (g_enableP1Sidelink ? "Autonomous Slotted MAC (No CSMA)" : "Continuous Random Delay + CSMA-CA") << "\n";
+    ss << "MAC Scheme                                        : " << (g_enableP1Ssa ? "SSA (Sensing-based Slotted Access, no CSMA)" : "Continuous Random Delay + CSMA-CA") << "\n";
     ss << "Post-lock Re-sync (Capture)                       : REMOVED (BLE chips never re-sync after Access Address lock)\n";
     ss << "Preamble Lock SINR Threshold                      : " << g_preambleLockDb << " dB\n";
     ss << "Rx Sensitivity / Noise Floor                      : " << g_rxSensitivityDbm << " dBm / " << (g_rxSensitivityDbm - g_preambleLockDb) << " dBm\n";
     ss << "P1 Clock Sync Error (per node, per cycle)         : +-" << g_p1SyncErrUs << " us\n";
-    if (g_enableP1Sidelink) {
+    if (g_enableP1Ssa) {
         ss << "P1 Slot Boundary Force Cutoffs                    : " << g_p1SlotCutoffCount << " (cut at slot end - " << g_p1SlotGuardUs << " us)\n";
         ss << "P1 Beacons Not Started Within Slot                : " << g_p1LateStartCount << "\n";
     }
-    if (g_enableP1Sidelink) {
+    if (g_enableP1Ssa) {
         int numP1Slots = NumP1Slots();
         ss << "Slotted Configuration                             : Slot " << g_p1SlotUs << " us (" << numP1Slots << " slots in " << g_p1DurationMs << "ms)\n";
-        ss << "Sidelink Sensing / Reselection                    : decay " << g_p1SenseDecay << ", pool " << g_p1PoolFrac
+        ss << "SSA Sensing / Reselection                         : decay " << g_p1SenseDecay << ", pool " << g_p1PoolFrac
            << ", counter " << g_p1ReselMin << "-" << g_p1ReselMax << " cycles\n";
     }
     ss << "Total Expected P1 Neighbor Links (Epochs x Top-K) : " << g_p1TotalTargetLinks << "\n";
@@ -1867,7 +1867,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("enableP2Capture", "[REMOVED, ignored] post-lock re-sync no longer exists", legacyCaptureFlag);
     cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);
     cmd.AddValue("simTime", "Total simulation duration in seconds (default 10.0)", g_simTime);
-    cmd.AddValue("enableP1Sidelink", "Enable Sidelink-inspired Semi-Persistent Scheduling for Phase 1 (default false)", g_enableP1Sidelink);
+    cmd.AddValue("enableP1Ssa", "Enable SSA (Sensing-based Slotted Access) for Phase 1 (default false)", g_enableP1Ssa);
     cmd.AddValue("p1SyncErrUs", "P1 clock sync error E: node timing off by U(-E,+E) us per cycle (default 0)", g_p1SyncErrUs);
     cmd.AddValue("p1Copies", "P1 CSMA: beacon transmissions per cycle (default 1)", g_p1Copies);
     cmd.AddValue("p1MinBE", "P1 CSMA min backoff exponent (default 0)", g_p1MinBE);
@@ -1875,14 +1875,14 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p1MaxBackoffs", "P1 CSMA extra CCA attempts before failure (default 0)", g_p1MaxBackoffs);
     cmd.AddValue("p1RetryMinMs", "P1 app retry delay min after CCA failure, ms (default 0.1)", g_p1RetryMinMs);
     cmd.AddValue("p1RetryMaxMs", "P1 app retry delay max after CCA failure, ms (default 0.5)", g_p1RetryMaxMs);
-    cmd.AddValue("p1ReselInitMin", "Sidelink first counter min after blind pick (default -1 = p1ReselMin)", g_p1ReselInitMin);
-    cmd.AddValue("p1ReselInitMax", "Sidelink first counter max after blind pick (default -1 = p1ReselMax)", g_p1ReselInitMax);
-    cmd.AddValue("p1ReselMin", "Sidelink reselection counter min cycles (default 5)", g_p1ReselMin);
-    cmd.AddValue("p1ReselMax", "Sidelink reselection counter max cycles (default 15)", g_p1ReselMax);
-    cmd.AddValue("p1PoolFrac", "Sidelink candidate pool: fraction of lowest-RSSI slots (default 0.25)", g_p1PoolFrac);
-    cmd.AddValue("p1SlotGuardUs", "Sidelink cutoff at slot end - guard in us (default 0 = slot boundary)", g_p1SlotGuardUs);
-    cmd.AddValue("p1SenseDecay", "Sidelink per-cycle decay of sensed slot energy (default 0.8; 1.0 = equal weights)", g_p1SenseDecay);
-    cmd.AddValue("p1SlotUs", "Phase 1 Sidelink slot duration in microseconds (default 300.0)", g_p1SlotUs);
+    cmd.AddValue("p1ReselInitMin", "SSA first counter min after blind pick (default -1 = p1ReselMin)", g_p1ReselInitMin);
+    cmd.AddValue("p1ReselInitMax", "SSA first counter max after blind pick (default -1 = p1ReselMax)", g_p1ReselInitMax);
+    cmd.AddValue("p1ReselMin", "SSA reselection counter min cycles (default 5)", g_p1ReselMin);
+    cmd.AddValue("p1ReselMax", "SSA reselection counter max cycles (default 15)", g_p1ReselMax);
+    cmd.AddValue("p1PoolFrac", "SSA candidate pool: fraction of lowest-RSSI slots (default 0.25)", g_p1PoolFrac);
+    cmd.AddValue("p1SlotGuardUs", "SSA cutoff at slot end - guard in us (default 0 = slot boundary)", g_p1SlotGuardUs);
+    cmd.AddValue("p1SenseDecay", "SSA per-cycle decay of sensed slot energy (default 0.8; 1.0 = equal weights)", g_p1SenseDecay);
+    cmd.AddValue("p1SlotUs", "Phase 1 SSA slot duration in microseconds (default 300.0)", g_p1SlotUs);
     cmd.AddValue("p1AvoidDist", "RX Deafness defense distance in meters", g_p1AvoidDist);
     cmd.AddValue("p1AvoidRssi", "Defense RSSI threshold in dBm (-106 to -90)", g_p1AvoidRssi);
     cmd.AddValue("enableDefense", "Enable spatial slot defense (default true)", g_enableDefense);

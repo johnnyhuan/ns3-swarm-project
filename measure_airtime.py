@@ -29,7 +29,7 @@ for rel_path in ["scratch/lr-wpan-swarm.cc", "src/lr-wpan/model/lr-wpan-phy.cc",
 
 cmd = [
     "./ns3", "run",
-    "scratch/lr-wpan-swarm --numNodes=2 --simTime=0.1 --p1Duration=10.0 --p2Duration=10.0 --enableP1Sidelink=true"
+    "scratch/lr-wpan-swarm --numNodes=2 --simTime=0.1 --p1Duration=10.0 --p2Duration=10.0 --enableP1Ssa=true"
 ]
 
 print("📡 Executing Real Hardware Air-Time Measurement via ns-3 PHY Traces...\n")

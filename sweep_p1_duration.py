@@ -54,7 +54,7 @@ for dur in durations:
         "./ns3", "run",
         f"scratch/lr-wpan-swarm --numNodes={num_nodes} --nodeSpeed={node_speed} "
         f"--p1Duration={dur} --p1TxPower=0 --p2TxPower=-2 --simTime={sim_time} "
-        f"--enableP1Sidelink=false"
+        f"--enableP1Ssa=false"
     ]
 
     proc = subprocess.Popen(cmd, cwd=NS3_DIR, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)

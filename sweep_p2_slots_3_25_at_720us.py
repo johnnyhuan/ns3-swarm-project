@@ -83,7 +83,7 @@ def run_single_slot_count(num_slots):
         f"--numSlots={num_slots} --p2Duration={p2_duration_ms:.4f} --dataSlotUs={slot_us} "
         f"--numChannels={num_channels} --simTime={sim_time} --spaceSize={space_size} --spaceZ={space_z} "
         f"--p1TxPower=0 --p2TxPower=-2 --p1CcaThresholdDbm=-96.58 --nodeSpeed=10.0 "
-        f"--enableP1Sidelink=false --enablePhyCapture=true --enableP2Capture=false "
+        f"--enableP1Ssa=false --enablePhyCapture=true --enableP2Capture=false "
         f"--p1CaptureThresholdDb={capture_thresh_db} --phyCaptureMarginDb={capture_thresh_db} --autoPush=false"
     ]
 

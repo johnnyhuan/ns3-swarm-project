@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Phase 2 Data Delivery Benchmark for 150 UAV Swarm
-- Baseline Phase 1: 3GPP Sidelink Mode 4 S-SPS (10ms window, 100 µs slot width)
+- Baseline Phase 1: SSA (Sensing-based Slotted Access) (10ms window, 100 µs slot width)
 - Phase 2 Total Duration: 10.0 ms
 - Evaluates Phase 2 Data Delivery Success Rate (PRR), Ground Truth Drop Breakdown, Power Capture Events, and AoI.
 - Compares:
@@ -64,7 +64,7 @@ def run_test(slot_us, p2_dur_ms=10.0):
     cmd = [
         "./ns3", "run",
         f"scratch/lr-wpan-swarm --numNodes={num_nodes} --p1Duration=10.0 --p1SlotUs=100.0 "
-        f"--enableP1Sidelink=true --p2Duration={p2_dur_ms} --dataSlotUs={slot_us} "
+        f"--enableP1Ssa=true --p2Duration={p2_dur_ms} --dataSlotUs={slot_us} "
         f"--simTime={sim_time} --spaceSize={space_size} --spaceZ={space_z} "
         f"--p1TxPower=0 --p2TxPower=-2 --nodeSpeed=10.0 --autoPush=false"
     ]
@@ -195,7 +195,7 @@ report_path = os.path.join(PROJECT_DIR, "p2_benchmark_150uav_report.txt")
 with open(report_path, "w", encoding="utf-8") as f:
     f.write("# Phase 2 Data Delivery Benchmark Report (150 UAVs, P1=10ms, P2=10ms)\n\n")
     f.write(f"- Swarm Scale       : {num_nodes} UAVs\n")
-    f.write(f"- Phase 1 Window    : 10.0 ms (Sidelink Mode 4 S-SPS, 100 µs micro-slot)\n")
+    f.write(f"- Phase 1 Window    : 10.0 ms (SSA SSA, 100 µs micro-slot)\n")
     f.write(f"- Phase 2 Window    : 10.0 ms\n")
     f.write(f"- 2 Mbps Packet Air : 436 µs (50B payload + 11B MAC header + 12 symbols PPDU header)\n")
     f.write(f"- Fast Turnaround   : 40 µs (BLE 5.4 fast PLL turnaround)\n\n")

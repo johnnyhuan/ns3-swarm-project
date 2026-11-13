@@ -3,7 +3,7 @@
 Phase 2 (Data Delivery) Single Run Test: 10 ms Phase 2 Duration
 Baseline Configuration:
 - Swarm Scale: 150 UAVs
-- Phase 1 Architecture: 3GPP Sidelink Mode 4 S-SPS (100 µs Micro-Slot, 10 ms window)
+- Phase 1 Architecture: SSA (Sensing-based Slotted Access) (100 µs Micro-Slot, 10 ms window)
 - Phase 2 Window: 10.0 ms
 - Phase 2 Slot Width: 1000 µs (1.0 ms) or 625 µs (Bluetooth Baseband slot)
 - Physical Layer: 2 Mbps LE 2M PHY, 436 µs airtime, 40 µs fast turnaround
@@ -17,7 +17,7 @@ import sys
 import re
 
 print("==========================================================================================")
-print("🚀  PHASE 2 DATA DELIVERY TEST: 10 ms DURATION (150 UAVs, SIDELINK BASELINE)  🚀")
+print("🚀  PHASE 2 DATA DELIVERY TEST: 10 ms DURATION (150 UAVs, SSA BASELINE)  🚀")
 print("==========================================================================================")
 
 # Command-line configurable parameters
@@ -38,7 +38,7 @@ guard_us = data_slot_us - 436.0 - 40.0
 cycle_ms = p1_duration + 1.0 + p2_duration
 
 print(f"• UAV Swarm Scale        : {num_nodes} UAVs")
-print(f"• Phase 1 Broadcast Win  : {p1_duration:.1f} ms (Sidelink S-SPS, {p1_slot_us:.0f} µs slot, SINR Thresh: {p1_capt_thresh:+.1f} dB)")
+print(f"• Phase 1 Broadcast Win  : {p1_duration:.1f} ms (SSA, {p1_slot_us:.0f} µs slot, SINR Thresh: {p1_capt_thresh:+.1f} dB)")
 print(f"• Phase 2 Data Window    : {p2_duration:.1f} ms ({p2_slots} slots x {data_slot_us:.0f} µs, {num_channels} channels = {total_cells} cells)")
 print(f"• Data Packet Airtime    : 436 µs (@ 2 Mbps, 50B payload + headers) + 40 µs turnaround")
 print(f"• Timing Guard Band      : {guard_us:.0f} µs")
@@ -90,7 +90,7 @@ cmd = [
     f"--p2Duration={p2_duration} --dataSlotUs={data_slot_us} --numChannels={num_channels} "
     f"--simTime={sim_time} --spaceSize={space_size} --spaceZ={space_z} "
     f"--p1TxPower=0 --p2TxPower=-2 --p1CcaThresholdDbm=-96.58 --nodeSpeed=10.0 "
-    f"--enableP1Sidelink=true --p1SlotUs={p1_slot_us} --p1CaptureThresholdDb={p1_capt_thresh} --autoPush=false"
+    f"--enableP1Ssa=true --p1SlotUs={p1_slot_us} --p1CaptureThresholdDb={p1_capt_thresh} --autoPush=false"
 ]
 
 try:
@@ -201,7 +201,7 @@ summary_file = os.path.join(PROJECT_DIR, "p2_10ms_ground_truth_results.txt")
 with open(summary_file, "w", encoding="utf-8") as f:
     f.write(f"# Phase 2 Data Delivery Single Test Report (10 ms Duration)\n")
     f.write(f"- Swarm Scale       : {num_nodes} UAVs\n")
-    f.write(f"- Phase 1 Window    : {p1_duration:.1f} ms (Sidelink S-SPS, {p1_slot_us:.0f} us slot)\n")
+    f.write(f"- Phase 1 Window    : {p1_duration:.1f} ms (SSA, {p1_slot_us:.0f} us slot)\n")
     f.write(f"- Phase 2 Window    : {p2_duration:.1f} ms ({p2_slots} slots x {data_slot_us:.0f} us, {num_channels} channels = {total_cells} cells)\n")
     f.write(f"- Cycle Time        : {cycle_ms:.1f} ms\n")
     f.write(f"- P1 PRR            : {m_p1_succ.group(2) if m_p1_succ else 'N/A'}%\n")

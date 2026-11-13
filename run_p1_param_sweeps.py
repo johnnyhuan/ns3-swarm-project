@@ -83,10 +83,16 @@ EXPS = {
                  for n in [1, 2, 5, 10, 20, 30, 50, 100]]),
     "slot": ([("perfect sync", x, ssa(p1SlotUs=x)) for x in [130, 140, 150, 170, 200, 250, 300]] +
              [("sync error +-20 us", x, ssa(p1SlotUs=x, p1SyncErrUs=20)) for x in [130, 140, 150, 170, 200, 250, 300]]),
+    # fixed 150 us slots, N slots per cycle: P1 = 40 us settle + N x 150 us (+1 us rounding margin)
+    "slotcount": [("SSA", n, ssa(p1Duration=round((41 + 150 * n) / 1000.0, 3)))
+                  for n in [10, 25, 40, 55, 66, 70, 85, 100, 120]],
     "sync": ([("SSA", x, ssa(p1SyncErrUs=x)) for x in range(0, 61, 5)] +
              [("CSMA", x, csma(p1SyncErrUs=x)) for x in (0, 30, 60)]),
-    "density": ([("SSA", n, ssa(numNodes=n)) for n in range(25, 251, 25)] +
-                [("CSMA", n, csma(numNodes=n)) for n in range(25, 251, 25)]),
+    "density": ([("SSA", n, ssa(numNodes=n)) for n in range(50, 201, 25)] +
+                [("CSMA", n, csma(numNodes=n)) for n in range(50, 201, 25)]),
+    # Phase 1 window length (ms) for both methods, 100 UAVs; the cycle grows with it (P1 + 1 ms + P2)
+    "duration": ([("SSA", d, ssa(p1Duration=float(d))) for d in range(2, 16)] +
+                 [("CSMA", d, csma(p1Duration=float(d))) for d in range(2, 16)]),
     "distance": [("SSA tuned", 0, ssa()),
                  ("SSA default", 0, "--enableP1Ssa=true --numNodes=100 --p1SlotUs=150 --p1TxPower=4 "
                                     "--p1SenseDecay=0.8 --p1ReselMin=5 --p1ReselMax=15 --p1PoolFrac=0.25"),

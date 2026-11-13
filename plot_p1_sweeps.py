@@ -141,6 +141,24 @@ if ("slot", "perfect sync") in data:
     ax.legend(loc="lower left")
     finish(fig, "s4_slot.png", "100 UAVs, 10 s, 3 seeds; slot = 40 µs turnaround + 96 µs beacon + guard (grey: guard < 20 µs; 130 µs does not fit)")
 
+# 4b) number of slots per cycle at a fixed 150 us slot width
+if ("slotcount", "SSA") in data:
+    fig, ax = plt.subplots(figsize=(8.5, 5.4))
+    xs, m = line(ax, "slotcount", "SSA", BLUE, "SSA (150 µs slots)")
+    ax.set_xticks(xs)
+    ax.set_xlabel("Slots per cycle (Phase 1 = 40 µs + slots × 150 µs)")
+    ax.set_ylabel("Phase 1 discovery PRR (%)")
+    ax.set_ylim(min(m) - 3, 100.5)
+    top = ax.secondary_xaxis("top")
+    top.set_xticks(xs, [f"{(40 + 150 * x) / 1000:.1f}" for x in xs])
+    top.set_xlabel("Phase 1 duration (ms)", color=INK2)
+    top.tick_params(colors=INK2)
+    mark(ax, 66, "used: 66 slots (10 ms)")
+    ax.set_title("SSA: number of slots per cycle (100 UAVs)")
+    finish(fig, "s5_slot_count.png",
+           f"{NOTE}; slot width fixed at 150 µs, longer P1 also lengthens the cycle (P1 + 1 ms + 9.75 ms P2); "
+           "others at tuned SSA")
+
 # 5) sync error
 if ("sync", "SSA") in data:
     fig, ax = plt.subplots(figsize=(8, 5))
@@ -169,7 +187,31 @@ if ("density", "SSA") in data:
     ax.set_ylim(min(mc) - 3, 100.5)
     ax.set_title("Discovery reliability vs. swarm density")
     ax.legend(loc="lower left")
-    finish(fig, "s6_density.png", "200×200×80 m, 10 m/s, perfect sync, BLE 5.4 LE 2M model, 10 s, mean ± 1 std of 3 seeds")
+    finish(fig, "s6_density.png", "200×200×80 m, 10 m/s, perfect sync, BLE 5.4 LE 2M model, 10 s, 1 seed (trend only); "
+           "SSA: +8 dBm, 150 µs slots, decay 0.7, pool 25 %, counter 2–5 → 30–90; CSMA: +4 dBm, CCA −94 dBm, MinBE 0 + 1 retry")
+
+# 6b) Phase 1 duration, both methods
+if ("duration", "SSA") in data:
+    fig, ax = plt.subplots(figsize=(8.5, 5.4))
+    xs, ms = line(ax, "duration", "SSA", BLUE, "SSA (tuned)")
+    _, mc = line(ax, "duration", "CSMA", ORANGE, "CSMA (tuned)", marker="s")
+    ax.set_xticks(xs)
+    ax.set_xlabel("Phase 1 duration (ms)")
+    ax.set_ylabel("Phase 1 discovery PRR (%)")
+    ax.set_ylim(min(ms + mc) - 3, 100.5)
+    top = ax.secondary_xaxis("top")
+    top.set_xticks(xs, [str(int((x * 1000 - 40) // 150)) for x in xs])
+    top.set_xlabel("SSA slots per cycle (150 µs each)", color=INK2)
+    top.tick_params(colors=INK2)
+    ax.axvline(10, color=INK2, ls=":", lw=1.2)
+    ax.annotate("used: 10 ms", (10, ax.get_ylim()[0]), xytext=(4, 6), textcoords="offset points", fontsize=10, color=INK2)
+    for x, a, b in zip(xs, ms, mc):
+        if x in (2, 5, 10, 15):
+            ax.annotate(f"+{a - b:.1f}", (x, (a + b) / 2), ha="center", va="center", fontsize=10, color=INK2)
+    ax.set_title("Discovery reliability vs. Phase 1 duration (100 UAVs)")
+    ax.legend(loc="lower right")
+    finish(fig, "s8_duration.png", f"{NOTE.replace('mean ± 1 std of 3 seeds', '1 seed (trend only)')}; cycle = P1 + 1 ms gap + 9.75 ms P2; grey numbers = SSA − CSMA (pp); "
+           "SSA +8 dBm / CSMA +4 dBm tuned settings")
 
 # 7) distance (2 m bins)
 dpath = os.path.join(RES, "p1_distance_bins.csv")

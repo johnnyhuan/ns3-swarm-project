@@ -48,6 +48,7 @@ const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels
 // Sidelink S-SPS (Semi-Persistent Scheduling) for Phase 1
 bool g_enableP1Sidelink = false; // Phase 1 Sidelink S-SPS mode switch (default: false for baseline compatibility)
 // Phase 1 CSMA tuning (P2 always keeps MinBE 0 / no extra backoffs)
+double g_p1SyncErrUs = 0.0;      // P1 clock sync error: each node's P1 timing is off by U(-E,+E) us, redrawn every cycle
 int g_p1Copies = 1;              // P1 CSMA: independent random transmissions of the beacon per cycle
 int g_p1MinBE = 0;               // CSMA min backoff exponent in P1 (backoff unit 60 us)
 int g_p1MaxBE = 5;               // CSMA max backoff exponent in P1 (>= 3)
@@ -366,7 +367,7 @@ public:
             // RxBegin fires at preamble lock, i.e. a fixed latency after the sender's slot start:
             // RX->TX turnaround (40 us) + BLE sync window (24 us) = 64 us (Sidelink skips CCA).
             // Map back to the sender's slot; without this, packets were booked into slot s+1.
-            double rxLatencyUs = P1_SLOT_OFFSET_US + 40.0 + m_device->GetPhy()->GetSyncDuration().GetMicroSeconds();
+            double rxLatencyUs = m_clockOffsetUs + P1_SLOT_OFFSET_US + 40.0 + m_device->GetPhy()->GetSyncDuration().GetMicroSeconds();
             double timeInP1Us = (Simulator::Now() - m_epochStartTime).GetMicroSeconds() - rxLatencyUs;
             int numP1Slots = NumP1Slots();
             int slotIdx = (timeInP1Us < 0.0) ? -1 : (int)(timeInP1Us / g_p1SlotUs);
@@ -547,7 +548,8 @@ private:
 
     // Phase 1 Sidelink S-SPS variables
     int m_p1ClaimedSlot;
-    uint32_t m_p1PickedEpoch = 0;   // epoch in which the P2 resource was last picked
+    uint32_t m_p1PickedEpoch = 0;
+    double m_clockOffsetUs = 0.0;   // this cycle's clock-sync error of this node (us)   // epoch in which the P2 resource was last picked
     int m_p1ReselCounter;
     bool m_p1ConflictOccurred;
     std::set<int> m_p1OccupiedSlotsThisEpoch;
@@ -629,6 +631,16 @@ private:
         m_epochStartTime = Simulator::Now();
         double now = Simulator::Now().GetSeconds() * 1000.0;
 
+        // Residual clock-sync error of this node in this cycle (relative to the common reference).
+        // Drawn as U(0, 2E) so every node stays after the 40 us radio settle; pairwise this is the
+        // same as +-E around the reference. All of this node's P1 timing uses its own clock.
+        if (g_p1SyncErrUs > 0.0) {
+            Ptr<UniformRandomVariable> cv = CreateObject<UniformRandomVariable>();
+            m_clockOffsetUs = cv->GetValue(0.0, 2.0 * g_p1SyncErrUs);
+        } else {
+            m_clockOffsetUs = 0.0;
+        }
+
         // Phase 1 (Broadcast): Configurable range
         SwitchChannelAndPower(BROADCAST_CHANNEL, (int8_t)g_p1TxPower);
         // Sidelink S-SPS transmits in its slot without listen-before-talk
@@ -645,7 +657,7 @@ private:
             Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
             double maxDelayUs = std::max(200.0, g_phase1DurationUs - P1CsmaWorstCaseUs());
             for (int k = 0; k < std::max(1, g_p1Copies); k++) {
-                double randomDelayUs = uv->GetValue(100.0, maxDelayUs);
+                double randomDelayUs = m_clockOffsetUs + uv->GetValue(100.0, maxDelayUs);
                 Simulator::Schedule(MicroSeconds(randomDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
             }
         } else {
@@ -717,19 +729,19 @@ private:
             // before the next slot. Jitter may only use what is left above that guard.
             double maxJitterUs = std::max(0.0, std::min(15.0, g_p1SlotUs - 148.0));
             double jitterUs = (maxJitterUs > 0.0) ? uv->GetValue(0.0, maxJitterUs) : 0.0;
-            double txDelayUs = P1_SLOT_OFFSET_US + m_p1ClaimedSlot * g_p1SlotUs + jitterUs;
+            double txDelayUs = m_clockOffsetUs + P1_SLOT_OFFSET_US + m_p1ClaimedSlot * g_p1SlotUs + jitterUs;
 
             Simulator::Schedule(MicroSeconds(txDelayUs), &SwarmSchedulerApp::PickResourceAndSendBeacon, this);
 
             // Hard slot boundary: whatever is still on air at the end of my slot is cut off
-            Simulator::Schedule(MicroSeconds(P1_SLOT_OFFSET_US + (m_p1ClaimedSlot + 1) * g_p1SlotUs - g_p1SlotGuardUs),
+            Simulator::Schedule(MicroSeconds(m_clockOffsetUs + P1_SLOT_OFFSET_US + (m_p1ClaimedSlot + 1) * g_p1SlotUs - g_p1SlotGuardUs),
                                 &SwarmSchedulerApp::EndP1SlotCutoff, this, m_epoch, m_p1ClaimedSlot);
 
             // RSSI sensing (3GPP S-SPS style): sample the received energy in the middle of every
             // other slot's transmission window (40 + 44 us after slot start).
             for (int s = 0; s < numP1Slots; s++) {
                 if (s == m_p1ClaimedSlot) continue; // half-duplex: cannot sense while transmitting
-                Simulator::Schedule(MicroSeconds(P1_SLOT_OFFSET_US + s * g_p1SlotUs + 84.0), &SwarmSchedulerApp::SampleP1SlotEnergy, this, s, m_epoch);
+                Simulator::Schedule(MicroSeconds(m_clockOffsetUs + P1_SLOT_OFFSET_US + s * g_p1SlotUs + 84.0), &SwarmSchedulerApp::SampleP1SlotEnergy, this, s, m_epoch);
             }
 
         }
@@ -1015,7 +1027,7 @@ private:
                     // Attempt immediate migration to a later free slot in current epoch
                     int numP1Slots = NumP1Slots();
                     double timeInP1Us = (Simulator::Now() - m_epochStartTime).GetMicroSeconds();
-                    int currentSlot = (int)((timeInP1Us - P1_SLOT_OFFSET_US) / g_p1SlotUs);
+                    int currentSlot = (int)((timeInP1Us - m_clockOffsetUs - P1_SLOT_OFFSET_US) / g_p1SlotUs);
                     
                     std::vector<int> laterFreeSlots;
                     for (int s = currentSlot + 1; s < numP1Slots; s++) {
@@ -1029,7 +1041,7 @@ private:
                         m_p1ClaimedSlot = laterFreeSlots[idx];
                         m_p1ConflictOccurred = false;
                         
-                        double nextTxUs = P1_SLOT_OFFSET_US + m_p1ClaimedSlot * g_p1SlotUs;
+                        double nextTxUs = m_clockOffsetUs + P1_SLOT_OFFSET_US + m_p1ClaimedSlot * g_p1SlotUs;
                         double delayUs = nextTxUs - timeInP1Us;
                         if (delayUs > 50.0) {
                             if (g_verboseLog) {
@@ -1547,6 +1559,7 @@ void PrintGroundTruthReport() {
     ss << "Post-lock Re-sync (Capture)                       : REMOVED (BLE chips never re-sync after Access Address lock)\n";
     ss << "Preamble Lock SINR Threshold                      : " << g_preambleLockDb << " dB\n";
     ss << "Rx Sensitivity / Noise Floor                      : " << g_rxSensitivityDbm << " dBm / " << (g_rxSensitivityDbm - g_preambleLockDb) << " dBm\n";
+    ss << "P1 Clock Sync Error (per node, per cycle)         : +-" << g_p1SyncErrUs << " us\n";
     if (g_enableP1Sidelink) {
         ss << "P1 Slot Boundary Force Cutoffs                    : " << g_p1SlotCutoffCount << " (cut at slot end - " << g_p1SlotGuardUs << " us)\n";
         ss << "P1 Beacons Not Started Within Slot                : " << g_p1LateStartCount << "\n";
@@ -1855,6 +1868,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p1Duration", "Phase 1 duration in ms (e.g., 10 to 40)", g_p1DurationMs);
     cmd.AddValue("simTime", "Total simulation duration in seconds (default 10.0)", g_simTime);
     cmd.AddValue("enableP1Sidelink", "Enable Sidelink-inspired Semi-Persistent Scheduling for Phase 1 (default false)", g_enableP1Sidelink);
+    cmd.AddValue("p1SyncErrUs", "P1 clock sync error E: node timing off by U(-E,+E) us per cycle (default 0)", g_p1SyncErrUs);
     cmd.AddValue("p1Copies", "P1 CSMA: beacon transmissions per cycle (default 1)", g_p1Copies);
     cmd.AddValue("p1MinBE", "P1 CSMA min backoff exponent (default 0)", g_p1MinBE);
     cmd.AddValue("p1MaxBE", "P1 CSMA max backoff exponent (default 5, >= 3)", g_p1MaxBE);

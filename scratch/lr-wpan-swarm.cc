@@ -35,6 +35,7 @@ int g_numDataChannels = 6;   // Phase 2 Data Channels (configurable via cmd line
 int g_numDataSlots = 10;     // Phase 2 Data Slots (configurable via cmd line, 1 to 16)
 double g_p2DurationMs = -1.0; // Phase 2 Duration in ms (configurable via cmd line, default: computed from numSlots)
 double g_dataSlotUs = 1000.0; // Phase 2 Data Slot Duration in microseconds (default: 1000.0 us for 2 Mbps PHY)
+bool g_p2Cca = false;          // BLE has no CCA: P2 transmits at its scheduled slot start (set true for legacy CCA)
 double g_slotGuardBandUs = 50.0; // Phase 2 slot end guard band in microseconds reserved for transceiver turnaround to RX
 
 double g_p1DurationMs = 10.0; // Phase 1 Duration in ms (configurable via cmd line, default: 10.0 ms)
@@ -856,9 +857,9 @@ private:
     }
 
     void ComputeSchedule() {
-        // Phase 2 keeps its normal CCA behaviour and the original single-shot CSMA
+        // Phase 2: BLE-style scheduled TX, no CCA (legacy single-shot CCA only with --p2Cca=true)
         if (m_csma) {
-            m_csma->SetSkipCca(false);
+            m_csma->SetSkipCca(!g_p2Cca);
             m_csma->SetMacMinBE(0);
             m_csma->SetMacMaxCSMABackoffs(0);
         }
@@ -977,8 +978,12 @@ private:
             Ptr<LrWpanPhy> phy = m_device->GetPhy();
             PhyEnumeration phyState = g_dronePhyState[myId];
             
-            // Check if UAV is still actively transmitting or waiting in CSMA/CCA
-            if (phyState == IEEE_802_15_4_PHY_BUSY_TX || phyState == IEEE_802_15_4_PHY_TX_ON) {
+            // Only a packet that is really still on air counts. After a normal TX the radio stays in
+            // TX_ON for the 40 us TX->RX turnaround, which is NOT an overrun (same rule as P1).
+            auto lastIt = g_p2TxUidsInEpoch.find({m_epoch, (uint16_t)myId});
+            uint64_t lastUid = (lastIt != g_p2TxUidsInEpoch.end() && !lastIt->second.empty()) ? lastIt->second.back() : 0;
+            bool onAir = (phyState == IEEE_802_15_4_PHY_BUSY_TX) && lastUid != 0 && g_packetTxStartTime.count(lastUid) > 0;
+            if (onAir) {
                 // Forcefully interrupt ongoing transmission!
                 g_p2SlotCutoffCount++;
                 g_p2TxAbortInEpoch[m_epoch][myId] = true;
@@ -1730,6 +1735,7 @@ void PrintPhase2GroundTruthReport() {
     ss << "========================================================================================\n";
     ss << "Phase 2 Configuration                             : " << g_numDataSlots << " slots x " << g_dataSlotUs << " us (" << (g_numDataSlots * g_dataSlotUs / 1000.0) << " ms), " << g_numDataChannels << " channels\n";
     ss << "Slot Guard Band (RX Turnaround)                   : " << g_slotGuardBandUs << " us\n";
+    ss << "P2 Access                                         : scheduled broadcast TDMA, " << (g_p2Cca ? "CCA before TX" : "no CCA (BLE)") << ", TX power " << g_p2TxPower << " dBm\n";
     ss << "Total Slot Boundary Force Cutoffs                 : " << g_p2SlotCutoffCount << "\n";
     ss << "Total Expected P2 Neighbor Links (Epochs x Top-K) : " << g_p2TotalTargetLinks << "\n";
     double succPct = (g_p2TotalTargetLinks > 0) ? (100.0 * g_p2ReasonCounts[P2_REASON_SUCCESS] / g_p2TotalTargetLinks) : 0;
@@ -1890,6 +1896,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("numSlots", "Number of Phase 2 data slots (e.g., 5 to 20)", g_numDataSlots);
     cmd.AddValue("p2Duration", "Phase 2 duration in ms (default: 10.0 ms)", g_p2DurationMs);
     cmd.AddValue("dataSlotUs", "Phase 2 data slot duration in microseconds (default: 1000.0 us, e.g. 625.0 or 1000.0)", g_dataSlotUs);
+    cmd.AddValue("p2Cca", "Phase 2 legacy CCA before TX (default false: BLE has no CCA)", g_p2Cca);
     cmd.AddValue("slotGuardBandUs", "Phase 2 slot end guard band in microseconds reserved for switching to RX (default 50.0 us)", g_slotGuardBandUs);
     cmd.AddValue("numNodes", "Number of UAV nodes in swarm (e.g., 50, 100)", numNodes);
     cmd.AddValue("nodeSpeed", "Speed of UAVs in m/s (default 10.0 m/s, 0 for static hover)", nodeSpeed);

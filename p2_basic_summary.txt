@@ -1,0 +1,23 @@
+P2 basic BLE TDMA | P1 = SSA tuned | 100 UAVs | simTime 10.0s | seeds [1]
+====================================================================================
+Metric (mean over seeds)         750us x13 +8dBm   400us x24 +8dBm   400us x24 +4dBm
+------------------------------------------------------------------------------------
+P1 PRR (%)                                 97.40             97.30             97.30
+P2 PRR (%)                                 83.10             90.00             90.50
+------------------------------------------------------------------------------------
+P2 failure share (% of all links):
+  P1_DISCOVERY_MISS                         2.41              2.39              2.39
+  TX_DEAFNESS_SAME_SLOT                     0.64              0.08              0.08
+  RX_DEAFNESS_SLOT_CONFLICT                 4.07              0.94              0.94
+  RECEIVER_CHANNEL_MISMATCH                 2.84              3.09              3.09
+  PREAMBLE_COLLISION_BUSY_RX                3.77              2.07              1.01
+  PREAMBLE_LOW_SINR                         3.21              1.48              2.00
+  PAYLOAD_INTERFERENCE_DROP                 0.00              0.00              0.00
+  SLOT_BOUNDARY_CUTOFF                      0.00              0.00              0.00
+Slot-end force cutoffs                         0                 0                 0
+====================================================================================
+Settings:
+  common: --numNodes=100 --simTime=10.0 --p1Duration=10 --preambleLockDb=6 --nodeSpeed=10.0 --spaceSize=200 --spaceZ=80 --autoPush=false --enableP1Ssa=true --p1SlotUs=150 --p1TxPower=8 --p1SenseDecay=0.7 --p1ReselInitMin=2 --p1ReselInitMax=5 --p1ReselMin=30 --p1ReselMax=90 --p1PoolFrac=0.25 --numChannels=6 --p2Duration=9.75
+  750us x13 +8dBm : --dataSlotUs=750 --slotGuardBandUs=50 --p2TxPower=8
+  400us x24 +8dBm : --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=8
+  400us x24 +4dBm : --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4

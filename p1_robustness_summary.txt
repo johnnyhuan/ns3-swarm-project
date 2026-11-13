@@ -1,0 +1,22 @@
+P1 robustness | simTime 10.0s | seeds [1, 2, 3] | tuned CSMA vs tuned Sidelink
+==============================================================================
+A) Clock-sync error, 100 UAVs (P1 PRR %, mean +- stdev over seeds)
+  sync error          Sidelink              CSMA  SL collisions  SL low SINR
+      +-0 us     97.40 +- 0.10     82.03 +- 0.81            141         5640
+     +-10 us     96.73 +- 0.50                 -            291         6866
+     +-20 us     95.30 +- 0.44                 -           4162         5871
+     +-30 us     93.70 +- 0.53                 -           9112         4469
+     +-40 us     90.07 +- 0.35                 -          17718         3743
+     +-60 us     82.63 +- 0.91     81.87 +- 0.91          33746         4039
+
+B) Density, perfect sync (P1 PRR %, mean +- stdev over seeds)
+  UAVs  50m nbrs          Sidelink              CSMA     gap  CSMA aborts
+    50      10.2     98.63 +- 0.06     85.30 +- 0.17   13.33          156
+   100      19.6     97.40 +- 0.10     82.03 +- 0.81   15.37          674
+   150      27.4     96.53 +- 0.31     79.97 +- 0.42   16.57         1958
+   200      36.7     95.77 +- 0.32     77.93 +- 0.38   17.83         3797
+
+Slot-end force cutoffs (Sidelink, all runs): 0
+==============================================================================
+CSMA tuned: --enableP1Sidelink=false --p1TxPower=4 --p1CcaThresholdDbm=-94 --p1MinBE=0 --p1MaxBackoffs=1 --p1RetryMinMs=0.05 --p1RetryMaxMs=0.2
+SL tuned  : --enableP1Sidelink=true --p1SlotUs=150 --p1TxPower=8 --p1SenseDecay=0.7 --p1ReselInitMin=2 --p1ReselInitMax=5 --p1ReselMin=30 --p1ReselMax=90 --p1PoolFrac=0.25

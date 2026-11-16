@@ -1,0 +1,47 @@
+
+========================================================================================
+       🔬 PHASE 2 PHYSICAL & MAC GROUND TRUTH ANALYSIS (Top-K within 50m) 🔬           
+========================================================================================
+Phase 2 Configuration                             : 27 slots x 365 us (9.855 ms), 6 channels
+Slot Guard Band (RX Turnaround)                   : 0 us
+P2 Access                                         : scheduled broadcast TDMA, no CCA (BLE), TX power 4 dBm
+Total Slot Boundary Force Cutoffs                 : 0
+Total Expected P2 Neighbor Links (Epochs x Top-K) : 235888
+  ✅ Successfully Received (Delivered)            : 214505 (90.9%)
+  ❌ Failed Link Receptions (Dropped/Missed)      : 21383 (9.1%)
+----------------------------------------------------------------------------------------
+EXACT PHYSICAL ROOT CAUSE BREAKDOWN (Zero Estimation / Direct From Protocol Pipeline):
+  P1_DISCOVERY_MISS                      :  5838 ( 27.3% of fails |   2.5% of all links)
+  TX_DEAFNESS_SAME_SLOT                  :   125 (  0.6% of fails |   0.1% of all links)
+  RX_DEAFNESS_SLOT_CONFLICT              :  1889 (  8.8% of fails |   0.8% of all links)
+  RECEIVER_CHANNEL_MISMATCH              :  7887 ( 36.9% of fails |   3.3% of all links)
+  RADIO_TURNAROUND_BUSY                  :     0 (  0.0% of fails |   0.0% of all links)
+  SENDER_CSMA_ABORT                      :     0 (  0.0% of fails |   0.0% of all links)
+  PREAMBLE_COLLISION_BUSY_RX             :  2037 (  9.5% of fails |   0.9% of all links)
+  PREAMBLE_LOW_SINR                      :  3607 ( 16.9% of fails |   1.5% of all links)
+  PAYLOAD_INTERFERENCE_DROP              :     0 (  0.0% of fails |   0.0% of all links)
+  SLOT_BOUNDARY_CUTOFF                   :     0 (  0.0% of fails |   0.0% of all links)
+========================================================================================
+
+--- Distance Bracket Breakdown (0-10m, 10-20m, 20-30m, 30-40m, 40-50m) ---
+Bracket   | Total | Success | P1 Miss | TX Deaf | RX Deaf | Ch Mismatch | CSMA Abort | Collision | Low SINR | Payload Drop
+------------------------------------------------------------------------------------------------------------------------
+ 0-10m    | 12834 |   12626 |      92 |       1 |       0 |           0 |          0 |       114 |        1 |            0
+10-20m    | 79965 |   78014 |     256 |       5 |     117 |         624 |          0 |       742 |      207 |            0
+20-30m    | 87201 |   79768 |    1485 |      32 |     626 |        3535 |          0 |       683 |     1072 |            0
+30-40m    | 42646 |   34914 |    2404 |      66 |     820 |        2764 |          0 |       340 |     1338 |            0
+40-50m    | 13242 |    9183 |    1601 |      21 |     326 |         964 |          0 |       158 |      989 |            0
+========================================================================================================================
+
+📡 PHYSICAL RF SIGNAL PROOFS & SWARM DENSITY (Averages & Evidence) [PHASE 2]:
+  • Airspace Dimensions & Topology      : 200.0m x 200.0m x 80.0m
+  • Mean 50m Neighbors per UAV (Density): 20.22 UAVs
+  • UAVs with >= 5 Neighbors in 50m     : 96.4%
+  • Preamble Lock SINR Threshold         : 6.0 dB (post-lock re-sync removed)
+  • Total Power Capture Events Triggered : 0 (post-lock re-sync removed)
+  • Delivered Links Mean SINR           : 12.2 dB (BLE 5.4 C/I Threshold: >= 6.0 dB)
+  • Low SINR Dropped Links Mean SINR    : 1.9 dB (BLE 5.4 C/I Threshold: < 6.0 dB)
+  • Low SINR Mean Received Power (Prx)  : -94.1 dBm
+  • Low SINR Mean Interference Power (I): -98.7 dBm
+========================================================================================================================
+

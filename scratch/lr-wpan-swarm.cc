@@ -82,6 +82,9 @@ static double P1CsmaWorstCaseUs() {
     return us + 40.0 + 88.0 + 20.0;             // RX->TX turnaround + ~air time + margin (kept as used in all runs)
 }
 
+// P2 data channel index -> lr-wpan channel: 0..14 -> 12..26, 15 -> 11 (the P1 broadcast channel is
+// free during P2). The model has 16 non-overlapping channels in total (5 MHz apart, no adjacent leakage).
+static uint8_t DataChannel(int c) { return (uint8_t)(c < 15 ? 12 + c : 11); }
 static int NumP1Slots() {
     return std::max(1, (int)((g_phase1DurationUs - P1_SLOT_OFFSET_US) / g_p1SlotUs));
 }
@@ -889,7 +892,7 @@ private:
         }
 
         m_schedule[m_myClaimedSlot].action = ScheduleSlot::TX;
-        m_schedule[m_myClaimedSlot].channel = m_myClaimedChannel + 12;
+        m_schedule[m_myClaimedSlot].channel = DataChannel(m_myClaimedChannel);
 
         int expected = std::min(K_CLOSEST, (int)filteredList.size());
         g_totalExpectedRx += expected;
@@ -924,7 +927,7 @@ private:
             }
 
             m_schedule[n.claimedSlot].action = ScheduleSlot::RX;
-            m_schedule[n.claimedSlot].channel = n.claimedChannel + 12;
+            m_schedule[n.claimedSlot].channel = DataChannel(n.claimedChannel);
             m_schedule[n.claimedSlot].targetId = n.id;
             m_lastScheduledRx.push_back(n.id);
             assigned++;
@@ -1934,6 +1937,10 @@ int main(int argc, char *argv[]) {
         g_numDataSlots = std::max(1, g_numDataSlots);
     }
 
+    if (g_numDataChannels > MAX_DATA_CHANNELS) {
+        std::cerr << "Warning: numChannels (" << g_numDataChannels << ") exceeds the 16 lr-wpan channels, clamping to 16" << std::endl;
+        g_numDataChannels = MAX_DATA_CHANNELS;
+    }
     if (g_numDataSlots > MAX_DATA_SLOTS) {
         std::cerr << "Warning: numSlots (" << g_numDataSlots << ") exceeds MAX_DATA_SLOTS (" << MAX_DATA_SLOTS << "), clamping to " << MAX_DATA_SLOTS << std::endl;
         g_numDataSlots = MAX_DATA_SLOTS;

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Phase 2 channel-count sweep: 1-10 data channels (400 us slots x24, +4 dBm, 5+3 RX).
+Phase 2 channel-count sweep: 1-16 data channels (400 us slots x24, +4 dBm, 5+3 RX).
 
 Phase 2 basic BLE-style TDMA test. P1 is fixed to the tuned SSA setting.
 
@@ -35,6 +35,7 @@ ap.add_argument("--simtime", type=float, default=10.0)
 ap.add_argument("--seeds", type=int, nargs="+", default=[1])
 ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 1))
 ap.add_argument("--no-push", action="store_true")
+ap.add_argument("--channels", type=int, nargs="+", default=list(range(1, 17)))
 a = ap.parse_args()
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -58,7 +59,7 @@ BASE = (f"--numNodes={a.nodes} --simTime={a.simtime} --p1Duration=10 --preambleL
         f"--p1ReselInitMin=2 --p1ReselInitMax=5 --p1ReselMin=30 --p1ReselMax=90 --p1PoolFrac=0.25 "
         f"--p2Duration=9.75")
 
-CHANNELS = list(range(1, 11))
+CHANNELS = a.channels   # model max: 16 non-overlapping channels (11-26)
 MODES = [(f"{c} ch", f"p2_ch{c}", f"--numChannels={c} --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3")
          for c in CHANNELS]
 REASONS = ["P1_DISCOVERY_MISS", "TX_DEAFNESS_SAME_SLOT", "RX_DEAFNESS_SLOT_CONFLICT",
@@ -159,7 +160,7 @@ files = ["p2_channels_summary.txt"] + sorted(saved)
 try:
     subprocess.run(["git", "pull", "--rebase", "--autostash", "origin", "main"], cwd=PROJECT_DIR, check=True)
     subprocess.run(["git", "add", "-f"] + files, cwd=PROJECT_DIR, check=True)
-    subprocess.run(["git", "commit", "-m", f"data: P2 channel-count sweep 1-10 ({a.nodes} UAVs, {a.simtime}s, seeds {a.seeds})"],
+    subprocess.run(["git", "commit", "-m", f"data: P2 channel-count sweep 1-16 ({a.nodes} UAVs, {a.simtime}s, seeds {a.seeds})"],
                    cwd=PROJECT_DIR, check=True)
     subprocess.run(["git", "push", "origin", "HEAD:main"], cwd=PROJECT_DIR, check=True)
     print("✓ Results pushed to GitHub")

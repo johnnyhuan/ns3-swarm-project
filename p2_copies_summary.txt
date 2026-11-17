@@ -1,0 +1,27 @@
+P2 copies per cycle (1 vs 2) | P1 = SSA tuned | simTime 10.0s | seeds [1]
+==========================================================================================
+Metric (mean over seeds)          100 x1    100 x2    150 x1    150 x2    200 x1    200 x2
+------------------------------------------------------------------------------------------
+P1 PRR (%)                         97.30     97.20     96.70     96.80     96.00     96.00
+P2 PRR (%)                         94.60     95.70     93.00     94.60     92.00     93.50
+------------------------------------------------------------------------------------------
+P2 failure share (% of all links):
+  P1_DISCOVERY_MISS                 2.53      2.57      3.13      2.93      3.76      3.68
+  TX_DEAFNESS_SAME_SLOT             0.08      0.12      0.08      0.13      0.08      0.12
+  RX_DEAFNESS_SLOT_CONFLICT         1.04      0.64      1.29      0.87      1.38      0.95
+  RECEIVER_CHANNEL_MISMATCH         0.06      0.14      0.11      0.15      0.09      0.13
+  PREAMBLE_COLLISION_BUSY_RX        0.39      0.18      0.78      0.35      1.03      0.48
+  PREAMBLE_LOW_SINR                 1.27      0.68      1.59      0.98      1.65      1.12
+  PAYLOAD_INTERFERENCE_DROP         0.00      0.00      0.00      0.00      0.00      0.00
+  SLOT_BOUNDARY_CUTOFF              0.00      0.00      0.00      0.00      0.00      0.00
+RX slots per cycle (avg)            7.61     13.20      7.73     13.23      7.88     13.42
+Slot-end force cutoffs                 0         0         0         0         0         0
+==========================================================================================
+Settings:
+  common: --simTime=10.0 --p1Duration=10 --preambleLockDb=6 --nodeSpeed=10.0 --spaceSize=200 --spaceZ=80 --autoPush=false --enableP1Ssa=true --p1SlotUs=150 --p1TxPower=8 --p1SenseDecay=0.7 --p1ReselInitMin=2 --p1ReselInitMax=5 --p1ReselMin=30 --p1ReselMax=90 --p1PoolFrac=0.25
+  100 x1          : --numNodes=100 --p2Copies=1 --p1AvoidDist=50 --numSlots=24 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  100 x2          : --numNodes=100 --p2Copies=2 --p1AvoidDist=50 --numSlots=24 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  150 x1          : --numNodes=150 --p2Copies=1 --p1AvoidDist=50 --numSlots=24 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  150 x2          : --numNodes=150 --p2Copies=2 --p1AvoidDist=50 --numSlots=24 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  200 x1          : --numNodes=200 --p2Copies=1 --p1AvoidDist=50 --numSlots=24 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  200 x2          : --numNodes=200 --p2Copies=2 --p1AvoidDist=50 --numSlots=24 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3

@@ -35,6 +35,7 @@ int g_numDataChannels = 10;  // Phase 2 Data Channels (configurable via cmd line
 int g_numDataSlots = 10;     // Phase 2 Data Slots (configurable via cmd line, 1 to 16)
 double g_p2DurationMs = -1.0; // Phase 2 Duration in ms (configurable via cmd line, default: computed from numSlots)
 double g_dataSlotUs = 1000.0; // Phase 2 Data Slot Duration in microseconds (default: 1000.0 us for 2 Mbps PHY)
+int g_p2Copies = 1;           // P2: send the state packet in 1 or 2 (slot, channel) cells per cycle
 int g_p2ExtraRx = 3;          // P2: also listen to this many extra neighbours (RSSI rank 6, 7, ...) in free slots
 static uint64_t g_p2RxSlotsTotal = 0, g_p2ScheduleCount = 0;
 bool g_p2Cca = false;          // BLE has no CCA: P2 transmits at its scheduled slot start (set true for legacy CCA)
@@ -218,6 +219,8 @@ struct NeighborInfo {
     uint32_t epoch;
     uint8_t claimedSlot;
     uint8_t claimedChannel;
+    uint8_t claimedSlot2 = 255;     // second copy (only with --p2Copies=2)
+    uint8_t claimedChannel2 = 0;
 };
 
 struct ScheduleSlot {
@@ -294,6 +297,8 @@ static std::map<uint32_t, std::map<uint16_t, bool>> g_p2DroneCutoffInEpoch;
 static std::set<uint64_t> g_p2CutoffUids;
 static std::map<uint32_t, std::map<uint16_t, uint8_t>> g_droneClaimedSlot;
 static std::map<uint32_t, std::map<uint16_t, uint8_t>> g_droneClaimedChannel;
+static std::map<uint32_t, std::map<uint16_t, uint8_t>> g_droneClaimedSlot2;
+static std::map<uint32_t, std::map<uint16_t, uint8_t>> g_droneClaimedChannel2;
 static std::map<uint32_t, std::map<uint16_t, int>> g_p1DroneClaimedSlot;
 static std::map<uint32_t, std::map<uint16_t, std::set<uint16_t>>> g_p2DiscoveredInP1;
 static std::map<uint32_t, std::map<uint16_t, std::map<int, ScheduleSlot::Action>>> g_p2SlotAction;
@@ -530,6 +535,8 @@ private:
     Time m_epochStartTime;
     uint8_t m_myClaimedSlot;
     uint8_t m_myClaimedChannel;
+    uint8_t m_myClaimedSlot2 = 255;
+    uint8_t m_myClaimedChannel2 = 0;
     std::vector<NeighborInfo> m_monitorList;
     ScheduleSlot m_schedule[MAX_DATA_SLOTS];
 
@@ -799,6 +806,9 @@ private:
             if (n.claimedSlot < g_numDataSlots && n.claimedChannel < g_numDataChannels) {
                 cost[n.claimedSlot][n.claimedChannel] += 10000;
             }
+            if (n.claimedSlot2 < g_numDataSlots && n.claimedChannel2 < g_numDataChannels) {
+                cost[n.claimedSlot2][n.claimedChannel2] += 10000;
+            }
             
             // 加入空間防禦：利用距離或指定之 RSSI 門檻判斷是否為鄰近無人機 (利用 Friis 公式反推 RSSI 門檻)
             if (g_enableDefense && g_p1AvoidDist > 0.0) {
@@ -811,6 +821,11 @@ private:
                 if (n.rssi >= avoidRssi && n.claimedSlot < g_numDataSlots) {
                     for (int c = 0; c < g_numDataChannels; c++) {
                         cost[n.claimedSlot][c] += 1000;
+                    }
+                }
+                if (n.rssi >= avoidRssi && n.claimedSlot2 < g_numDataSlots) {
+                    for (int c = 0; c < g_numDataChannels; c++) {
+                        cost[n.claimedSlot2][c] += 1000;
                     }
                 }
             }
@@ -837,12 +852,40 @@ private:
         m_myClaimedChannel = bestOptions[pickIdx].second;
         g_droneClaimedSlot[m_epoch][m_id] = m_myClaimedSlot;
         g_droneClaimedChannel[m_epoch][m_id] = m_myClaimedChannel;
+
+        // Second copy: same rule, but not in the slot of the first copy or next to it
+        // (one radio; after a TX the MAC waits the 150 us BLE T_IFS, so a copy in the very next
+        //  slot would start late and be cut off at the slot end)
+        m_myClaimedSlot2 = 255;
+        if (g_p2Copies >= 2 && g_numDataSlots >= 4) {
+            for (int s = std::max(0, m_myClaimedSlot - 1); s <= std::min(g_numDataSlots - 1, m_myClaimedSlot + 1); s++) {
+                for (int c = 0; c < g_numDataChannels; c++) cost[s][c] += 1000000;
+            }
+            minCost = 99999999;
+            bestOptions.clear();
+            for (int s = 0; s < g_numDataSlots; s++) {
+                for (int c = 0; c < g_numDataChannels; c++) {
+                    if (cost[s][c] < minCost) { minCost = cost[s][c]; bestOptions.clear(); bestOptions.push_back({s, c}); }
+                    else if (cost[s][c] == minCost) bestOptions.push_back({s, c});
+                }
+            }
+            int pick2 = uv->GetInteger(0, bestOptions.size() - 1);
+            m_myClaimedSlot2 = bestOptions[pick2].first;
+            m_myClaimedChannel2 = bestOptions[pick2].second;
+            g_droneClaimedSlot2[m_epoch][m_id] = m_myClaimedSlot2;
+            g_droneClaimedChannel2[m_epoch][m_id] = m_myClaimedChannel2;
+        }
         SendBeaconPacket();
     }
 
     void SendBeaconPacket() {
         // 位元封裝 (Bit-packing in 4 bytes): ID(9 bits: 0-511), Slot(8 bits: 0-255), Channel(4 bits: 0-15) -> Total 21 bits in 32 bits
         uint32_t payload = (m_id & 0x01FF) | ((m_myClaimedSlot & 0x00FF) << 9) | ((m_myClaimedChannel & 0x000F) << 17);
+        if (g_p2Copies >= 2) {
+            // Two copies (<= 32 slots): ID 9 + slot 5 + ch 4 + slot2 5 + ch2 4 = 27 bits
+            payload = (m_id & 0x01FF) | ((m_myClaimedSlot & 0x1F) << 9) | ((m_myClaimedChannel & 0x0F) << 14) |
+                      ((m_myClaimedSlot2 & 0x1F) << 18) | ((m_myClaimedChannel2 & 0x0F) << 23);
+        }
         uint8_t buffer[4] = {
             (uint8_t)(payload & 0xFF),
             (uint8_t)((payload >> 8) & 0xFF),
@@ -893,6 +936,10 @@ private:
 
         m_schedule[m_myClaimedSlot].action = ScheduleSlot::TX;
         m_schedule[m_myClaimedSlot].channel = DataChannel(m_myClaimedChannel);
+        if (g_p2Copies >= 2 && m_myClaimedSlot2 < g_numDataSlots) {
+            m_schedule[m_myClaimedSlot2].action = ScheduleSlot::TX;
+            m_schedule[m_myClaimedSlot2].channel = DataChannel(m_myClaimedChannel2);
+        }
 
         int expected = std::min(K_CLOSEST, (int)filteredList.size());
         g_totalExpectedRx += expected;
@@ -902,7 +949,37 @@ private:
         // Listen to the K strongest neighbours, plus g_p2ExtraRx more in still-free slots.
         // RSSI includes interference and is 1 dB coarse, so the true 5th-nearest is often ranked 6th+.
         const int rxLimit = K_CLOSEST + std::max(0, g_p2ExtraRx);
+        if (g_p2Copies >= 2) {
+            // Pass 1: one copy of each neighbour (the copy whose slot is still free).
+            // Pass 2: the other copy as a backup, in the slots that are left.
+            std::vector<NeighborInfo> top;
+            for (auto& n : filteredList) {
+                if ((int)top.size() >= rxLimit) break;
+                top.push_back(n);
+            }
+            std::vector<int> gotCopy(top.size(), -1);
+            auto tryCell = [&](const NeighborInfo& n, int k) {
+                uint8_t sl = (k == 0) ? n.claimedSlot : n.claimedSlot2;
+                uint8_t ch = (k == 0) ? n.claimedChannel : n.claimedChannel2;
+                if (sl >= g_numDataSlots || m_schedule[sl].action != ScheduleSlot::IDLE) return false;
+                m_schedule[sl].action = ScheduleSlot::RX;
+                m_schedule[sl].channel = DataChannel(ch);
+                m_schedule[sl].targetId = n.id;
+                return true;
+            };
+            for (size_t j = 0; j < top.size(); j++) {
+                for (int k = 0; k < 2 && gotCopy[j] < 0; k++) {
+                    if (tryCell(top[j], k)) gotCopy[j] = k;
+                }
+                if (gotCopy[j] >= 0) { m_lastScheduledRx.push_back(top[j].id); assigned++; }
+                else if ((int)j < K_CLOSEST) g_rxDeafnessCount++;
+            }
+            for (size_t j = 0; j < top.size(); j++) {
+                if (gotCopy[j] >= 0 && tryCell(top[j], 1 - gotCopy[j])) assigned++;
+            }
+        }
         for (auto& n : filteredList) {
+            if (g_p2Copies >= 2) break;
             if (assigned >= rxLimit) break;
             if (n.claimedSlot >= g_numDataSlots) continue;
             
@@ -1117,8 +1194,15 @@ private:
             if (g_verboseLog) std::cout << "[P1_RX] Time: " << now << "ms, Receiver: " << myId << ", Sender: " << (int)senderId << ", RSSI: " << (int)rssi << "\n";
             uint8_t claimedSlot = (payload >> 9) & 0x00FF;
             uint8_t claimedChannel = (payload >> 17) & 0x000F;
-            
-            m_monitorList.push_back({senderId, rssi, m_epoch, claimedSlot, claimedChannel});
+            uint8_t claimedSlot2 = 255, claimedChannel2 = 0;
+            if (g_p2Copies >= 2) {
+                claimedSlot = (payload >> 9) & 0x1F;
+                claimedChannel = (payload >> 14) & 0x0F;
+                claimedSlot2 = (payload >> 18) & 0x1F;
+                claimedChannel2 = (payload >> 23) & 0x0F;
+            }
+
+            m_monitorList.push_back({senderId, rssi, m_epoch, claimedSlot, claimedChannel, claimedSlot2, claimedChannel2});
             m_discoveryReceivedCount[senderId]++;
             
             if (m_lastDiscoveryTime.find(senderId) != m_lastDiscoveryTime.end()) {
@@ -1351,6 +1435,17 @@ private:
             auto uidsIt = g_p2TxUidsInEpoch.find({epoch, (uint16_t)i});
             if (uidsIt != g_p2TxUidsInEpoch.end() && !uidsIt->second.empty()) {
                 p2TxUids[i] = uidsIt->second.back();
+            }
+            // Two copies: loss reasons are judged on the later copy (the one whose radio states are logged)
+            if (g_p2Copies >= 2) {
+                auto e2 = g_droneClaimedSlot2.find(epoch);
+                if (e2 != g_droneClaimedSlot2.end()) {
+                    auto it2 = e2->second.find(i);
+                    if (it2 != e2->second.end() && it2->second < g_numDataSlots && (nodeSlots[i] == 255 || it2->second > nodeSlots[i])) {
+                        nodeSlots[i] = it2->second;
+                        nodeChs[i] = g_droneClaimedChannel2[epoch][i];
+                    }
+                }
             }
         }
 
@@ -1745,7 +1840,7 @@ void PrintPhase2GroundTruthReport() {
     ss << "========================================================================================\n";
     ss << "Phase 2 Configuration                             : " << g_numDataSlots << " slots x " << g_dataSlotUs << " us (" << (g_numDataSlots * g_dataSlotUs / 1000.0) << " ms), " << g_numDataChannels << " channels\n";
     ss << "Slot Guard Band (RX Turnaround)                   : " << g_slotGuardBandUs << " us\n";
-    ss << "P2 Access                                         : scheduled broadcast TDMA, " << (g_p2Cca ? "CCA before TX" : "no CCA (BLE)") << ", TX power " << g_p2TxPower << " dBm\n";
+    ss << "P2 Access                                         : scheduled broadcast TDMA, " << (g_p2Cca ? "CCA before TX" : "no CCA (BLE)") << ", TX power " << g_p2TxPower << " dBm, " << g_p2Copies << " cop" << (g_p2Copies > 1 ? "ies" : "y") << " per cycle\n";
     ss << "P2 RX Slots per Cycle (avg, 5 + extra " << g_p2ExtraRx << ")      : " << std::fixed << std::setprecision(2) << (g_p2ScheduleCount ? (double)g_p2RxSlotsTotal / g_p2ScheduleCount : 0.0) << "\n";
     ss << "Total Slot Boundary Force Cutoffs                 : " << g_p2SlotCutoffCount << "\n";
     ss << "Total Expected P2 Neighbor Links (Epochs x Top-K) : " << g_p2TotalTargetLinks << "\n";
@@ -1907,6 +2002,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("numSlots", "Number of Phase 2 data slots (e.g., 5 to 20)", g_numDataSlots);
     cmd.AddValue("p2Duration", "Phase 2 duration in ms (default: 10.0 ms)", g_p2DurationMs);
     cmd.AddValue("dataSlotUs", "Phase 2 data slot duration in microseconds (default: 1000.0 us, e.g. 625.0 or 1000.0)", g_dataSlotUs);
+    cmd.AddValue("p2Copies", "Phase 2: state packet copies per cycle, 1 or 2 (2 needs <= 32 slots)", g_p2Copies);
     cmd.AddValue("p2ExtraRx", "Phase 2: listen to this many extra neighbours beyond the 5 strongest (default 3)", g_p2ExtraRx);
     cmd.AddValue("p2Cca", "Phase 2 legacy CCA before TX (default false: BLE has no CCA)", g_p2Cca);
     cmd.AddValue("slotGuardBandUs", "Phase 2 slot end guard band in microseconds reserved for switching to RX (default 50.0 us)", g_slotGuardBandUs);
@@ -1944,6 +2040,11 @@ int main(int argc, char *argv[]) {
     if (g_numDataSlots > MAX_DATA_SLOTS) {
         std::cerr << "Warning: numSlots (" << g_numDataSlots << ") exceeds MAX_DATA_SLOTS (" << MAX_DATA_SLOTS << "), clamping to " << MAX_DATA_SLOTS << std::endl;
         g_numDataSlots = MAX_DATA_SLOTS;
+    }
+    g_p2Copies = std::max(1, std::min(2, g_p2Copies));
+    if (g_p2Copies >= 2 && g_numDataSlots > 32) {
+        std::cerr << "Error: --p2Copies=2 packs 5-bit slot numbers in the beacon, so numSlots must be <= 32" << std::endl;
+        return 1;
     }
     g_p2DurationMs = g_numDataSlots * g_dataSlotUs / 1000.0;
 

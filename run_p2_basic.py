@@ -54,7 +54,7 @@ BASE = (f"--numNodes={a.nodes} --simTime={a.simtime} --p1Duration=10 --preambleL
         f"--nodeSpeed=10.0 --spaceSize=200 --spaceZ=80 --autoPush=false "
         f"--enableP1Ssa=true --p1SlotUs=150 --p1TxPower=8 --p1SenseDecay=0.7 "
         f"--p1ReselInitMin=2 --p1ReselInitMax=5 --p1ReselMin=30 --p1ReselMax=90 --p1PoolFrac=0.25 "
-        f"--numChannels=6 --p2Duration=9.75")
+        f"--numChannels=10 --p2Duration=9.75")
 
 MODES = [
     ("750us x13 +8dBm", "p2_slot750_tx8", "--dataSlotUs=750 --slotGuardBandUs=50 --p2TxPower=8"),

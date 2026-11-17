@@ -31,7 +31,7 @@ double g_p1TxPower = 4.0;  // Phase 1 TX Power in dBm (+4 dBm: BLE decode range 
 double g_p1AvoidDist = 50.0; // RX Deafness defense distance in meters
 double g_p1AvoidRssi = -999.0; // Specific defense RSSI threshold in dBm (-106 to -90, overrides p1AvoidDist if set)
 bool g_enableDefense = true; // Defense design switch: true = spatial slot exclusion, false = exact cell avoidance only
-int g_numDataChannels = 6;   // Phase 2 Data Channels (configurable via cmd line, 0 to 10)
+int g_numDataChannels = 10;  // Phase 2 Data Channels (configurable via cmd line, 1 to 16; chosen default 10)
 int g_numDataSlots = 10;     // Phase 2 Data Slots (configurable via cmd line, 1 to 16)
 double g_p2DurationMs = -1.0; // Phase 2 Duration in ms (configurable via cmd line, default: computed from numSlots)
 double g_dataSlotUs = 1000.0; // Phase 2 Data Slot Duration in microseconds (default: 1000.0 us for 2 Mbps PHY)

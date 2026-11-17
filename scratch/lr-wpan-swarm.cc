@@ -26,7 +26,7 @@ NS_LOG_COMPONENT_DEFINE("LrWpanSwarm");
 // --- 系統常數設定 ---
 const uint32_t MINI_BEACON_SIZE = 4; 
 const uint32_t DATA_PACKET_SIZE = 50;
-double g_p2TxPower = -2.0; // Phase 2 TX Power (configurable via cmd line, optimal at -2 dBm)
+double g_p2TxPower = 4.0;  // Phase 2 TX Power in dBm (power sweep: flat 94.4-94.7 % from +3 to +8; -95 dBm sensitivity needs >= ~+3 for 50 m)
 double g_p1TxPower = 4.0;  // Phase 1 TX Power in dBm (+4 dBm: BLE decode range ~55 m at -95 dBm sensitivity, covers the 50 m target radius)
 double g_p1AvoidDist = 50.0; // RX Deafness defense distance in meters
 double g_p1AvoidRssi = -999.0; // Specific defense RSSI threshold in dBm (-106 to -90, overrides p1AvoidDist if set)

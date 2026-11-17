@@ -1,0 +1,30 @@
+P2 slot-count sweep (400 us) | P1 = SSA tuned | 100 UAVs | simTime 10.0s | seeds [1]
+========================================================================================================================
+Metric (mean over seeds)         3 slots   6 slots   9 slots  12 slots  16 slots  20 slots  24 slots  30 slots  36 slots
+------------------------------------------------------------------------------------------------------------------------
+P1 PRR (%)                         96.80     97.50     97.30     97.10     97.60     97.10     97.30     96.70     97.00
+P2 PRR (%)                         31.20     63.30     79.60     86.80     92.10     93.50     94.60     94.70     95.40
+------------------------------------------------------------------------------------------------------------------------
+P2 failure share (% of all links):
+  P1_DISCOVERY_MISS                 3.18      2.50      2.61      2.78      2.31      2.71      2.53      3.13      2.77
+  TX_DEAFNESS_SAME_SLOT            14.02      4.99      1.99      0.88      0.29      0.11      0.08      0.05      0.04
+  RX_DEAFNESS_SLOT_CONFLICT        31.67     18.62      9.41      5.08      2.42      1.47      1.04      0.77      0.65
+  RECEIVER_CHANNEL_MISMATCH        13.85      4.91      1.93      0.81      0.26      0.11      0.06      0.07      0.07
+  PREAMBLE_COLLISION_BUSY_RX        1.25      1.28      0.95      0.89      0.59      0.54      0.39      0.35      0.24
+  PREAMBLE_LOW_SINR                 4.79      4.43      3.51      2.72      2.05      1.57      1.27      0.96      0.78
+  PAYLOAD_INTERFERENCE_DROP         0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00
+  SLOT_BOUNDARY_CUTOFF              0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00
+RX slots per cycle (avg)            1.99      4.85      7.37      7.54      7.59      7.60      7.61      7.59      7.60
+Slot-end force cutoffs                 0         0         0         0         0         0         0         0         0
+========================================================================================================================
+Settings:
+  common: --numNodes=100 --simTime=10.0 --p1Duration=10 --preambleLockDb=6 --nodeSpeed=10.0 --spaceSize=200 --spaceZ=80 --autoPush=false --enableP1Ssa=true --p1SlotUs=150 --p1TxPower=8 --p1SenseDecay=0.7 --p1ReselInitMin=2 --p1ReselInitMax=5 --p1ReselMin=30 --p1ReselMax=90 --p1PoolFrac=0.25
+  3 slots         : --numSlots=3 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  6 slots         : --numSlots=6 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  9 slots         : --numSlots=9 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  12 slots        : --numSlots=12 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  16 slots        : --numSlots=16 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  20 slots        : --numSlots=20 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  24 slots        : --numSlots=24 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  30 slots        : --numSlots=30 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  36 slots        : --numSlots=36 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3

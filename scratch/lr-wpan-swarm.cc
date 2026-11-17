@@ -35,8 +35,8 @@ int g_numDataChannels = 10;  // Phase 2 Data Channels (configurable via cmd line
 int g_numDataSlots = 10;     // Phase 2 Data Slots (configurable via cmd line, 1 to 16)
 double g_p2DurationMs = -1.0; // Phase 2 Duration in ms (configurable via cmd line, default: computed from numSlots)
 double g_dataSlotUs = 1000.0; // Phase 2 Data Slot Duration in microseconds (default: 1000.0 us for 2 Mbps PHY)
-int g_p2Copies = 1;
-bool g_p2SmartPick = false;   // 2 copies: first book the copy whose cell no other heard neighbour also claims           // P2: send the state packet in 1 or 2 (slot, channel) cells per cycle
+int g_p2Copies = 2;           // P2: send the state packet in 1 or 2 (slot, channel) cells per cycle (official: 2)
+bool g_p2SmartPick = true;    // 2 copies: first book the copy whose cell no other heard neighbour also claims
 int g_p2ExtraRx = 3;          // P2: also listen to this many extra neighbours (RSSI rank 6, 7, ...) in free slots
 static uint64_t g_p2RxSlotsTotal = 0, g_p2ScheduleCount = 0;
 bool g_p2Cca = false;          // BLE has no CCA: P2 transmits at its scheduled slot start (set true for legacy CCA)
@@ -2016,8 +2016,8 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("numSlots", "Number of Phase 2 data slots (e.g., 5 to 20)", g_numDataSlots);
     cmd.AddValue("p2Duration", "Phase 2 duration in ms (default: 10.0 ms)", g_p2DurationMs);
     cmd.AddValue("dataSlotUs", "Phase 2 data slot duration in microseconds (default: 1000.0 us, e.g. 625.0 or 1000.0)", g_dataSlotUs);
-    cmd.AddValue("p2SmartPick", "Phase 2 (2 copies): first book the copy whose cell no other heard neighbour claims (default false)", g_p2SmartPick);
-    cmd.AddValue("p2Copies", "Phase 2: state packet copies per cycle, 1 or 2 (2 needs <= 32 slots)", g_p2Copies);
+    cmd.AddValue("p2SmartPick", "Phase 2 (2 copies): first book the copy whose cell no other heard neighbour claims (default true)", g_p2SmartPick);
+    cmd.AddValue("p2Copies", "Phase 2: state packet copies per cycle, 1 or 2 (default 2; falls back to 1 above 32 slots)", g_p2Copies);
     cmd.AddValue("p2ExtraRx", "Phase 2: listen to this many extra neighbours beyond the 5 strongest (default 3)", g_p2ExtraRx);
     cmd.AddValue("p2Cca", "Phase 2 legacy CCA before TX (default false: BLE has no CCA)", g_p2Cca);
     cmd.AddValue("slotGuardBandUs", "Phase 2 slot end guard band in microseconds reserved for switching to RX (default 50.0 us)", g_slotGuardBandUs);
@@ -2058,8 +2058,9 @@ int main(int argc, char *argv[]) {
     }
     g_p2Copies = std::max(1, std::min(2, g_p2Copies));
     if (g_p2Copies >= 2 && g_numDataSlots > 32) {
-        std::cerr << "Error: --p2Copies=2 packs 5-bit slot numbers in the beacon, so numSlots must be <= 32" << std::endl;
-        return 1;
+        // The 4-byte beacon holds two 5-bit slot numbers only up to 32 slots
+        std::cerr << "Warning: --p2Copies=2 needs numSlots <= 32 (5-bit slot field); using 1 copy" << std::endl;
+        g_p2Copies = 1;
     }
     g_p2DurationMs = g_numDataSlots * g_dataSlotUs / 1000.0;
 

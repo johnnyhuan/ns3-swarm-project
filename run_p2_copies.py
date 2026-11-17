@@ -26,6 +26,7 @@ ap.add_argument("--seeds", type=int, nargs="+", default=[1])
 ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 1))
 ap.add_argument("--no-push", action="store_true")
 ap.add_argument("--counts", type=int, nargs="+", default=[200, 150, 100])
+ap.add_argument("--tag", default="", help="suffix for the summary file name")
 a = ap.parse_args()
 
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -108,7 +109,7 @@ with ThreadPoolExecutor(max_workers=a.jobs) as ex:
             print(f"✗ {label} seed {seed} failed (crash):", err.strip().splitlines()[-4:] if err else "")
             continue
         runs[label][seed] = parse(t1, t2)
-        fname = f"p2_copies_{tag}_seed{seed}.txt"
+        fname = f"p2_copies{a.tag}_{tag}_seed{seed}.txt"
         with open(os.path.join(PROJECT_DIR, fname), "w", encoding="utf-8") as f:
             f.write(t2)
         saved.append(fname)
@@ -139,13 +140,13 @@ for l, t, f in MODES:
     lines.append(f"  {l:16s}: {f}")
 summary = "\n".join(lines) + "\n"
 print("\n" + summary)
-with open(os.path.join(PROJECT_DIR, "p2_copies_summary.txt"), "w", encoding="utf-8") as f:
+with open(os.path.join(PROJECT_DIR, f"p2_copies{a.tag}_summary.txt"), "w", encoding="utf-8") as f:
     f.write(summary)
 shutil.rmtree(run_root, ignore_errors=True)
 
 if a.no_push:
     sys.exit(0)
-files = ["p2_copies_summary.txt"] + sorted(saved)
+files = [f"p2_copies{a.tag}_summary.txt"] + sorted(saved)
 try:
     subprocess.run(["git", "pull", "--rebase", "--autostash", "origin", "main"], cwd=PROJECT_DIR, check=True)
     subprocess.run(["git", "add", "-f"] + files, cwd=PROJECT_DIR, check=True)

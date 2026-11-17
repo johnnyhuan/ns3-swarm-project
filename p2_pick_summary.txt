@@ -1,0 +1,23 @@
+P2 two copies: fixed vs smart copy choice | P1 = SSA tuned | simTime 10.0s | seeds [1]
+==================================================
+Metric (mean over seeds)       100 fixed 100 smart
+--------------------------------------------------
+P1 PRR (%)                         97.20     97.20
+P2 PRR (%)                         95.70     95.90
+--------------------------------------------------
+P2 failure share (% of all links):
+  P1_DISCOVERY_MISS                 2.57      2.57
+  TX_DEAFNESS_SAME_SLOT             0.12      0.12
+  RX_DEAFNESS_SLOT_CONFLICT         0.64      0.53
+  RECEIVER_CHANNEL_MISMATCH         0.14      0.14
+  PREAMBLE_COLLISION_BUSY_RX        0.18      0.16
+  PREAMBLE_LOW_SINR                 0.68      0.58
+  PAYLOAD_INTERFERENCE_DROP         0.00      0.00
+  SLOT_BOUNDARY_CUTOFF              0.00      0.00
+RX slots per cycle (avg)           13.20     13.20
+Slot-end force cutoffs                 0         0
+==================================================
+Settings:
+  common: --simTime=10.0 --p1Duration=10 --preambleLockDb=6 --nodeSpeed=10.0 --spaceSize=200 --spaceZ=80 --autoPush=false --enableP1Ssa=true --p1SlotUs=150 --p1TxPower=8 --p1SenseDecay=0.7 --p1ReselInitMin=2 --p1ReselInitMax=5 --p1ReselMin=30 --p1ReselMax=90 --p1PoolFrac=0.25
+  100 fixed       : --numNodes=100 --p2Copies=2 --p2SmartPick=false --p1AvoidDist=50 --numSlots=24 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  100 smart       : --numNodes=100 --p2Copies=2 --p2SmartPick=true --p1AvoidDist=50 --numSlots=24 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3

@@ -35,7 +35,8 @@ int g_numDataChannels = 10;  // Phase 2 Data Channels (configurable via cmd line
 int g_numDataSlots = 10;     // Phase 2 Data Slots (configurable via cmd line, 1 to 16)
 double g_p2DurationMs = -1.0; // Phase 2 Duration in ms (configurable via cmd line, default: computed from numSlots)
 double g_dataSlotUs = 1000.0; // Phase 2 Data Slot Duration in microseconds (default: 1000.0 us for 2 Mbps PHY)
-int g_p2Copies = 1;           // P2: send the state packet in 1 or 2 (slot, channel) cells per cycle
+int g_p2Copies = 1;
+bool g_p2SmartPick = false;   // 2 copies: first book the copy whose cell no other heard neighbour also claims           // P2: send the state packet in 1 or 2 (slot, channel) cells per cycle
 int g_p2ExtraRx = 3;          // P2: also listen to this many extra neighbours (RSSI rank 6, 7, ...) in free slots
 static uint64_t g_p2RxSlotsTotal = 0, g_p2ScheduleCount = 0;
 bool g_p2Cca = false;          // BLE has no CCA: P2 transmits at its scheduled slot start (set true for legacy CCA)
@@ -967,8 +968,21 @@ private:
                 m_schedule[sl].targetId = n.id;
                 return true;
             };
+            // Is copy k of n in a cell that another heard neighbour also announced? (it would collide)
+            auto cellShared = [&](const NeighborInfo& n, int k) {
+                uint8_t sl = (k == 0) ? n.claimedSlot : n.claimedSlot2;
+                uint8_t ch = (k == 0) ? n.claimedChannel : n.claimedChannel2;
+                for (const auto& o : m_monitorList) {
+                    if (o.id == n.id) continue;
+                    if ((o.claimedSlot == sl && o.claimedChannel == ch) || (o.claimedSlot2 == sl && o.claimedChannel2 == ch)) return true;
+                }
+                return false;
+            };
             for (size_t j = 0; j < top.size(); j++) {
-                for (int k = 0; k < 2 && gotCopy[j] < 0; k++) {
+                int first = 0;
+                if (g_p2SmartPick && cellShared(top[j], 0) && !cellShared(top[j], 1)) first = 1;
+                for (int t = 0; t < 2 && gotCopy[j] < 0; t++) {
+                    int k = (t == 0) ? first : 1 - first;
                     if (tryCell(top[j], k)) gotCopy[j] = k;
                 }
                 if (gotCopy[j] >= 0) { m_lastScheduledRx.push_back(top[j].id); assigned++; }
@@ -2002,6 +2016,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("numSlots", "Number of Phase 2 data slots (e.g., 5 to 20)", g_numDataSlots);
     cmd.AddValue("p2Duration", "Phase 2 duration in ms (default: 10.0 ms)", g_p2DurationMs);
     cmd.AddValue("dataSlotUs", "Phase 2 data slot duration in microseconds (default: 1000.0 us, e.g. 625.0 or 1000.0)", g_dataSlotUs);
+    cmd.AddValue("p2SmartPick", "Phase 2 (2 copies): first book the copy whose cell no other heard neighbour claims (default false)", g_p2SmartPick);
     cmd.AddValue("p2Copies", "Phase 2: state packet copies per cycle, 1 or 2 (2 needs <= 32 slots)", g_p2Copies);
     cmd.AddValue("p2ExtraRx", "Phase 2: listen to this many extra neighbours beyond the 5 strongest (default 3)", g_p2ExtraRx);
     cmd.AddValue("p2Cca", "Phase 2 legacy CCA before TX (default false: BLE has no CCA)", g_p2Cca);

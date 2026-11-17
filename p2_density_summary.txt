@@ -1,0 +1,28 @@
+P2 density sweep | P1 = SSA tuned | simTime 10.0s | seeds [1]
+====================================================================================================
+Metric (mean over seeds)         50 UAVs   75 UAVs  100 UAVs  125 UAVs  150 UAVs  175 UAVs  200 UAVs
+----------------------------------------------------------------------------------------------------
+P1 PRR (%)                         99.20     97.50     97.30     96.00     96.70     95.80     96.00
+P2 PRR (%)                         97.40     95.70     94.60     92.80     93.00     92.00     92.00
+----------------------------------------------------------------------------------------------------
+P2 failure share (% of all links):
+  P1_DISCOVERY_MISS                 0.76      2.34      2.53      3.78      3.13      3.95      3.76
+  TX_DEAFNESS_SAME_SLOT             0.01      0.03      0.08      0.07      0.08      0.09      0.08
+  RX_DEAFNESS_SLOT_CONFLICT         1.12      0.92      1.04      1.20      1.29      1.33      1.38
+  RECEIVER_CHANNEL_MISMATCH         0.04      0.06      0.06      0.10      0.11      0.09      0.09
+  PREAMBLE_COLLISION_BUSY_RX        0.08      0.13      0.39      0.55      0.78      0.90      1.03
+  PREAMBLE_LOW_SINR                 0.55      0.82      1.27      1.49      1.59      1.67      1.65
+  PAYLOAD_INTERFERENCE_DROP         0.00      0.00      0.00      0.00      0.00      0.00      0.00
+  SLOT_BOUNDARY_CUTOFF              0.00      0.00      0.00      0.00      0.00      0.00      0.00
+RX slots per cycle (avg)            6.66      7.43      7.61      7.66      7.73      7.89      7.88
+Slot-end force cutoffs                 0         0         0         0         0         0         0
+====================================================================================================
+Settings:
+  common: --simTime=10.0 --p1Duration=10 --preambleLockDb=6 --nodeSpeed=10.0 --spaceSize=200 --spaceZ=80 --autoPush=false --enableP1Ssa=true --p1SlotUs=150 --p1TxPower=8 --p1SenseDecay=0.7 --p1ReselInitMin=2 --p1ReselInitMax=5 --p1ReselMin=30 --p1ReselMax=90 --p1PoolFrac=0.25
+  50 UAVs         : --numNodes=50 --p1AvoidDist=50 --numSlots=24 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  75 UAVs         : --numNodes=75 --p1AvoidDist=50 --numSlots=24 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  100 UAVs        : --numNodes=100 --p1AvoidDist=50 --numSlots=24 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  125 UAVs        : --numNodes=125 --p1AvoidDist=50 --numSlots=24 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  150 UAVs        : --numNodes=150 --p1AvoidDist=50 --numSlots=24 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  175 UAVs        : --numNodes=175 --p1AvoidDist=50 --numSlots=24 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3
+  200 UAVs        : --numNodes=200 --p1AvoidDist=50 --numSlots=24 --numChannels=10 --dataSlotUs=400 --slotGuardBandUs=30 --p2TxPower=4 --p2ExtraRx=3

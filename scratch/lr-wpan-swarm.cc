@@ -35,7 +35,7 @@ int g_numDataChannels = 6;   // Phase 2 Data Channels (configurable via cmd line
 int g_numDataSlots = 10;     // Phase 2 Data Slots (configurable via cmd line, 1 to 16)
 double g_p2DurationMs = -1.0; // Phase 2 Duration in ms (configurable via cmd line, default: computed from numSlots)
 double g_dataSlotUs = 1000.0; // Phase 2 Data Slot Duration in microseconds (default: 1000.0 us for 2 Mbps PHY)
-int g_p2ExtraRx = 0;          // P2: also listen to this many extra neighbours (RSSI rank 6, 7, ...) in free slots
+int g_p2ExtraRx = 3;          // P2: also listen to this many extra neighbours (RSSI rank 6, 7, ...) in free slots
 static uint64_t g_p2RxSlotsTotal = 0, g_p2ScheduleCount = 0;
 bool g_p2Cca = false;          // BLE has no CCA: P2 transmits at its scheduled slot start (set true for legacy CCA)
 double g_slotGuardBandUs = 50.0; // Phase 2 slot end guard band in microseconds reserved for transceiver turnaround to RX
@@ -1904,7 +1904,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("numSlots", "Number of Phase 2 data slots (e.g., 5 to 20)", g_numDataSlots);
     cmd.AddValue("p2Duration", "Phase 2 duration in ms (default: 10.0 ms)", g_p2DurationMs);
     cmd.AddValue("dataSlotUs", "Phase 2 data slot duration in microseconds (default: 1000.0 us, e.g. 625.0 or 1000.0)", g_dataSlotUs);
-    cmd.AddValue("p2ExtraRx", "Phase 2: listen to this many extra neighbours beyond the 5 strongest (default 0)", g_p2ExtraRx);
+    cmd.AddValue("p2ExtraRx", "Phase 2: listen to this many extra neighbours beyond the 5 strongest (default 3)", g_p2ExtraRx);
     cmd.AddValue("p2Cca", "Phase 2 legacy CCA before TX (default false: BLE has no CCA)", g_p2Cca);
     cmd.AddValue("slotGuardBandUs", "Phase 2 slot end guard band in microseconds reserved for switching to RX (default 50.0 us)", g_slotGuardBandUs);
     cmd.AddValue("numNodes", "Number of UAV nodes in swarm (e.g., 50, 100)", numNodes);

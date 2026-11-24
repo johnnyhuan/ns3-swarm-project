@@ -55,6 +55,15 @@ static uint32_t Crc32(const uint8_t* d, size_t n) {
     }
     return ~c;
 }
+// Age of Information, sampled once per cycle at the end of P2 for every true Top-5 (<= 50 m) link:
+//   AoI = now - max(generation time of the newest packet received from that neighbour,
+//                   start of the cycle in which the neighbour (re)entered the Top-5)
+// generation time = the packet's TX start. Separate for P1 beacons and P2 state packets.
+struct AoiLinkState { uint32_t lastEpoch = 0; double entryMs = 0.0; };
+static std::map<std::pair<uint16_t, uint16_t>, AoiLinkState> g_aoiLink;
+static std::map<std::pair<uint16_t, uint16_t>, double> g_aoiLastP1Gen, g_aoiLastP2Gen;
+static std::map<uint32_t, double> g_cycleStartMs;
+static std::vector<double> g_aoiP1Samples, g_aoiP2Samples;
 bool g_p1Capture = false;      // idealized P1 capture (re-sync to a >= 6 dB stronger packet); real BLE cannot
 static uint64_t g_p1CaptureEvents = 0;
 bool g_p2SmartPick = true;    // 2 copies: first book the copy whose cell no other heard neighbour also claims
@@ -697,6 +706,7 @@ private:
         m_monitorList.clear();
 
         m_epochStartTime = Simulator::Now();
+        if (m_id == 0) g_cycleStartMs[m_epoch] = Simulator::Now().GetSeconds() * 1000.0;
         double now = Simulator::Now().GetSeconds() * 1000.0;
 
         // Residual clock-sync error of this node in this cycle (relative to the common reference).
@@ -1304,6 +1314,13 @@ private:
                         << Simulator::Now().GetNanoSeconds() / 1000.0 << "\n";
             }
             g_p1ReceivedInEpoch[m_epoch][myId].insert(senderId);
+            {
+                auto mi = g_p1PacketsMeta.find(p->GetUid());
+                if (mi != g_p1PacketsMeta.end()) {
+                    double& g = g_aoiLastP1Gen[{(uint16_t)myId, senderId}];
+                    g = std::max(g, mi->second.txStartTime);
+                }
+            }
             g_p2DiscoveredInP1[m_epoch][myId].insert(senderId);
             if (g_verboseLog) std::cout << "[P1_RX] Time: " << now << "ms, Receiver: " << myId << ", Sender: " << (int)senderId << ", RSSI: " << (int)rssi << "\n";
             uint8_t claimedSlot = (payload >> 9) & 0x00FF;
@@ -1353,6 +1370,13 @@ private:
             if (!okEpoch) { g_p2PayloadStale++; return; }
             g_p2PayloadOk++;
             g_p2ReceivedInEpoch[m_epoch][myId].insert(srcId);
+            {
+                auto mi = g_p2PacketsMeta.find(p->GetUid());
+                if (mi != g_p2PacketsMeta.end()) {
+                    double& g = g_aoiLastP2Gen[{(uint16_t)myId, srcId}];
+                    g = std::max(g, mi->second.txStartTime);
+                }
+            }
             
             if (g_verboseLog) std::cout << "[P2_RX] Time: " << now << "ms, Receiver: " << myId << ", Sender: " << (int)srcId << ", RSSI: " << (int)rssi << "\n";
 
@@ -1716,6 +1740,23 @@ private:
                     }
                 }
 
+                {
+                    // End-of-cycle AoI sample for this Top-5 link (P1 and P2)
+                    std::pair<uint16_t, uint16_t> key{(uint16_t)r, sender};
+                    AoiLinkState& st = g_aoiLink[key];
+                    if (st.lastEpoch + 1 != epoch) {
+                        auto cs = g_cycleStartMs.find(epoch);
+                        st.entryMs = (cs != g_cycleStartMs.end()) ? cs->second : nowMs;
+                    }
+                    st.lastEpoch = epoch;
+                    double tNow = Simulator::Now().GetSeconds() * 1000.0;
+                    auto g1 = g_aoiLastP1Gen.find(key);
+                    auto g2 = g_aoiLastP2Gen.find(key);
+                    double ref1 = std::max(st.entryMs, g1 != g_aoiLastP1Gen.end() ? g1->second : -1e18);
+                    double ref2 = std::max(st.entryMs, g2 != g_aoiLastP2Gen.end() ? g2->second : -1e18);
+                    g_aoiP1Samples.push_back(tNow - ref1);
+                    g_aoiP2Samples.push_back(tNow - ref2);
+                }
                 auto genIt = g_lastBeaconRxGenTime.find({(uint16_t)r, sender});
                 if (genIt != g_lastBeaconRxGenTime.end()) {
                     double aoi = nowMs - genIt->second;
@@ -1802,6 +1843,17 @@ private:
     }
 };
 
+static std::string AoiLine(std::vector<double> v) {
+    std::stringstream o;
+    if (v.empty()) { o << "n/a"; return o.str(); }
+    std::sort(v.begin(), v.end());
+    double sum = 0.0;
+    for (double x : v) sum += x;
+    double p99 = v[std::min(v.size() - 1, (size_t)(0.99 * v.size()))];
+    o << std::fixed << std::setprecision(2) << sum / v.size() << " / " << p99 << " / " << v.back() << " ms";
+    return o.str();
+}
+
 void PrintGroundTruthReport() {
     std::stringstream ss;
     ss << "\n========================================================================================\n";
@@ -1811,6 +1863,7 @@ void PrintGroundTruthReport() {
     ss << "Post-lock Re-sync (Capture)                       : " << (g_p1Capture ? "IDEALIZED CAPTURE ON in P1 (>= lock dB stronger packet re-syncs; not possible on BLE chips)" : "off (BLE chips never re-sync after Access Address lock)") << "\n";
     ss << "P1 Capture Events                                 : " << g_p1CaptureEvents << "\n";
     ss << "Preamble Lock SINR Threshold                      : " << g_preambleLockDb << " dB\n";
+    ss << "AoI P1 at cycle end (mean / p99 / max)            : " << AoiLine(g_aoiP1Samples) << "\n";
     ss << "Rx Sensitivity / Noise Floor                      : " << g_rxSensitivityDbm << " dBm / " << (g_rxSensitivityDbm - g_preambleLockDb) << " dBm\n";
     ss << "P1 Clock Sync Error (per node, per cycle)         : +-" << g_p1SyncErrUs << " us\n";
     if (g_enableP1Ssa) {
@@ -1983,6 +2036,8 @@ void PrintPhase2GroundTruthReport() {
     ss << "========================================================================================\n";
     ss << "Phase 2 Configuration                             : " << g_numDataSlots << " slots x " << g_dataSlotUs << " us (" << (g_numDataSlots * g_dataSlotUs / 1000.0) << " ms), " << g_numDataChannels << " channels\n";
     ss << "Slot Guard Band (RX Turnaround)                   : " << g_slotGuardBandUs << " us\n";
+    ss << "AoI P1 at cycle end (mean / p99 / max)            : " << AoiLine(g_aoiP1Samples) << "\n";
+    ss << "AoI P2 at cycle end (mean / p99 / max)            : " << AoiLine(g_aoiP2Samples) << "\n";
     ss << "P2 Payload Check (valid / bad / stale cycle)      : " << g_p2PayloadOk << " / " << g_p2PayloadBad << " / " << g_p2PayloadStale << "\n";
     ss << "P2 Access                                         : scheduled broadcast TDMA, " << (g_p2Cca ? "CCA before TX" : "no CCA (BLE)") << ", TX power " << g_p2TxPower << " dBm, " << g_p2Copies << " cop" << (g_p2Copies > 1 ? "ies" : "y") << " per cycle\n";
     ss << "P2 RX Slots per Cycle (avg, 5 + extra " << g_p2ExtraRx << ")      : " << std::fixed << std::setprecision(2) << (g_p2ScheduleCount ? (double)g_p2RxSlotsTotal / g_p2ScheduleCount : 0.0) << "\n";

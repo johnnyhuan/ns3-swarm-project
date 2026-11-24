@@ -82,6 +82,13 @@ EXPERIMENTS = {
             ("smart copy\nchoice", dict(p2SmartPick="true")),
             ("TX power\n+4 -> +5 dBm\n(= P2 final)", dict(p2TxPower=5)),
         ])]),
+    # SSA reselection counter sweep, with and without the short first-pick counter (P2 = final)
+    "sweep_resel": dict(
+        steps=[(f"{lo}-{hi} | first pick {'2-5' if init else 'off'}",
+                dict(SSA_FINAL, **P2_FINAL, p1ReselMin=lo, p1ReselMax=hi,
+                     p1ReselInitMin=2 if init else -1, p1ReselInitMax=5 if init else -1))
+               for init in (False, True)
+               for lo, hi in ((3, 9), (5, 15), (10, 30), (15, 45), (20, 60), (30, 90), (50, 150))]),
 }
 
 METRICS = ["P1", "P2", "AoI1_mean", "AoI1_p99", "AoI1_max", "AoI2_mean", "AoI2_p99", "AoI2_max"]

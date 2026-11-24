@@ -27,7 +27,7 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
-COMMON = ("--simTime=10 --numNodes=100 --nodeSpeed=10.0 --spaceSize=200 --spaceZ=80 "
+COMMON = ("--simTime=10 --numNodes={nodes} --nodeSpeed=10.0 --spaceSize=200 --spaceZ=80 "
           "--p1Duration=10 --preambleLockDb=6 --autoPush=false --rxSensitivityDbm=-94 --topK=7")
 TOPK = 7   # each UAV must receive its 7 nearest neighbours within 50 m
 
@@ -94,11 +94,20 @@ EXPERIMENTS = {
 METRICS = ["P1", "P2", "AoI1_mean", "AoI1_p99", "AoI1_max", "AoI2_mean", "AoI2_p99", "AoI2_max",
            "AoI1_over100", "AoI1_over500", "AoI1_maxclose", "AoI2_over100", "AoI2_over500", "AoI2_maxclose"]
 BUILDUPS = ["buildup_csma", "buildup_ssa", "buildup_p2"]
+METRICS.append("DENS")   # mean number of UAVs within 50 m of a UAV (measured)
+
+# the three P1 methods with the final P2, for one chart per swarm size
+EXPERIMENTS["compare"] = dict(steps=[
+    ("CSMA (final)", dict(CSMA_FINAL, **P2_FINAL)),
+    ("CSMA + capture (idealized)", dict(CSMA_FINAL, p1Capture="true", **P2_FINAL)),
+    ("SSA (final)", dict(SSA_FINAL, **P2_FINAL)),
+])
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--exps", nargs="+", default=BUILDUPS, choices=list(EXPERIMENTS))
     ap.add_argument("--seeds", type=int, nargs="+", default=[1])
+    ap.add_argument("--nodes", type=int, default=100, help="swarm size (same 200 x 200 x 80 m box)")
     ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 1))
     ap.add_argument("--no-push", action="store_true")
     a = ap.parse_args()
@@ -119,20 +128,31 @@ if __name__ == "__main__":
     def flags(params):
         return " ".join(f"--{k}={v}" for k, v in sorted(params.items()))
 
-    CSV_PATH = os.path.join(PROJECT_DIR, "results", f"final_runs_top{TOPK}.csv")   # cache key = flags + seed
+    COMMON = COMMON.format(nodes=a.nodes)
+    SUFFIX = "" if a.nodes == 100 else f"_n{a.nodes}"
+    CSV_PATH = os.path.join(PROJECT_DIR, "results", f"final_runs_top{TOPK}{SUFFIX}.csv")   # cache key = flags + seed
     os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
     cache = {}
     if os.path.exists(CSV_PATH):
         with open(CSV_PATH, newline="") as f:
             for r in csv.DictReader(f):
-                cache[(r["flags"], int(r["seed"]))] = {m: float(r[m]) for m in METRICS}
+                cache[(r["flags"], int(r["seed"]))] = {m: float(r.get(m) or "nan") for m in METRICS}
+        # older cache files lack newer metric columns: rewrite with the current header
+        with open(CSV_PATH, newline="") as f:
+            header = next(csv.reader(f))
+        if header != ["flags", "seed"] + METRICS:
+            with open(CSV_PATH, "w", newline="") as f:
+                w = csv.writer(f)
+                w.writerow(["flags", "seed"] + METRICS)
+                for (fl, sd), v in cache.items():
+                    w.writerow([fl, sd] + [v[m] for m in METRICS])
 
     b = subprocess.run(["./ns3", "build", "scratch/lr-wpan-swarm"], cwd=NS3_DIR,
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     if b.returncode != 0:
         print(b.stdout[-3000:])
         sys.exit("build failed")
-    run_root = os.path.join(NS3_DIR, "final_runs")
+    run_root = os.path.join(NS3_DIR, f"final_runs_n{a.nodes}_{os.getpid()}")   # private per invocation
     os.makedirs(run_root, exist_ok=True)
 
     def parse(t1, t2):
@@ -148,7 +168,9 @@ if __name__ == "__main__":
             return [float(x) for x in m.groups()] if m else [float("nan")] * 3
         a1, a2 = aoi(t2, "P1"), aoi(t2, "P2")
         s1, s2 = safety(t2, "P1"), safety(t2, "P2")
-        return dict(P1=prr(t1), P2=prr(t2), AoI1_mean=a1[0], AoI1_p99=a1[1], AoI1_max=a1[2],
+        md = re.search(r"Mean 50m Neighbors per UAV \(Density\)\s*:\s*([\d.]+)", t1)
+        return dict(DENS=float(md.group(1)) if md else float("nan"),
+                    P1=prr(t1), P2=prr(t2), AoI1_mean=a1[0], AoI1_p99=a1[1], AoI1_max=a1[2],
                     AoI2_mean=a2[0], AoI2_p99=a2[1], AoI2_max=a2[2],
                     AoI1_over100=s1[0], AoI1_over500=s1[1], AoI1_maxclose=s1[2],
                     AoI2_over100=s2[0], AoI2_over500=s2[1], AoI2_maxclose=s2[2])
@@ -195,7 +217,7 @@ if __name__ == "__main__":
 
     saved = []
     for e, rows in plan.items():
-        path = os.path.join(PROJECT_DIR, "results", f"final_{e}.csv")
+        path = os.path.join(PROJECT_DIR, "results", f"final_{e}{SUFFIX}.csv")
         with open(path, "w", newline="") as f:
             w = csv.writer(f)
             w.writerow(["step", "label", "kind", "seeds"] + [f"{m}_{s}" for m in METRICS for s in ("mean", "std")] + ["flags"])

@@ -27,7 +27,9 @@ plt.rcParams.update({
     "legend.frameon": False, "lines.linewidth": 2.2, "lines.markersize": 8,
     "axes.spines.top": False, "axes.spines.right": False,
 })
-DENSITY = 20.2   # measured: mean UAVs within a 50 m sphere around each UAV (100 UAVs, seed 1)
+import sys
+NODES = int(sys.argv[1]) if len(sys.argv) > 1 else 100   # usage: python3 plot_compare.py [nodes]
+DENSITY = 20.2   # 100 UAVs: measured mean UAVs within a 50 m sphere around each UAV (seed 1)
 
 
 def rows(path):
@@ -35,12 +37,18 @@ def rows(path):
         return list(csv.DictReader(f))
 
 
-csma = rows("final_buildup_csma.csv")
-ssa = rows("final_buildup_ssa.csv")
+if NODES == 100:
+    csma = rows("final_buildup_csma.csv")
+    ssa = rows("final_buildup_ssa.csv")
+    picked = [[r for r in csma if r["kind"] == "step"][-1], [r for r in csma if r["kind"] == "reference"][0],
+              [r for r in ssa if r["kind"] == "step"][-1]]
+else:
+    picked = rows(f"final_compare_n{NODES}.csv")   # order: CSMA, CSMA + capture, SSA
+    DENSITY = sum(float(r["DENS_mean"]) for r in picked) / len(picked)
 methods = [
-    ("CSMA (final)", [r for r in csma if r["kind"] == "step"][-1], BLUE, "-", "o"),
-    ("CSMA + capture (idealized, not possible on BLE chips)", [r for r in csma if r["kind"] == "reference"][0], BLUE, "--", "o"),
-    ("SSA (final)", [r for r in ssa if r["kind"] == "step"][-1], ORANGE, "-", "s"),
+    ("CSMA (final)", picked[0], BLUE, "-", "o"),
+    ("CSMA + capture (idealized, not possible on BLE chips)", picked[1], BLUE, "--", "o"),
+    ("SSA (final)", picked[2], ORANGE, "-", "s"),
 ]
 PRR = [("P1", "P1\nsuccess rate"), ("P2", "P2\nsuccess rate")]
 AOI = [("AoI1_mean", "P1\nmean AoI"), ("AoI1_p99", "P1\np99 AoI"), ("AoI1_max", "P1\nmax AoI"),
@@ -78,21 +86,25 @@ label_all(a2, AOI, lambda y: f"{y:.0f}" if y >= 100 else f"{y:.1f}")
 a1.set_xticks(range(len(PRR)))
 a1.set_xticklabels([l for _, l in PRR])
 a1.set_xlim(-0.4, len(PRR) - 0.6)
-a1.set_ylim(70, 100)
+lo = min(float(r[f"{k}_mean"]) for _, r, *_ in methods for k, _ in PRR)
+a1.set_ylim(max(0, 5 * int(lo // 5) - 5), 100)
 a1.set_title("Success rate (%)  higher is better", loc="left")
 a2.set_xticks(range(len(AOI)))
 a2.set_xticklabels([l for _, l in AOI])
 a2.set_yscale("log")
-a2.set_ylim(5, 2500)
+hi = max(float(r[f"{k}_mean"]) for _, r, *_ in methods for k, _ in AOI)
+lo2 = min(float(r[f"{k}_mean"]) for _, r, *_ in methods for k, _ in AOI)
+a2.set_ylim(lo2 / 2, hi * 2)
 a2.yaxis.set_major_formatter(FuncFormatter(lambda y, _: f"{y:g}"))
 a2.set_title("Age of information (ms, log scale)  lower is better", loc="left")
 h, l = a2.get_legend_handles_labels()
 fig.legend(h, l, loc="upper right", bbox_to_anchor=(0.99, 0.995), ncol=3, fontsize=10.5)
-fig.suptitle(f"P1 method comparison (P2 = final design) | 100 UAVs, on average {DENSITY:.1f} UAVs within 50 m of each UAV",
+fig.suptitle(f"P1 method comparison (P2 = final design) | {NODES} UAVs, on average {DENSITY:.1f} UAVs within 50 m of each UAV",
              fontsize=14, fontweight="bold", x=0.01, ha="left", y=0.93)
 fig.text(0.01, 0.01, "200 x 200 x 80 m, 10 m/s random waypoint, 10 s, seed 1. nRF54L15 DK (QFN48): TX <= +7 dBm, "
          "BLE 2M sensitivity -94 dBm. Success = each UAV's 7 nearest neighbours (<= 50 m) really received per cycle; "
          "AoI = age of the newest packet held from them, sampled at the end of every cycle.", fontsize=9, color=INK2, wrap=True)
 fig.tight_layout(rect=(0, 0.05, 1, 0.9))
-fig.savefig(os.path.join(OUT, "compare_methods.png"), dpi=150)
-print("saved figures/final/compare_methods.png")
+name = "compare_methods.png" if NODES == 100 else f"compare_methods_n{NODES}.png"
+fig.savefig(os.path.join(OUT, name), dpi=150)
+print("saved figures/final/" + name)

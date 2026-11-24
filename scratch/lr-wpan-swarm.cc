@@ -14,6 +14,7 @@
 #include <set>
 #include <tuple>
 #include <string>
+#include <array>
 
 using namespace ns3;
 using namespace ns3::lrwpan;
@@ -36,6 +37,22 @@ int g_numDataSlots = 10;     // Phase 2 Data Slots (configurable via cmd line, 1
 double g_p2DurationMs = -1.0; // Phase 2 Duration in ms (configurable via cmd line, default: computed from numSlots)
 double g_dataSlotUs = 1000.0; // Phase 2 Data Slot Duration in microseconds (default: 1000.0 us for 2 Mbps PHY)
 int g_p2Copies = 2;           // P2: send the state packet in 1 or 2 (slot, channel) cells per cycle (official: 2)
+bool g_verifyLog = false;      // write verify_*.csv (every P2 TX, schedule, position, RX, evaluated link)
+std::string g_testPositions;   // test mode: "x,y,z;x,y,z;..." fixed positions (sets numNodes, speed 0)
+std::string g_forceCells;      // test mode: "id:slot:ch[:slot2:ch2];..." forces P2 cells (channel index 0..)
+static std::map<uint16_t, std::array<int, 4>> g_forcedCells;
+static std::ofstream g_vTx, g_vSched, g_vPos, g_vRx, g_vLinks;
+static uint64_t g_p2PayloadOk = 0, g_p2PayloadBad = 0, g_p2PayloadStale = 0;
+struct VTxOpen { uint32_t epoch; uint16_t sender; int slot; int ch; double startUs; };
+static std::map<uint64_t, VTxOpen> g_vTxOpen;
+static uint32_t Crc32(const uint8_t* d, size_t n) {
+    uint32_t c = 0xFFFFFFFFu;
+    for (size_t i = 0; i < n; i++) {
+        c ^= d[i];
+        for (int k = 0; k < 8; k++) c = (c >> 1) ^ (0xEDB88320u & (0u - (c & 1u)));
+    }
+    return ~c;
+}
 bool g_p2SmartPick = true;    // 2 copies: first book the copy whose cell no other heard neighbour also claims
 int g_p2ExtraRx = 3;          // P2: also listen to this many extra neighbours (RSSI rank 6, 7, ...) in free slots
 static uint64_t g_p2RxSlotsTotal = 0, g_p2ScheduleCount = 0;
@@ -478,6 +495,10 @@ public:
 
         auto it2 = g_p2PacketsMeta.find(uid);
         if (it2 != g_p2PacketsMeta.end()) {
+            if (g_verifyLog) {
+                g_vTxOpen[uid] = {it2->second.epoch, (uint16_t)it2->second.senderId, it2->second.slot,
+                                  (int)it2->second.channel, Simulator::Now().GetNanoSeconds() / 1000.0};
+            }
             it2->second.txStartTime = Simulator::Now().GetSeconds() * 1000.0;
             uint32_t numNodes = NodeList::GetNNodes();
             for (uint32_t j = 0; j < numNodes; j++) {
@@ -488,8 +509,18 @@ public:
         }
     }
 
+    static void WriteVTx(uint64_t uid, bool cut) {
+        auto v = g_vTxOpen.find(uid);
+        if (v == g_vTxOpen.end()) return;
+        g_vTx << v->second.epoch << "," << v->second.sender << "," << v->second.slot << "," << v->second.ch << ","
+              << std::fixed << std::setprecision(3) << v->second.startUs << "," << Simulator::Now().GetNanoSeconds() / 1000.0
+              << "," << (cut ? 1 : 0) << "\n";
+        g_vTxOpen.erase(v);
+    }
+
     void NotifyPhyTxEnd(Ptr<const Packet> p) {
         uint64_t uid = p->GetUid();
+        if (g_verifyLog) WriteVTx(uid, false);
         auto it = g_packetTxStartTime.find(uid);
         if (it != g_packetTxStartTime.end()) {
             Time duration = Simulator::Now() - it->second;
@@ -538,6 +569,7 @@ private:
     uint8_t m_myClaimedChannel;
     uint8_t m_myClaimedSlot2 = 255;
     uint8_t m_myClaimedChannel2 = 0;
+    uint32_t m_p2Seq = 0;
     std::vector<NeighborInfo> m_monitorList;
     ScheduleSlot m_schedule[MAX_DATA_SLOTS];
 
@@ -876,6 +908,19 @@ private:
             g_droneClaimedSlot2[m_epoch][m_id] = m_myClaimedSlot2;
             g_droneClaimedChannel2[m_epoch][m_id] = m_myClaimedChannel2;
         }
+        auto fc = g_forcedCells.find(m_id);
+        if (fc != g_forcedCells.end()) {   // test mode: fixed cells
+            m_myClaimedSlot = fc->second[0];
+            m_myClaimedChannel = fc->second[1];
+            g_droneClaimedSlot[m_epoch][m_id] = m_myClaimedSlot;
+            g_droneClaimedChannel[m_epoch][m_id] = m_myClaimedChannel;
+            if (fc->second[2] >= 0) {
+                m_myClaimedSlot2 = fc->second[2];
+                m_myClaimedChannel2 = fc->second[3];
+                g_droneClaimedSlot2[m_epoch][m_id] = m_myClaimedSlot2;
+                g_droneClaimedChannel2[m_epoch][m_id] = m_myClaimedChannel2;
+            }
+        }
         SendBeaconPacket();
     }
 
@@ -1025,6 +1070,15 @@ private:
         }
         g_p2RxSlotsTotal += assigned;
         g_p2ScheduleCount++;
+        if (g_verifyLog) {
+            Vector pos = myMobility->GetPosition();
+            g_vPos << m_epoch << "," << m_id << "," << std::fixed << std::setprecision(3) << pos.x << "," << pos.y << "," << pos.z << "\n";
+            for (int i = 0; i < g_numDataSlots; i++) {
+                if (m_schedule[i].action == ScheduleSlot::IDLE) continue;
+                g_vSched << m_epoch << "," << m_id << "," << i << "," << (m_schedule[i].action == ScheduleSlot::TX ? "TX" : "RX") << ","
+                         << (int)m_schedule[i].channel << "," << (m_schedule[i].action == ScheduleSlot::RX ? (int)m_schedule[i].targetId : -1) << "\n";
+            }
+        }
 
         for (int i = 0; i < g_numDataSlots; i++) {
             g_p2SlotAction[m_epoch][m_id][i] = m_schedule[i].action;
@@ -1051,7 +1105,19 @@ private:
             uint32_t myId = m_device->GetNode()->GetId();
             double now = Simulator::Now().GetMilliSeconds();
             if (g_verboseLog) std::cout << "[P2_ATTEMPT] Time: " << now << "ms, Drone: " << myId << ", Slot: " << slotIndex << ", Channel: " << (int)s.channel << "\n";
-            Ptr<Packet> p = Create<Packet>(DATA_PACKET_SIZE);
+            // 50-byte payload: magic, sender ID, cycle, sequence, slot, channel, filler, CRC-32.
+            // The receiver only counts a packet whose content checks out for this cycle.
+            uint8_t b[DATA_PACKET_SIZE];
+            b[0] = 0x5A; b[1] = 0xA5;
+            b[2] = myId & 0xFF; b[3] = (myId >> 8) & 0xFF;
+            for (int k = 0; k < 4; k++) b[4 + k] = (m_epoch >> (8 * k)) & 0xFF;
+            uint32_t seq = m_p2Seq++;
+            for (int k = 0; k < 4; k++) b[8 + k] = (seq >> (8 * k)) & 0xFF;
+            b[12] = (uint8_t)slotIndex; b[13] = s.channel;
+            for (uint32_t k = 14; k < DATA_PACKET_SIZE - 4; k++) b[k] = (uint8_t)(myId * 31 + m_epoch * 7 + k);
+            uint32_t crc = Crc32(b, DATA_PACKET_SIZE - 4);
+            for (int k = 0; k < 4; k++) b[DATA_PACKET_SIZE - 4 + k] = (crc >> (8 * k)) & 0xFF;
+            Ptr<Packet> p = Create<Packet>(b, DATA_PACKET_SIZE);
             uint64_t uid = p->GetUid();
 
             P2PacketMeta meta;
@@ -1093,6 +1159,7 @@ private:
                 auto uidsIt = g_p2TxUidsInEpoch.find({m_epoch, (uint16_t)myId});
                 if (uidsIt != g_p2TxUidsInEpoch.end() && !uidsIt->second.empty()) {
                     g_p2CutoffUids.insert(uidsIt->second.back());
+                    if (g_verifyLog) WriteVTx(uidsIt->second.back(), true);
                 }
                 
                 if (g_verboseLog) {
@@ -1236,6 +1303,22 @@ private:
             uint8_t addrBuffer[2];
             params.m_srcAddr.CopyTo(addrBuffer);
             uint16_t srcId = (addrBuffer[0] << 8) | addrBuffer[1];
+
+            // Payload check: right format, CRC, sender ID = MAC source, and sent in THIS cycle
+            uint8_t b[DATA_PACKET_SIZE];
+            p->CopyData(b, DATA_PACKET_SIZE);
+            uint32_t crc = b[46] | (b[47] << 8) | (b[48] << 16) | ((uint32_t)b[49] << 24);
+            bool okFmt = b[0] == 0x5A && b[1] == 0xA5 && Crc32(b, DATA_PACKET_SIZE - 4) == crc &&
+                         (uint16_t)(b[2] | (b[3] << 8)) == srcId;
+            uint32_t pktEpoch = b[4] | (b[5] << 8) | (b[6] << 16) | ((uint32_t)b[7] << 24);
+            bool okEpoch = okFmt && pktEpoch == m_epoch;
+            if (g_verifyLog) {
+                g_vRx << m_epoch << "," << myId << "," << srcId << "," << std::fixed << std::setprecision(3)
+                      << Simulator::Now().GetNanoSeconds() / 1000.0 << "," << (int)b[12] << "," << (okEpoch ? 1 : 0) << "\n";
+            }
+            if (!okFmt) { g_p2PayloadBad++; return; }
+            if (!okEpoch) { g_p2PayloadStale++; return; }
+            g_p2PayloadOk++;
             g_p2ReceivedInEpoch[m_epoch][myId].insert(srcId);
             
             if (g_verboseLog) std::cout << "[P2_RX] Time: " << now << "ms, Receiver: " << myId << ", Sender: " << (int)srcId << ", RSSI: " << (int)rssi << "\n";
@@ -1515,6 +1598,9 @@ private:
                     }
                 }
 
+                if (g_verifyLog) {
+                    g_vLinks << epoch << "," << r << "," << sender << "," << std::fixed << std::setprecision(3) << dist << "," << (delivered ? 1 : 0) << "\n";
+                }
                 P2DropCategory cat = P2_REASON_SUCCESS;
                 double nowMs = Simulator::Now().GetMilliSeconds();
                 if (delivered) {
@@ -1854,6 +1940,7 @@ void PrintPhase2GroundTruthReport() {
     ss << "========================================================================================\n";
     ss << "Phase 2 Configuration                             : " << g_numDataSlots << " slots x " << g_dataSlotUs << " us (" << (g_numDataSlots * g_dataSlotUs / 1000.0) << " ms), " << g_numDataChannels << " channels\n";
     ss << "Slot Guard Band (RX Turnaround)                   : " << g_slotGuardBandUs << " us\n";
+    ss << "P2 Payload Check (valid / bad / stale cycle)      : " << g_p2PayloadOk << " / " << g_p2PayloadBad << " / " << g_p2PayloadStale << "\n";
     ss << "P2 Access                                         : scheduled broadcast TDMA, " << (g_p2Cca ? "CCA before TX" : "no CCA (BLE)") << ", TX power " << g_p2TxPower << " dBm, " << g_p2Copies << " cop" << (g_p2Copies > 1 ? "ies" : "y") << " per cycle\n";
     ss << "P2 RX Slots per Cycle (avg, 5 + extra " << g_p2ExtraRx << ")      : " << std::fixed << std::setprecision(2) << (g_p2ScheduleCount ? (double)g_p2RxSlotsTotal / g_p2ScheduleCount : 0.0) << "\n";
     ss << "Total Slot Boundary Force Cutoffs                 : " << g_p2SlotCutoffCount << "\n";
@@ -2016,6 +2103,9 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("numSlots", "Number of Phase 2 data slots (e.g., 5 to 20)", g_numDataSlots);
     cmd.AddValue("p2Duration", "Phase 2 duration in ms (default: 10.0 ms)", g_p2DurationMs);
     cmd.AddValue("dataSlotUs", "Phase 2 data slot duration in microseconds (default: 1000.0 us, e.g. 625.0 or 1000.0)", g_dataSlotUs);
+    cmd.AddValue("verifyLog", "Write verify_*.csv logs for the independent cross-check (default false)", g_verifyLog);
+    cmd.AddValue("positions", "Test mode: fixed positions 'x,y,z;x,y,z;...' (sets numNodes, speed 0)", g_testPositions);
+    cmd.AddValue("forceCells", "Test mode: forced P2 cells 'id:slot:ch[:slot2:ch2];...'", g_forceCells);
     cmd.AddValue("p2SmartPick", "Phase 2 (2 copies): first book the copy whose cell no other heard neighbour claims (default true)", g_p2SmartPick);
     cmd.AddValue("p2Copies", "Phase 2: state packet copies per cycle, 1 or 2 (default 2; falls back to 1 above 32 slots)", g_p2Copies);
     cmd.AddValue("p2ExtraRx", "Phase 2: listen to this many extra neighbours beyond the 5 strongest (default 3)", g_p2ExtraRx);
@@ -2067,6 +2157,33 @@ int main(int argc, char *argv[]) {
     g_phase1DurationUs = g_p1DurationMs * 1000.0;
     g_cycleMs = (g_phase1DurationUs + GAP_US + g_numDataSlots * g_dataSlotUs) / 1000.0;
 
+    std::vector<Vector> testPos;
+    if (!g_testPositions.empty()) {
+        std::stringstream ps(g_testPositions);
+        std::string item;
+        while (std::getline(ps, item, ';')) {
+            double x, y, z;
+            if (sscanf(item.c_str(), "%lf,%lf,%lf", &x, &y, &z) == 3) testPos.push_back(Vector(x, y, z));
+        }
+        numNodes = testPos.size();
+        nodeSpeed = 0.0;
+    }
+    if (!g_forceCells.empty()) {
+        std::stringstream fs(g_forceCells);
+        std::string item;
+        while (std::getline(fs, item, ';')) {
+            int id, a, b, c = -1, d = -1;
+            if (sscanf(item.c_str(), "%d:%d:%d:%d:%d", &id, &a, &b, &c, &d) >= 3) g_forcedCells[(uint16_t)id] = {a, b, c, d};
+        }
+    }
+    if (g_verifyLog) {
+        g_vTx.open("verify_tx.csv");   g_vTx << "epoch,sender,slot,channel,start_us,end_us,cut\n";
+        g_vSched.open("verify_sched.csv"); g_vSched << "epoch,node,slot,action,channel,target\n";
+        g_vPos.open("verify_pos.csv"); g_vPos << "epoch,node,x,y,z\n";
+        g_vRx.open("verify_rx.csv");   g_vRx << "epoch,rx,tx,time_us,slot,valid\n";
+        g_vLinks.open("verify_links.csv"); g_vLinks << "epoch,rx,tx,dist,delivered\n";
+    }
+
     NodeContainer nodes;
     nodes.Create(numNodes);
 
@@ -2100,7 +2217,12 @@ int main(int argc, char *argv[]) {
     alloc->SetZ(zVar);
     
     mobility.SetPositionAllocator(alloc);
-    if (nodeSpeed > 0.0) {
+    if (!testPos.empty()) {
+        Ptr<ListPositionAllocator> list = CreateObject<ListPositionAllocator>();
+        for (auto& v : testPos) list->Add(v);
+        mobility.SetPositionAllocator(list);
+        mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+    } else if (nodeSpeed > 0.0) {
         std::stringstream ssSpeed;
         ssSpeed << "ns3::UniformRandomVariable[Min=" << (nodeSpeed * 0.8) << "|Max=" << (nodeSpeed * 1.2) << "]";
         mobility.SetMobilityModel("ns3::RandomWaypointMobilityModel",
@@ -2188,6 +2310,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    if (g_verifyLog) { g_vTx.close(); g_vSched.close(); g_vPos.close(); g_vRx.close(); g_vLinks.close(); }
     Simulator::Destroy();
 
     return 0;

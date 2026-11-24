@@ -1,0 +1,73 @@
+P2 verification suite (official P1 SSA + P2: 24 x 400 us, 10 ch, 5+3 RX, 2 copies + smart pick)
+====================================================================================================
+1. KNOWN-ANSWER TESTS (fixed positions, forced cells, 2 s each)
+  T1 range edge, +2 dBm at 45 m  (positions 0,0,10;45,0,10; cells free choice; +2 dBm; 1 copy)
+     UAV 1 -> UAV 0: expect always -> PASS  (received 97 / listened 97 / cycles 97)  [RX -94.3 dBm >= -95 dBm (SINR 6.7 dB over -101 dBm noise)]
+     UAV 0 -> UAV 1: expect always -> PASS  (received 97 / listened 97 / cycles 97)  [same, other direction]
+     cross-check violations: 0
+  T2 range edge, +1 dBm at 45 m  (positions 0,0,10;45,0,10; cells free choice; +1 dBm; 1 copy)
+     UAV 1 -> UAV 0: expect never  -> PASS  (received 0 / listened 97 / sent 97 / cycles 97)  [RX -95.3 dBm < -95 dBm (SINR 5.7 dB < 6 dB)]
+     UAV 0 -> UAV 1: expect never  -> PASS  (received 0 / listened 97 / sent 97 / cycles 97)  [same, other direction]
+     cross-check violations: 0
+  T3 same cell, interferer 1.5x farther  (positions 0,0,10;10,0,10;-15,0,10; cells 1:5:0;2:5:0;0:10:3; +4 dBm; 1 copy)
+     UAV 1 -> UAV 0: expect never  -> PASS  (received 0 / listened 97 / sent 97 / cycles 97)  [wanted 10 m vs interferer 15 m: 5.28 dB < 6 dB]
+     cross-check violations: 0
+  T4 same cell, interferer 2x farther  (positions 0,0,10;10,0,10;-20,0,10; cells 1:5:0;2:5:0;0:10:3; +4 dBm; 1 copy)
+     UAV 1 -> UAV 0: expect always -> PASS  (received 97 / listened 97 / cycles 97)  [wanted 10 m vs interferer 20 m: 9.03 dB > 6 dB]
+     UAV 2 -> UAV 0: expect never  -> PASS  (received 0 / listened 0 / sent 97 / cycles 97)  [the weaker one in the same cell can never lock]
+     cross-check violations: 0
+  T5 half duplex: both send in the same slot  (positions 0,0,10;10,0,10; cells 0:5:0;1:5:1; +4 dBm; 1 copy)
+     UAV 0 -> UAV 1: expect never  -> PASS  (received 0 / listened 0 / sent 97 / cycles 97)  [receiver is transmitting in that slot]
+     UAV 1 -> UAV 0: expect never  -> PASS  (received 0 / listened 0 / sent 97 / cycles 97)  [receiver is transmitting in that slot]
+     cross-check violations: 0
+  T6 control: different slots  (positions 0,0,10;10,0,10; cells 0:5:0;1:9:1; +4 dBm; 1 copy)
+     UAV 0 -> UAV 1: expect always -> PASS  (received 97 / listened 97 / cycles 97)  [10 m, no interference]
+     UAV 1 -> UAV 0: expect always -> PASS  (received 97 / listened 97 / cycles 97)  [10 m, no interference]
+     cross-check violations: 0
+  T7 same slot, different channels  (positions 0,0,10;30,0,10;14,0,10;16,0,10; cells 0:5:0;1:5:1;2:10:2;3:12:3; +4 dBm; 1 copy)
+     UAV 0 -> UAV 2: expect always -> PASS  (received 97 / listened 97 / cycles 97)  [B is on another channel: no interference]
+     UAV 1 -> UAV 3: expect always -> PASS  (received 97 / listened 97 / cycles 97)  [A is on another channel: no interference]
+     cross-check violations: 0
+  T8 same slot, same channel (control for T7)  (positions 0,0,10;30,0,10;14,0,10;16,0,10; cells 0:5:0;1:5:0;2:10:2;3:12:3; +4 dBm; 1 copy)
+     UAV 0 -> UAV 2: expect never  -> PASS  (received 0 / listened 97 / sent 97 / cycles 97)  [14 m vs 16 m: 1.74 dB < 6 dB]
+     UAV 1 -> UAV 3: expect never  -> PASS  (received 0 / listened 97 / sent 97 / cycles 97)  [14 m vs 16 m: 1.74 dB < 6 dB]
+     cross-check violations: 0
+  T9 two copies: 1st copy collides, 2nd is clean  (positions 0,0,10;10,0,10;-15,0,10; cells 1:5:0:15:2;2:5:0:20:4;0:10:3:18:5; +4 dBm; 2 copy)
+     UAV 1 -> UAV 0: expect always -> PASS  (received 97 / listened 97 / cycles 97)  [copy in slot 5 collides (5.28 dB), copy in slot 15 is clean]
+     UAV 1 -> UAV 0: received only in slot 15 -> PASS (slots [15])
+     cross-check violations: 0
+
+2. INDEPENDENT CROSS-CHECK OF EVERY RECEPTION (100 UAVs, 3 s, seed 1)
+  swarm_2copies_3s: PASS (0 violations)
+    valid receptions 187613, rejected by payload check 0, Top-5 links 72012 (delivered 67421)
+      V1 no matching TX                 : 0
+      V2 TX was cut off                 : 0
+      V3 receiver on another channel    : 0
+      V4 receiver was transmitting      : 0
+      V5 SINR below lock                : 0
+      V6 delivered without reception    : 0
+      V7 reception not counted          : 0
+      borderline receptions (lock +-0.5 dB) : 3994
+      lost because an earlier packet locked first (no re-sync, sender skipped the channel switch): 20
+      unexplained losses (tuned, idle, SINR >= lock+1 dB, nothing earlier): 0
+  swarm_1copy_3s: PASS (0 violations)
+    valid receptions 109914, rejected by payload check 0, Top-5 links 72012 (delivered 66199)
+      V1 no matching TX                 : 0
+      V2 TX was cut off                 : 0
+      V3 receiver on another channel    : 0
+      V4 receiver was transmitting      : 0
+      V5 SINR below lock                : 0
+      V6 delivered without reception    : 0
+      V7 reception not counted          : 0
+      borderline receptions (lock +-0.5 dB) : 2065
+      lost because an earlier packet locked first (no re-sync, sender skipped the channel switch): 42
+      unexplained losses (tuned, idle, SINR >= lock+1 dB, nothing earlier): 0
+
+3. PAYLOAD CHECK (ID + cycle + sequence + CRC-32 in every P2 packet)
+  swarm_2copies_10s: valid 647525, bad 0, stale cycle 0; P2 PRR 95.9%  (before the check: 95.9%) -> PASS
+  swarm_2copies_3s: valid 187613, bad 0, stale cycle 0; P2 PRR 93.6% -> PASS
+  swarm_1copy_3s: valid 109914, bad 0, stale cycle 0; P2 PRR 91.9% -> PASS
+
+4. TIMELINE for a hand check: verify_timeline_example.txt (UAV 0, cycle 100)
+
+OVERALL: ALL PASS

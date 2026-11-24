@@ -18,6 +18,7 @@
 #include "ns3/traced-value.h"
 
 #include <iostream>
+#include <map>
 
 namespace ns3
 {
@@ -647,6 +648,13 @@ class LrWpanPhy : public SpectrumPhy
     void CheckInterference();
 
     /**
+     * Update the lowest SINR seen so far by every packet whose preamble is still being
+     * received (RX_ON), over the time since the last signal change. Must be called before
+     * a signal is added to or removed from the channel.
+     */
+    void UpdatePreambleSinr();
+
+    /**
      * Update Clear Channel Assestment (CCA) or Energy Detection (ED) energy values
      * if an energy tracking event is currently in process. This function is called
      * during the different events that form the reception of a packet
@@ -970,6 +978,14 @@ class LrWpanPhy : public SpectrumPhy
      * Timestamp of the last calculation of the PER of a packet currently received.
      */
     Time m_rxLastUpdate;
+
+    /**
+     * Packets whose preamble is being received -> lowest SINR (linear) over the preamble so far.
+     * A preamble that was hit by an interferer for part of its duration must not lock just
+     * because the interferer has left by the end of the preamble.
+     */
+    std::map<Ptr<LrWpanSpectrumSignalParameters>, double> m_preambleMinSinr;
+    Time m_preambleLastUpdate;
 
     /**
      * Status information of the currently received packet. The first parameter

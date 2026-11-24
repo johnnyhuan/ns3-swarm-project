@@ -396,6 +396,8 @@ LrWpanPhy::StartRx(Ptr<SpectrumSignalParameters> spectrumRxParams)
     {
         CheckInterference();
     }
+    // Same for every preamble still being received: close its chunk with the old interference.
+    UpdatePreambleSinr();
 
     // 1- Add the signal to the spectrum to keep track of the transmission regardless
     // of the origin or the state of the receiving radio.
@@ -422,6 +424,8 @@ LrWpanPhy::StartRx(Ptr<SpectrumSignalParameters> spectrumRxParams)
         // The reception of the lr-wpan preamble start here
         NS_LOG_INFO("Lr-wpan signal detected, processing preamble for a duration of "
                     << lrWpanRxParams->preambleDuration.GetSeconds() << " seconds");
+        m_preambleMinSinr[lrWpanRxParams] = std::numeric_limits<double>::infinity();
+        m_preambleLastUpdate = Simulator::Now();
 
         Simulator::Schedule(lrWpanRxParams->preambleDuration,
                             &LrWpanPhy::EndPreamble,
@@ -459,6 +463,16 @@ LrWpanPhy::EndPreamble(Ptr<LrWpanSpectrumSignalParameters> lrWpanRxParams)
     Ptr<Packet> p = (lrWpanRxParams->packetBurst->GetPackets()).front();
     NS_ASSERT(p);
 
+    // Lowest SINR over the whole preamble (the last chunk is closed here)
+    UpdatePreambleSinr();
+    double preambleMinSinr = std::numeric_limits<double>::infinity();
+    auto pm = m_preambleMinSinr.find(lrWpanRxParams);
+    if (pm != m_preambleMinSinr.end())
+    {
+        preambleMinSinr = pm->second;
+        m_preambleMinSinr.erase(pm);
+    }
+
     // Prevent PHY from receiving another packet while switching the transceiver state.
     if (m_trxState == IEEE_802_15_4_PHY_RX_ON && !m_setTRXState.IsPending())
     {
@@ -470,6 +484,8 @@ LrWpanPhy::EndPreamble(Ptr<LrWpanSpectrumSignalParameters> lrWpanRxParams)
                                                      m_phyPIBAttributes.phyCurrentChannel) /
             LrWpanSpectrumValueHelper::TotalAvgPower(interferenceAndNoise,
                                                      m_phyPIBAttributes.phyCurrentChannel);
+        // The preamble must be clean during its whole duration, not only at its last instant
+        sinr = std::min(sinr, preambleMinSinr);
 
         // Figure out if packet is decodable based on SINR.
         // Preamble & Sync Word lock: SINR must exceed the BLE 5.4 LE 2M co-channel C/I
@@ -523,6 +539,28 @@ LrWpanPhy::EndPreamble(Ptr<LrWpanSpectrumSignalParameters> lrWpanRxParams)
 
     Time endRx = (lrWpanRxParams->duration - lrWpanRxParams->preambleDuration);
     Simulator::Schedule(endRx, &LrWpanPhy::EndRx, this, lrWpanRxParams);
+}
+
+void
+LrWpanPhy::UpdatePreambleSinr()
+{
+    if (m_preambleMinSinr.empty() || Simulator::Now() <= m_preambleLastUpdate)
+    {
+        m_preambleLastUpdate = Simulator::Now();
+        return;
+    }
+    for (auto& entry : m_preambleMinSinr)
+    {
+        Ptr<SpectrumValue> interferenceAndNoise = m_signal->GetSignalPsd();
+        *interferenceAndNoise -= *entry.first->psd;
+        *interferenceAndNoise += *m_noise;
+        double sinr = LrWpanSpectrumValueHelper::TotalAvgPower(entry.first->psd,
+                                                               m_phyPIBAttributes.phyCurrentChannel) /
+                      LrWpanSpectrumValueHelper::TotalAvgPower(interferenceAndNoise,
+                                                               m_phyPIBAttributes.phyCurrentChannel);
+        entry.second = std::min(entry.second, sinr);
+    }
+    m_preambleLastUpdate = Simulator::Now();
 }
 
 void
@@ -610,6 +648,7 @@ LrWpanPhy::EndRx(Ptr<SpectrumSignalParameters> par)
     // Evaluate the locked packet up to now before any signal leaves the channel, so that an
     // interferer ending mid-packet is accounted for over exactly the time it was present.
     CheckInterference();
+    UpdatePreambleSinr();
 
     // The packet reception has ended, remove it from the accumulated signals
     // in the receptor tracker

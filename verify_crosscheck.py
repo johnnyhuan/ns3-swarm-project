@@ -210,12 +210,136 @@ def report(res):
     return "\n".join(lines)
 
 
+# ----------------------------------------------------------------------------------------------
+# P1 (discovery beacons, all on the broadcast channel)
+# ----------------------------------------------------------------------------------------------
+class P1Model:
+    """Same idea for P1: every counted beacon reception is re-checked from the logs."""
+    TURNAROUND_US = 40.0
+
+    def __init__(self, run_dir, p1power, sens=-95.0, lock=6.0):
+        def rows(name):
+            with open(os.path.join(run_dir, name), newline="") as f:
+                return list(csv.DictReader(f))
+        self.p, self.lock, self.sens = p1power, lock, sens
+        self.noise_mw = mw(sens - lock)
+        self.pos = {(int(r["epoch"]), int(r["node"])): (float(r["x"]), float(r["y"]), float(r["z"]))
+                    for r in rows("verify_p1_pos.csv")}
+        self.tx = [dict(epoch=int(r["epoch"]), sender=int(r["sender"]), uid=int(r["uid"]), slot=int(r["slot"]),
+                        start=float(r["start_us"]), end=float(r["end_us"]), cut=int(r["cut"])) for r in rows("verify_p1_tx.csv")]
+        self.rx = [dict(epoch=int(r["epoch"]), rx=int(r["rx"]), tx=int(r["tx"]), uid=int(r["uid"]), t=float(r["time_us"]))
+                   for r in rows("verify_p1_rx.csv")]
+        self.links = [dict(epoch=int(r["epoch"]), rx=int(r["rx"]), tx=int(r["tx"]), dist=float(r["dist"]),
+                           delivered=int(r["delivered"])) for r in rows("verify_p1_links.csv")]
+        self.by_uid = {t["uid"]: t for t in self.tx}
+        self.by_epoch = defaultdict(list)
+        self.by_sender = defaultdict(list)
+        for t in self.tx:
+            self.by_epoch[t["epoch"]].append(t)
+            self.by_sender[(t["epoch"], t["sender"])].append(t)
+
+    def busy_own_tx(self, epoch, node, start, end, guard=0.0):
+        """Node transmitting (or turning its radio around, with guard) during [start, end]."""
+        return any(t["start"] - guard < end and t["end"] + guard > start for t in self.by_sender[(epoch, node)])
+
+    def min_sinr(self, t, rx_node):
+        e = t["epoch"]
+        if (e, t["sender"]) not in self.pos or (e, rx_node) not in self.pos:
+            return None, None
+        rpos = self.pos[(e, rx_node)]
+        sig = rx_dbm(self.p, self.pos[(e, t["sender"])], rpos)
+        intf = [o for o in self.by_epoch[e] if o is not t and o["sender"] not in (t["sender"], rx_node)
+                and o["start"] < t["end"] and o["end"] > t["start"] and (e, o["sender"]) in self.pos]
+        cuts = sorted({t["start"], t["end"]} | {max(t["start"], o["start"]) for o in intf} | {min(t["end"], o["end"]) for o in intf})
+        worst = None
+        for a, b in zip(cuts, cuts[1:]):
+            if b - a <= 1e-6:
+                continue
+            i_mw = sum(mw(rx_dbm(self.p, self.pos[(e, o["sender"])], rpos)) for o in intf if o["start"] < b and o["end"] > a)
+            sinr = sig - 10 * math.log10(i_mw + self.noise_mw)
+            worst = sinr if worst is None else min(worst, sinr)
+        return worst, sig
+
+    def check(self, tol=0.5):
+        v = defaultdict(list)
+        border = 0
+        for r in self.rx:
+            t = self.by_uid.get(r["uid"])
+            if t is None or t["sender"] != r["tx"] or t["epoch"] != r["epoch"]:
+                v["V1 no matching TX (wrong sender/cycle)"].append(r)
+                continue
+            if t["cut"]:
+                v["V2 TX was cut off"].append(r)
+            if self.busy_own_tx(r["epoch"], r["rx"], t["start"], t["end"]):
+                v["V4 receiver was transmitting"].append(r)
+            s, _ = self.min_sinr(t, r["rx"])
+            if s is None:
+                continue
+            if s < self.lock - tol:
+                v["V5 SINR below lock"].append(dict(r, sinr=round(s, 2)))
+            elif s < self.lock + tol:
+                border += 1
+        got = {(r["epoch"], r["rx"], r["tx"]) for r in self.rx}
+        for l in self.links:
+            k = (l["epoch"], l["rx"], l["tx"])
+            if l["delivered"] and k not in got:
+                v["V6 delivered without reception"].append(l)
+            if not l["delivered"] and k in got:
+                v["V7 reception not counted"].append(l)
+        locked_first, turnaround, unexplained = [], [], []
+        for l in self.links:
+            if l["delivered"]:
+                continue
+            e = l["epoch"]
+            for t in self.by_sender[(e, l["tx"])]:
+                if t["cut"] or self.busy_own_tx(e, l["rx"], t["start"], t["end"]):
+                    continue
+                s, _ = self.min_sinr(t, l["rx"])
+                if s is None or s < self.lock + 1.0:
+                    continue
+                rpos = self.pos.get((e, l["rx"]))
+                early = [o for o in self.by_epoch[e] if o["sender"] not in (t["sender"], l["rx"]) and o["start"] < t["start"] < o["end"]
+                         and (e, o["sender"]) in self.pos and rx_dbm(self.p, self.pos[(e, o["sender"])], rpos) >= self.sens]
+                if early:
+                    locked_first.append(dict(l, sinr=round(s, 2)))
+                elif self.busy_own_tx(e, l["rx"], t["start"], t["end"], guard=self.TURNAROUND_US):
+                    turnaround.append(dict(l, sinr=round(s, 2)))
+                else:
+                    unexplained.append(dict(l, sinr=round(s, 2), start=t["start"]))
+                break
+        return dict(valid_rx=len(self.rx), links=len(self.links), delivered=sum(l["delivered"] for l in self.links),
+                    violations=v, borderline=border, locked_first=locked_first, turnaround=turnaround, unexplained=unexplained)
+
+
+P1_NAMES = ["V1 no matching TX (wrong sender/cycle)", "V2 TX was cut off", "V4 receiver was transmitting",
+            "V5 SINR below lock", "V6 delivered without reception", "V7 reception not counted"]
+
+
+def report_p1(res):
+    lines = [f"beacon receptions {res['valid_rx']}, Top-5 links {res['links']} (delivered {res['delivered']})"]
+    for n in P1_NAMES:
+        lines.append(f"  {n:38s}: {len(res['violations'][n])}")
+        for ex in res["violations"][n][:3]:
+            lines.append(f"      e.g. {ex}")
+    lines.append(f"  borderline receptions (lock +-0.5 dB)     : {res['borderline']}")
+    lines.append(f"  lost: an earlier beacon locked first (no re-sync)      : {len(res['locked_first'])}")
+    lines.append(f"  lost: receiver in RX/TX turnaround (own beacon <=40 us) : {len(res['turnaround'])}")
+    lines.append(f"  unexplained losses                                     : {len(res['unexplained'])}")
+    for ex in res["unexplained"][:3]:
+        lines.append(f"      e.g. {ex}")
+    return "\n".join(lines)
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("run_dir")
     ap.add_argument("--p2power", type=float, default=4.0)
+    ap.add_argument("--p1", type=float, metavar="P1POWER", help="check P1 beacons instead (P1 TX power in dBm)")
     ap.add_argument("--timeline", type=int, nargs=2, metavar=("NODE", "EPOCH"))
     a = ap.parse_args()
+    if a.p1 is not None:
+        print(report_p1(P1Model(a.run_dir, a.p1).check()))
+        raise SystemExit
     m = Model(a.run_dir, a.p2power)
     if a.timeline:
         print(m.timeline(*a.timeline))

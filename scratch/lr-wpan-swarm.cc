@@ -41,9 +41,11 @@ bool g_verifyLog = false;      // write verify_*.csv (every P2 TX, schedule, pos
 std::string g_testPositions;   // test mode: "x,y,z;x,y,z;..." fixed positions (sets numNodes, speed 0)
 std::string g_forceCells;      // test mode: "id:slot:ch[:slot2:ch2];..." forces P2 cells (channel index 0..)
 static std::map<uint16_t, std::array<int, 4>> g_forcedCells;
-static std::ofstream g_vTx, g_vSched, g_vPos, g_vRx, g_vLinks;
+static std::ofstream g_vTx, g_vSched, g_vPos, g_vRx, g_vLinks, g_vP1Tx, g_vP1Rx, g_vP1Links, g_vP1Pos;
+std::string g_forceP1Slots;     // test mode: "id:slot;..." fixed SSA P1 slots (no reselection)
+static std::map<uint16_t, int> g_forcedP1Slot;
 static uint64_t g_p2PayloadOk = 0, g_p2PayloadBad = 0, g_p2PayloadStale = 0;
-struct VTxOpen { uint32_t epoch; uint16_t sender; int slot; int ch; double startUs; };
+struct VTxOpen { uint32_t epoch; uint16_t sender; int slot; int ch; double startUs; bool p1; uint64_t uid; };
 static std::map<uint64_t, VTxOpen> g_vTxOpen;
 static uint32_t Crc32(const uint8_t* d, size_t n) {
     uint32_t c = 0xFFFFFFFFu;
@@ -485,6 +487,10 @@ public:
 
         auto it = g_p1PacketsMeta.find(uid);
         if (it != g_p1PacketsMeta.end()) {
+            if (g_verifyLog) {
+                g_vTxOpen[uid] = {it->second.epoch, (uint16_t)it->second.senderId, g_enableP1Ssa ? m_p1ClaimedSlot : -1,
+                                  (int)BROADCAST_CHANNEL, Simulator::Now().GetNanoSeconds() / 1000.0, true, uid};
+            }
             it->second.txStartTime = Simulator::Now().GetSeconds() * 1000.0;
             uint32_t numNodes = NodeList::GetNNodes();
             for (uint32_t j = 0; j < numNodes; j++) {
@@ -497,7 +503,7 @@ public:
         if (it2 != g_p2PacketsMeta.end()) {
             if (g_verifyLog) {
                 g_vTxOpen[uid] = {it2->second.epoch, (uint16_t)it2->second.senderId, it2->second.slot,
-                                  (int)it2->second.channel, Simulator::Now().GetNanoSeconds() / 1000.0};
+                                  (int)it2->second.channel, Simulator::Now().GetNanoSeconds() / 1000.0, false, uid};
             }
             it2->second.txStartTime = Simulator::Now().GetSeconds() * 1000.0;
             uint32_t numNodes = NodeList::GetNNodes();
@@ -512,6 +518,13 @@ public:
     static void WriteVTx(uint64_t uid, bool cut) {
         auto v = g_vTxOpen.find(uid);
         if (v == g_vTxOpen.end()) return;
+        if (v->second.p1) {
+            g_vP1Tx << v->second.epoch << "," << v->second.sender << "," << v->second.uid << "," << v->second.slot << ","
+                    << std::fixed << std::setprecision(3) << v->second.startUs << "," << Simulator::Now().GetNanoSeconds() / 1000.0
+                    << "," << (cut ? 1 : 0) << "\n";
+            g_vTxOpen.erase(v);
+            return;
+        }
         g_vTx << v->second.epoch << "," << v->second.sender << "," << v->second.slot << "," << v->second.ch << ","
               << std::fixed << std::setprecision(3) << v->second.startUs << "," << Simulator::Now().GetNanoSeconds() / 1000.0
               << "," << (cut ? 1 : 0) << "\n";
@@ -643,6 +656,7 @@ private:
             g_p1SlotCutoffCount++;
             g_p1DroneCutoffInEpoch[epoch][m_id] = true;
             if (lastUid != 0) g_p1CutoffUids.insert(lastUid);
+            if (g_verifyLog && lastUid != 0) WriteVTx(lastUid, true);
             if (g_verboseLog) {
                 std::cout << "[P1_SLOT_CUTOFF] Time: " << now << "ms, Drone: " << (int)m_id
                           << " slot " << slot << " ended while still transmitting -> forced TRX_OFF\n";
@@ -768,6 +782,11 @@ private:
             // Decrement reselection counter for this cycle
             m_p1ReselCounter--;
 
+            auto fp = g_forcedP1Slot.find(m_id);
+            if (fp != g_forcedP1Slot.end()) {   // test mode: fixed P1 slot, never reselect
+                m_p1ClaimedSlot = fp->second;
+                m_p1ReselCounter = 1000000;
+            }
             // Record claimed slot in global registry for Phase 1 SSA
             g_p1DroneClaimedSlot[m_epoch][m_id] = m_p1ClaimedSlot;
 
@@ -1270,6 +1289,10 @@ private:
             uint32_t payload = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
             
             uint16_t senderId = payload & 0x01FF;
+            if (g_verifyLog) {
+                g_vP1Rx << m_epoch << "," << myId << "," << senderId << "," << p->GetUid() << "," << std::fixed << std::setprecision(3)
+                        << Simulator::Now().GetNanoSeconds() / 1000.0 << "\n";
+            }
             g_p1ReceivedInEpoch[m_epoch][myId].insert(senderId);
             g_p2DiscoveredInP1[m_epoch][myId].insert(senderId);
             if (g_verboseLog) std::cout << "[P1_RX] Time: " << now << "ms, Receiver: " << myId << ", Sender: " << (int)senderId << ", RSSI: " << (int)rssi << "\n";
@@ -1334,6 +1357,12 @@ private:
 
     void EvaluatePhase1Epoch(uint32_t epoch) {
         uint32_t numNodes = NodeList::GetNNodes();
+        if (g_verifyLog) {
+            for (uint32_t i = 0; i < numNodes; i++) {
+                Vector v = NodeList::GetNode(i)->GetObject<MobilityModel>()->GetPosition();
+                g_vP1Pos << epoch << "," << i << "," << std::fixed << std::setprecision(3) << v.x << "," << v.y << "," << v.z << "\n";
+            }
+        }
         std::vector<Ptr<MobilityModel>> mobs(numNodes);
         std::vector<double> sTxTimes(numNodes, -1.0);
         std::vector<uint64_t> sTxUids(numNodes, 0);
@@ -1417,6 +1446,9 @@ private:
                     }
                 }
 
+                if (g_verifyLog) {
+                    g_vP1Links << epoch << "," << r << "," << sender << "," << std::fixed << std::setprecision(3) << dist << "," << (heard ? 1 : 0) << "\n";
+                }
                 P1DropCategory cat = REASON_SUCCESS;
                 if (heard) {
                     cat = REASON_SUCCESS;
@@ -2105,6 +2137,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("dataSlotUs", "Phase 2 data slot duration in microseconds (default: 1000.0 us, e.g. 625.0 or 1000.0)", g_dataSlotUs);
     cmd.AddValue("verifyLog", "Write verify_*.csv logs for the independent cross-check (default false)", g_verifyLog);
     cmd.AddValue("positions", "Test mode: fixed positions 'x,y,z;x,y,z;...' (sets numNodes, speed 0)", g_testPositions);
+    cmd.AddValue("forceP1Slots", "Test mode: fixed SSA P1 slots 'id:slot;...' (no reselection)", g_forceP1Slots);
     cmd.AddValue("forceCells", "Test mode: forced P2 cells 'id:slot:ch[:slot2:ch2];...'", g_forceCells);
     cmd.AddValue("p2SmartPick", "Phase 2 (2 copies): first book the copy whose cell no other heard neighbour claims (default true)", g_p2SmartPick);
     cmd.AddValue("p2Copies", "Phase 2: state packet copies per cycle, 1 or 2 (default 2; falls back to 1 above 32 slots)", g_p2Copies);
@@ -2176,7 +2209,19 @@ int main(int argc, char *argv[]) {
             if (sscanf(item.c_str(), "%d:%d:%d:%d:%d", &id, &a, &b, &c, &d) >= 3) g_forcedCells[(uint16_t)id] = {a, b, c, d};
         }
     }
+    if (!g_forceP1Slots.empty()) {
+        std::stringstream fs(g_forceP1Slots);
+        std::string item;
+        while (std::getline(fs, item, ';')) {
+            int id, sl;
+            if (sscanf(item.c_str(), "%d:%d", &id, &sl) == 2) g_forcedP1Slot[(uint16_t)id] = sl;
+        }
+    }
     if (g_verifyLog) {
+        g_vP1Tx.open("verify_p1_tx.csv"); g_vP1Tx << "epoch,sender,uid,slot,start_us,end_us,cut\n";
+        g_vP1Rx.open("verify_p1_rx.csv"); g_vP1Rx << "epoch,rx,tx,uid,time_us\n";
+        g_vP1Links.open("verify_p1_links.csv"); g_vP1Links << "epoch,rx,tx,dist,delivered\n";
+        g_vP1Pos.open("verify_p1_pos.csv"); g_vP1Pos << "epoch,node,x,y,z\n";
         g_vTx.open("verify_tx.csv");   g_vTx << "epoch,sender,slot,channel,start_us,end_us,cut\n";
         g_vSched.open("verify_sched.csv"); g_vSched << "epoch,node,slot,action,channel,target\n";
         g_vPos.open("verify_pos.csv"); g_vPos << "epoch,node,x,y,z\n";
@@ -2310,7 +2355,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (g_verifyLog) { g_vTx.close(); g_vSched.close(); g_vPos.close(); g_vRx.close(); g_vLinks.close(); }
+    if (g_verifyLog) { g_vP1Tx.close(); g_vP1Rx.close(); g_vP1Links.close(); g_vP1Pos.close(); g_vTx.close(); g_vSched.close(); g_vPos.close(); g_vRx.close(); g_vLinks.close(); }
     Simulator::Destroy();
 
     return 0;

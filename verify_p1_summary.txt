@@ -1,12 +1,12 @@
-P1 verification suite (SSA tuned: 150 us x 66 slots, +8 dBm; CSMA tuned: +4 dBm, CCA -94 dBm)
+P1 verification suite (SSA tuned: 150 us x 66 slots, +7 dBm; CSMA tuned: +4 dBm, CCA -94 dBm)
 ====================================================================================================
-1. KNOWN-ANSWER TESTS (SSA, fixed positions, forced P1 slots, +8 dBm, 2 s each)
-  T1 range edge: 70 m at +8 dBm  (positions 0,0,10;70,0,10; P1 slots 0:10;1:40)
-     UAV 1 -> UAV 0: expect always -> PASS  (received 97 / sent 97 / cycles 98)  [RX -94.03 dBm >= -95 dBm]
+1. KNOWN-ANSWER TESTS (SSA, fixed positions, forced P1 slots, +7 dBm, 2 s each)
+  T1 range edge: 60 m at +7 dBm  (positions 0,0,10;60,0,10; P1 slots 0:10;1:40)
+     UAV 1 -> UAV 0: expect always -> PASS  (received 97 / sent 97 / cycles 98)  [RX -93.02 dBm >= -94 dBm]
      UAV 0 -> UAV 1: expect always -> PASS  (received 98 / sent 98 / cycles 98)  [other direction]
      cross-check violations: 0
-  T2 range edge: 80 m at +8 dBm  (positions 0,0,10;80,0,10; P1 slots 0:10;1:40)
-     UAV 1 -> UAV 0: expect never  -> PASS  (received 0 / sent 97 / cycles 98)  [RX -95.77 dBm < -95 dBm]
+  T2 range edge: 70 m at +7 dBm  (positions 0,0,10;70,0,10; P1 slots 0:10;1:40)
+     UAV 1 -> UAV 0: expect never  -> PASS  (received 0 / sent 97 / cycles 98)  [RX -95.03 dBm < -94 dBm]
      UAV 0 -> UAV 1: expect never  -> PASS  (received 0 / sent 98 / cycles 98)  [other direction]
      cross-check violations: 0
   T3 same slot, interferer 1.5x farther  (positions 0,0,10;10,0,10;-15,0,10; P1 slots 0:30;1:5;2:5)
@@ -28,34 +28,34 @@ P1 verification suite (SSA tuned: 150 us x 66 slots, +8 dBm; CSMA tuned: +4 dBm,
 
 2. INDEPENDENT CROSS-CHECK OF EVERY BEACON RECEPTION (100 UAVs, 3 s, seed 1)
   swarm_ssa_3s: PASS (0 violations)
-    beacon receptions 281679, Top-5 links 72506 (delivered 68288)
+    beacon receptions 223010, Top-5 links 72506 (delivered 67988)
       V1 no matching TX (wrong sender/cycle): 0
       V2 TX was cut off                     : 0
       V4 receiver was transmitting          : 0
       V5 SINR below lock                    : 0
       V6 delivered without reception        : 0
       V7 reception not counted              : 0
-      borderline receptions (lock +-0.5 dB)     : 22048
+      borderline receptions (lock +-0.5 dB)     : 17490
       lost: an earlier beacon locked first (no re-sync)      : 0
       lost: receiver in RX/TX turnaround (own beacon <=40 us) : 0
-      unexplained losses                                     : 10
-          e.g. {'epoch': 76, 'rx': 18, 'tx': 9, 'dist': 26.956, 'delivered': 0, 'sinr': 14.74, 'start': 1545231.0}
-          e.g. {'epoch': 76, 'rx': 52, 'tx': 9, 'dist': 30.256, 'delivered': 0, 'sinr': 12.8, 'start': 1545231.0}
-          e.g. {'epoch': 76, 'rx': 95, 'tx': 9, 'dist': 22.118, 'delivered': 0, 'sinr': 17.88, 'start': 1545231.0}
+      unexplained losses                                     : 6
+          e.g. {'epoch': 76, 'rx': 18, 'tx': 9, 'dist': 26.956, 'delivered': 0, 'sinr': 13.95, 'start': 1545231.0}
+          e.g. {'epoch': 76, 'rx': 52, 'tx': 9, 'dist': 30.256, 'delivered': 0, 'sinr': 12.08, 'start': 1545231.0}
+          e.g. {'epoch': 76, 'rx': 95, 'tx': 9, 'dist': 22.118, 'delivered': 0, 'sinr': 16.99, 'start': 1545231.0}
   swarm_csma_3s: PASS (0 violations)
-    beacon receptions 123406, Top-5 links 72506 (delivered 60609)
+    beacon receptions 108824, Top-5 links 72506 (delivered 59912)
       V1 no matching TX (wrong sender/cycle): 0
       V2 TX was cut off                     : 0
       V4 receiver was transmitting          : 0
       V5 SINR below lock                    : 0
       V6 delivered without reception        : 0
       V7 reception not counted              : 0
-      borderline receptions (lock +-0.5 dB)     : 10733
-      lost: an earlier beacon locked first (no re-sync)      : 794
+      borderline receptions (lock +-0.5 dB)     : 9480
+      lost: an earlier beacon locked first (no re-sync)      : 565
       lost: receiver in RX/TX turnaround (own beacon <=40 us) : 0
-      unexplained losses                                     : 18
-          e.g. {'epoch': 15, 'rx': 65, 'tx': 63, 'dist': 48.319, 'delivered': 0, 'sinr': 7.8, 'start': 294684.0}
-          e.g. {'epoch': 19, 'rx': 49, 'tx': 98, 'dist': 31.353, 'delivered': 0, 'sinr': 7.99, 'start': 371342.0}
-          e.g. {'epoch': 28, 'rx': 4, 'tx': 6, 'dist': 44.074, 'delivered': 0, 'sinr': 8.06, 'start': 557234.0}
+      unexplained losses                                     : 17
+          e.g. {'epoch': 6, 'rx': 4, 'tx': 22, 'dist': 35.167, 'delivered': 0, 'sinr': 8.96, 'start': 105094.0}
+          e.g. {'epoch': 6, 'rx': 51, 'tx': 22, 'dist': 40.827, 'delivered': 0, 'sinr': 7.44, 'start': 105094.0}
+          e.g. {'epoch': 8, 'rx': 95, 'tx': 82, 'dist': 31.763, 'delivered': 0, 'sinr': 11.43, 'start': 153386.0}
 
 OVERALL: ALL PASS

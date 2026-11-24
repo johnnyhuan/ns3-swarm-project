@@ -62,9 +62,9 @@ def load(run_dir):
 
 
 class Model:
-    def __init__(self, run_dir, p2power, sens=-95.0, lock=6.0):
+    def __init__(self, run_dir, p2power, sens=-94.0, lock=6.0):
         self.pos, self.tx, self.sched, self.rx, self.links = load(run_dir)
-        self.p, self.lock = p2power, lock
+        self.p, self.lock, self.sens = p2power, lock, sens
         self.noise_mw = mw(sens - lock)
         self.by_ch = defaultdict(list)          # (epoch, channel) -> tx rows
         self.by_sender = defaultdict(list)      # (epoch, sender) -> tx rows
@@ -153,7 +153,7 @@ class Model:
                     early = [o for o in self.by_ch[(e, t["ch"])]
                              if o["sender"] not in (t["sender"], l["rx"]) and o["start"] < t["start"] < o["end"]
                              and (e, o["sender"]) in self.pos and rpos is not None
-                             and rx_dbm(self.p, self.pos[(e, o["sender"])], rpos) >= -95.0]
+                             and rx_dbm(self.p, self.pos[(e, o["sender"])], rpos) >= self.sens]
                     if early:
                         locked_first.append(dict(l, slot=t["slot"], sinr=round(s, 2)))
                     else:
@@ -217,7 +217,7 @@ class P1Model:
     """Same idea for P1: every counted beacon reception is re-checked from the logs."""
     TURNAROUND_US = 40.0
 
-    def __init__(self, run_dir, p1power, sens=-95.0, lock=6.0):
+    def __init__(self, run_dir, p1power, sens=-94.0, lock=6.0):
         def rows(name):
             with open(os.path.join(run_dir, name), newline="") as f:
                 return list(csv.DictReader(f))

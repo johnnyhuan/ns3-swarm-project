@@ -28,7 +28,7 @@ NS_LOG_COMPONENT_DEFINE("LrWpanSwarm");
 const uint32_t MINI_BEACON_SIZE = 4; 
 const uint32_t DATA_PACKET_SIZE = 50;
 double g_p2TxPower = 4.0;  // Phase 2 TX Power in dBm (power sweep: flat 94.4-94.7 % from +3 to +8; -95 dBm sensitivity needs >= ~+3 for 50 m)
-double g_p1TxPower = 4.0;  // Phase 1 TX Power in dBm (+4 dBm: BLE decode range ~55 m at -95 dBm sensitivity, covers the 50 m target radius)
+double g_p1TxPower = 4.0;  // Phase 1 TX Power in dBm (official SSA: +7 dBm = nRF54L15 QFN48 maximum, as on the nRF54L15 DK)
 double g_p1AvoidDist = 50.0; // RX Deafness defense distance in meters
 double g_p1AvoidRssi = -999.0; // Specific defense RSSI threshold in dBm (-106 to -90, overrides p1AvoidDist if set)
 bool g_enableDefense = true; // Defense design switch: true = spatial slot exclusion, false = exact cell avoidance only
@@ -110,7 +110,7 @@ static int NumP1Slots() {
     return std::max(1, (int)((g_phase1DurationUs - P1_SLOT_OFFSET_US) / g_p1SlotUs));
 }
 double g_p1CcaThresholdDbm = -97.0; // Phase 1 CCA RSSI threshold in dBm (signal + noise; -97 = noise floor -101 + 4 dB margin for RSSI error)
-double g_rxSensitivityDbm = -95.0;   // BLE 5.4 LE 2M receiver sensitivity in dBm (noise floor = sensitivity - lock threshold)
+double g_rxSensitivityDbm = -94.0;   // nRF54L15 BLE 2M sensitivity, typ. -94 dBm (datasheet, packet <= 37 B) (noise floor = sensitivity - lock threshold)
 double g_preambleLockDb = 6.0;        // Preamble / sync-word lock SINR threshold in dB (BLE 5.4 LE 2M C/I: +6.0 dB)
 bool g_verboseLog = false;       // Verbose per-packet log switch (default: false for high-speed simulation at scale)
 
@@ -2099,7 +2099,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("p2TxPower", "Phase 2 TX Power in dBm (e.g., -9, -4, 0)", g_p2TxPower);
     cmd.AddValue("p1TxPower", "Phase 1 TX Power in dBm (default 4)", g_p1TxPower);
     cmd.AddValue("p1CcaThresholdDbm", "Phase 1 CCA RSSI threshold in dBm, signal + noise (default -97.0)", g_p1CcaThresholdDbm);
-    cmd.AddValue("rxSensitivityDbm", "BLE receiver sensitivity in dBm (default: -95.0; noise floor = sensitivity - preambleLockDb)", g_rxSensitivityDbm);
+    cmd.AddValue("rxSensitivityDbm", "BLE receiver sensitivity in dBm (default: -94.0; noise floor = sensitivity - preambleLockDb)", g_rxSensitivityDbm);
     cmd.AddValue("preambleLockDb", "Preamble lock SINR threshold in dB (BLE 5.4 LE 2M C/I, default: 6.0; old 802.15.4 behaviour: -5.0)", g_preambleLockDb);
     // Legacy capture flags: post-lock re-sync was removed (BLE chips cannot do it).
     // Still accepted so old sweep scripts keep running, but they have no effect.

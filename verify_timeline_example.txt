@@ -1,24 +1,22 @@
-Timeline of UAV 0 in cycle 100  (P2 TX power 4.0 dBm, noise -101 dBm, lock 6.0 dB)
+Timeline of UAV 0 in cycle 100  (P2 TX power 4.0 dBm, noise -100 dBm, lock 6.0 dB)
 position (112.451, 100.498, 17.656)
 Ground-truth Top-5 (<= 50 m): UAV 28 25.6 m OK, UAV 54 26.1 m OK, UAV 23 26.6 m OK, UAV 99 29.8 m OK, UAV 72 32.3 m OK
 slot  my action              packets on my channel in this slot (sender: distance, RX power, SINR -> result)
-   1  RX ch 20 -> UAV 72     24: 74.2 m, -98.8 dBm, SINR -11.0 dB -> -; 72: 32.4 m, -88.0 dBm, SINR 8.8 dB -> RECEIVED
-   2  IDLE (stay ch 20)      97: 44.8 m, -92.2 dBm, SINR 8.8 dB -> RECEIVED
-   3  RX ch 13 -> UAV 54     54: 26.1 m, -85.2 dBm, SINR 15.8 dB -> RECEIVED
-   4  IDLE (stay ch 13)      56: 50.9 m, -93.9 dBm, SINR 7.1 dB -> RECEIVED
-   5  RX ch 17 -> UAV 23     23: 26.7 m, -85.4 dBm, SINR 15.6 dB -> RECEIVED
-   6  RX ch 16 -> UAV 54     54: 26.1 m, -85.2 dBm, SINR 3.4 dB -> -; 76: 35.2 m, -89.1 dBm, SINR -4.1 dB -> -; 82: 90.0 m, -101.3 dBm, SINR -17.7 dB -> -
-   7  TX ch 12               78: 60.7 m, -96.2 dBm, SINR 0.4 dB -> -; 65: 72.5 m, -98.5 dBm, SINR -3.6 dB -> -
-   9  RX ch 21 -> UAV 72     11: 45.3 m, -92.4 dBm, SINR -4.6 dB -> -; 72: 32.4 m, -88.0 dBm, SINR 3.8 dB -> -
-  10  RX ch 19 -> UAV 76     76: 35.2 m, -89.1 dBm, SINR 11.9 dB -> RECEIVED
-  11  RX ch 12 -> UAV 99     85: 78.5 m, -99.5 dBm, SINR -12.8 dB -> -; 99: 29.8 m, -86.9 dBm, SINR 10.3 dB -> RECEIVED
-  12  RX ch 15 -> UAV 23     14: 99.7 m, -102.6 dBm, SINR -17.3 dB -> -; 23: 26.7 m, -85.4 dBm, SINR 13.3 dB -> RECEIVED
-  13  RX ch 16 -> UAV 58     58: 40.6 m, -90.9 dBm, SINR 6.5 dB -> RECEIVED; 40: 80.6 m, -99.9 dBm, SINR -9.3 dB -> -
-  15  RX ch 19 -> UAV 25     25: 35.3 m, -89.1 dBm, SINR 11.9 dB -> RECEIVED
-  16  TX ch 16               78: 60.7 m, -96.2 dBm, SINR 4.8 dB -> -
-  17  IDLE (stay ch 16)      42: 70.9 m, -98.2 dBm, SINR 2.8 dB -> -
-  18  RX ch 17 -> UAV 99     99: 29.8 m, -86.9 dBm, SINR 14.1 dB -> RECEIVED
-  19  RX ch 20 -> UAV 28     28: 25.7 m, -85.0 dBm, SINR 16.0 dB -> RECEIVED
-  20  RX ch 15 -> UAV 25     25: 35.3 m, -89.1 dBm, SINR 11.9 dB -> RECEIVED
-  21  IDLE (stay ch 15)      71: 120.5 m, -105.1 dBm, SINR -11.1 dB -> -; 74: 58.8 m, -95.8 dBm, SINR 2.0 dB -> -; 83: 97.8 m, -102.4 dBm, SINR -8.1 dB -> -
-  22  RX ch 17 -> UAV 28     28: 25.7 m, -85.0 dBm, SINR 11.8 dB -> RECEIVED; 89: 74.7 m, -98.9 dBm, SINR -14.0 dB -> -
+   3  RX ch 13 -> UAV 54     54: 26.1 m, -85.2 dBm, SINR 7.8 dB -> RECEIVED; 56: 50.9 m, -93.9 dBm, SINR -8.9 dB -> -
+   5  RX ch 17 -> UAV 23     23: 26.7 m, -85.4 dBm, SINR 14.6 dB -> RECEIVED
+   6  RX ch 15 -> UAV 54     54: 26.1 m, -85.2 dBm, SINR 14.8 dB -> RECEIVED
+   7  TX ch 12               78: 60.7 m, -96.2 dBm, SINR 3.8 dB -> -
+   9  RX ch 19 -> UAV 72     72: 32.4 m, -88.0 dBm, SINR 7.1 dB -> RECEIVED; 92: 63.9 m, -96.8 dBm, SINR -9.1 dB -> -
+  10  RX ch 18 -> UAV 76     76: 35.2 m, -89.1 dBm, SINR 10.9 dB -> RECEIVED
+  11  RX ch 18 -> UAV 99     99: 29.8 m, -86.9 dBm, SINR 13.1 dB -> RECEIVED
+  12  RX ch 13 -> UAV 23     23: 26.7 m, -85.4 dBm, SINR 14.6 dB -> RECEIVED
+  13  RX ch 16 -> UAV 58     58: 40.6 m, -90.9 dBm, SINR 6.0 dB -> RECEIVED; 40: 80.6 m, -99.9 dBm, SINR -9.4 dB -> -
+  14  IDLE (stay ch 16)      5: 106.7 m, -103.5 dBm, SINR -3.5 dB -> -
+  16  TX ch 15               59: 66.2 m, -97.3 dBm, SINR -2.0 dB -> -; 98: 77.4 m, -99.3 dBm, SINR -4.9 dB -> -; 75: 89.6 m, -101.2 dBm, SINR -7.3 dB -> -
+  17  IDLE (stay ch 15)      47: 85.1 m, -100.6 dBm, SINR -9.1 dB -> -; 1: 90.2 m, -101.3 dBm, SINR -9.9 dB -> -; 27: 46.5 m, -92.7 dBm, SINR 3.1 dB -> -
+  18  RX ch 18 -> UAV 99     38: 83.5 m, -100.3 dBm, SINR -13.6 dB -> -; 99: 29.8 m, -86.9 dBm, SINR 10.2 dB -> RECEIVED
+  19  RX ch 19 -> UAV 28     28: 25.7 m, -85.0 dBm, SINR 15.0 dB -> RECEIVED
+  20  RX ch 15 -> UAV 25     25: 35.3 m, -89.1 dBm, SINR 10.9 dB -> RECEIVED
+  21  IDLE (stay ch 15)      71: 120.5 m, -105.1 dBm, SINR -10.7 dB -> -; 74: 58.8 m, -95.8 dBm, SINR 3.1 dB -> -
+  22  IDLE (stay ch 15)      55: 76.7 m, -99.2 dBm, SINR 0.8 dB -> -
+  23  RX ch 17 -> UAV 28     25: 35.3 m, -89.1 dBm, SINR -4.3 dB -> -; 28: 25.7 m, -85.0 dBm, SINR 3.8 dB -> -

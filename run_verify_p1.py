@@ -2,7 +2,7 @@
 """
 P1 verification suite: is a discovered neighbour really discovered?
 
-  1. Known-answer tests (SSA, fixed positions, forced P1 slots, +8 dBm): range edge, the 6 dB lock
+  1. Known-answer tests (SSA, fixed positions, forced P1 slots, +7 dBm): range edge, the 6 dB lock
      rule inside one slot, half duplex, adjacent slots. PASS only if every link behaves exactly
      as worked out by hand in every cycle.
   2. Independent cross-check (verify_crosscheck.P1Model) of every counted beacon reception in a
@@ -46,7 +46,7 @@ for rel in ["scratch/lr-wpan-swarm.cc",
         shutil.copy(s, d)
 
 COMMON = "--p1Duration=10 --preambleLockDb=6 --autoPush=false"
-SSA = ("--enableP1Ssa=true --p1SlotUs=150 --p1TxPower=8 --p1SenseDecay=0.7 --p1ReselInitMin=2 --p1ReselInitMax=5 "
+SSA = ("--enableP1Ssa=true --p1SlotUs=150 --p1TxPower=7 --p1SenseDecay=0.7 --p1ReselInitMin=2 --p1ReselInitMax=5 "
        "--p1ReselMin=30 --p1ReselMax=90 --p1PoolFrac=0.25")
 CSMA = ("--enableP1Ssa=false --p1TxPower=4 --p1CcaThresholdDbm=-94 --p1MinBE=0 --p1MaxBackoffs=1 "
         "--p1RetryMinMs=0.05 --p1RetryMaxMs=0.2")
@@ -60,10 +60,10 @@ def pr(p, d):
 
 # expect: (sender, receiver, 'always' | 'never', why)
 TESTS = [
-    dict(name="T1 range edge: 70 m at +8 dBm", pos="0,0,10;70,0,10", slots="0:10;1:40",
-         expect=[(1, 0, "always", f"RX {pr(8, 70):.2f} dBm >= -95 dBm"), (0, 1, "always", "other direction")]),
-    dict(name="T2 range edge: 80 m at +8 dBm", pos="0,0,10;80,0,10", slots="0:10;1:40",
-         expect=[(1, 0, "never", f"RX {pr(8, 80):.2f} dBm < -95 dBm"), (0, 1, "never", "other direction")]),
+    dict(name="T1 range edge: 60 m at +7 dBm", pos="0,0,10;60,0,10", slots="0:10;1:40",
+         expect=[(1, 0, "always", f"RX {pr(7, 60):.2f} dBm >= -94 dBm"), (0, 1, "always", "other direction")]),
+    dict(name="T2 range edge: 70 m at +7 dBm", pos="0,0,10;70,0,10", slots="0:10;1:40",
+         expect=[(1, 0, "never", f"RX {pr(7, 70):.2f} dBm < -94 dBm"), (0, 1, "never", "other direction")]),
     dict(name="T3 same slot, interferer 1.5x farther", pos="0,0,10;10,0,10;-15,0,10", slots="0:30;1:5;2:5",
          expect=[(1, 0, "never", f"10 m vs 15 m: {30 * math.log10(1.5):.2f} dB < 6 dB"),
                  (2, 0, "never", "weaker one")]),
@@ -109,11 +109,11 @@ with ThreadPoolExecutor(max_workers=a.jobs) as ex:
         done[tag] = d
         print(f"   {tag} done", flush=True)
 
-lines = ["P1 verification suite (SSA tuned: 150 us x 66 slots, +8 dBm; CSMA tuned: +4 dBm, CCA -94 dBm)", "=" * 100]
+lines = ["P1 verification suite (SSA tuned: 150 us x 66 slots, +7 dBm; CSMA tuned: +4 dBm, CCA -94 dBm)", "=" * 100]
 all_ok = True
-lines.append("1. KNOWN-ANSWER TESTS (SSA, fixed positions, forced P1 slots, +8 dBm, 2 s each)")
+lines.append("1. KNOWN-ANSWER TESTS (SSA, fixed positions, forced P1 slots, +7 dBm, 2 s each)")
 for i, t in enumerate(TESTS):
-    m = vc.P1Model(done[f"test{i + 1}"], 8.0)
+    m = vc.P1Model(done[f"test{i + 1}"], 7.0)
     epochs = {r["epoch"] for r in m.tx}
     sent = defaultdict(set)
     for r in m.tx:
@@ -140,7 +140,7 @@ for i, t in enumerate(TESTS):
 
 lines.append("")
 lines.append("2. INDEPENDENT CROSS-CHECK OF EVERY BEACON RECEPTION (100 UAVs, 3 s, seed 1)")
-for tag, p in (("swarm_ssa_3s", 8.0), ("swarm_csma_3s", 4.0)):
+for tag, p in (("swarm_ssa_3s", 7.0), ("swarm_csma_3s", 4.0)):
     res = vc.P1Model(done[tag], p).check()
     nv = sum(len(v) for v in res["violations"].values())
     all_ok &= nv == 0

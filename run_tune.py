@@ -8,7 +8,8 @@ Method (one-factor-at-a-time around the current best, repeated):
     ("center"); all sweeps of a pass run in parallel
   - a parameter moves to a new value only if that value beats the center by >= MIN_GAIN points
     (averaged over the tuning seeds); otherwise it stays (guards against seed noise)
-  - resource parameters (TX power, beacon copies, P2 slots, data channels, extra listening) use the
+  - P2 slots (24 x 400 us) and data channels (10) are fixed (user's resource budget)
+  - resource parameters (TX power, beacon copies, extra listening) use the
     knee rule instead: the cheapest value within MIN_GAIN of the best, since more resources always
     help a little and the plain maximum would always win
   - pass 2 repeats the sweeps around the new center, which catches interactions
@@ -63,8 +64,7 @@ COMMON = (f"--numNodes=100 --simTime={a.simtime} --nodeSpeed=10.0 --spaceSize=20
 # Resource parameters (cost grows along the value list: energy, air time, cycle length, spectrum)
 # use the knee rule: the cheapest value within MIN_GAIN of the best. Without it the search always
 # takes the maximum (more power / slots / channels always helps a little).
-COST_PARAMS = {"P1 power (dBm)", "beacon copies per cycle", "P2 power (dBm)", "P2 slots (x 400 us)",
-               "data channels", "extra neighbours listened"}
+COST_PARAMS = {"P1 power (dBm)", "beacon copies per cycle", "P2 power (dBm)", "extra neighbours listened"}
 def f1(flag):
     return lambda v: f"--{flag}={v}"
 
@@ -89,10 +89,10 @@ SSA = dict(fixed="--enableP1Ssa=true", objective="P1", params=[
      lambda v: "--p1ReselInitMin=-1 --p1ReselInitMax=-1" if v == "off"
      else f"--p1ReselInitMin={v.split('-')[0]} --p1ReselInitMax={v.split('-')[1]}"),
 ])
-P2 = dict(fixed="--dataSlotUs=400 --slotGuardBandUs=30 --p2Copies=2 --p2SmartPick=true", objective="P2", params=[
+# P2 slots (24 x 400 us) and data channels (10) are a fixed resource budget chosen by the user
+P2 = dict(fixed="--dataSlotUs=400 --slotGuardBandUs=30 --p2Copies=2 --p2SmartPick=true --numSlots=24 --numChannels=10",
+          objective="P2", params=[
     ("P2 power (dBm)", [2, 3, 4, 5, 6, 7], 4, f1("p2TxPower")),
-    ("P2 slots (x 400 us)", [16, 20, 24, 28, 32], 24, f1("numSlots")),
-    ("data channels", [8, 10, 12, 14, 16], 10, f1("numChannels")),
     ("extra neighbours listened", [1, 2, 3, 4, 5], 3, f1("p2ExtraRx")),
     ("slot-avoid distance (m)", [40, 45, 50, 55, 60, 70], 50, f1("p1AvoidDist")),
 ])
@@ -241,10 +241,13 @@ def tune(label, method, extra_fixed=""):
 
 
 best = {}
+# P2 as it runs while P1 is tuned (same string as the cached runs)
+P2_FOR_P1 = ("--dataSlotUs=400 --slotGuardBandUs=30 --p2Copies=2 --p2SmartPick=true --p2TxPower=4 "
+             "--numSlots=24 --numChannels=10 --p2ExtraRx=3 --p1AvoidDist=50")
 if "p1" in a.stages:
     # P1 methods are tuned with the current P2 in place (so the cycle is identical); run both in one pool
-    best["CSMA"] = tune("CSMA", CSMA, extra_fixed=flags_of(P2, default_center(P2)))
-    best["SSA"] = tune("SSA", SSA, extra_fixed=flags_of(P2, default_center(P2)))
+    best["CSMA"] = tune("CSMA", CSMA, extra_fixed=P2_FOR_P1)
+    best["SSA"] = tune("SSA", SSA, extra_fixed=P2_FOR_P1)
 if "p2" in a.stages:
     if "SSA" in best:
         ssa_flags = flags_of(SSA, best["SSA"][0])

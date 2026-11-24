@@ -1,0 +1,54 @@
+Re-tuning for nRF54L15 DK (QFN48): TX <= +7 dBm, sensitivity -94 dBm | 100 UAVs, 10.0 s, tuning seeds [101] | move only if >= 0.2 pt better; resource parameters: cheapest value within 0.2 pt of the best | * = center
+====================================================================================================
+CSMA pass 1: center P1 PRR 80.60%
+  P1 power (dBm)                 2:75.70  3:78.80  4:80.60*  5:81.80  6:82.40  7:82.50   -> 6  (moved)  [knee rule]
+  CCA threshold (dBm)            -98:79.90  -96:81.00  -94:80.60*  -92:79.50  -90:78.10  -88:77.00   -> -96  (moved)
+  extra CCA attempts             0:80.70  1:80.60*  2:80.50  3:79.60   -> 1
+  min backoff exponent           0:80.60*  1:80.40  2:80.00   -> 0
+  retry window (ms)              0.02-0.1:80.50  0.05-0.2:80.60*  0.1-0.5:80.80  0.2-1.0:80.50   -> 0.1-0.5  (moved)
+  beacon copies per cycle        1:80.60*  2:79.10   -> 1  [knee rule]
+  combined new center: 82.00% (was 80.60%)
+CSMA pass 2: center P1 PRR 82.00%
+  P1 power (dBm)                 2:77.30  3:79.60  4:81.20  5:82.00  6:82.00*  7:81.50   -> 5  (moved)  [knee rule]
+  CCA threshold (dBm)            -98:79.90  -96:82.00*  -94:82.30  -92:81.80  -90:80.50  -88:79.20   -> -94  (moved)
+  extra CCA attempts             0:80.80  1:82.00*  2:81.90  3:81.30   -> 1
+  min backoff exponent           0:82.00*  1:81.30  2:81.00   -> 0
+  retry window (ms)              0.02-0.1:81.60  0.05-0.2:81.80  0.1-0.5:82.00*  0.2-1.0:81.50   -> 0.1-0.5
+  beacon copies per cycle        1:82.00*  2:80.20   -> 1  [knee rule]
+  combined new center: 82.00% (was 82.00%)
+CSMA FINAL: 80.60% (old setting) -> 82.00% (tuned) on tuning seeds
+  flags: --enableP1Ssa=false --dataSlotUs=400 --slotGuardBandUs=30 --p2Copies=2 --p2SmartPick=true --p2TxPower=4 --numSlots=24 --numChannels=10 --p2ExtraRx=3 --p1AvoidDist=50 --p1TxPower=5 --p1CcaThresholdDbm=-94 --p1MaxBackoffs=1 --p1MinBE=0 --p1RetryMinMs=0.1 --p1RetryMaxMs=0.5 --p1Copies=1
+
+SSA pass 1: center P1 PRR 96.10%
+  P1 power (dBm)                 3:92.70  4:94.30  5:95.30  6:95.70  7:96.10*   -> 7  [knee rule]
+  slot length (us)               140:97.30  150:96.10*  170:96.10  200:93.00   -> 140  (moved)
+  candidate pool                 0.1:92.70  0.15:96.10  0.25:96.10*  0.35:96.80  0.5:96.10   -> 0.35  (moved)
+  RSSI memory decay              0.3:96.70  0.5:96.60  0.6:97.00  0.7:96.10*  0.8:96.40  0.9:95.60   -> 0.6  (moved)
+  reselection counter (cycles)   10-30:94.90  20-60:96.30  30-90:96.10*  50-150:96.20  100-300:93.70   -> 20-60  (moved)
+  first-pick counter (cycles)    off:96.60  1-3:95.80  2-5:96.10*  5-10:97.30   -> 5-10  (moved)
+  combined new center: 97.30% (was 96.10%)
+SSA pass 2: center P1 PRR 97.30%
+  P1 power (dBm)                 3:94.40  4:95.80  5:96.70  6:97.30  7:97.30*   -> 6  (moved)  [knee rule]
+  slot length (us)               140:97.30*  150:97.10  170:95.50  200:94.40   -> 140
+  candidate pool                 0.1:94.90  0.15:96.90  0.25:97.20  0.35:97.30*  0.5:97.10   -> 0.35
+  RSSI memory decay              0.3:97.30  0.5:97.60  0.6:97.30*  0.7:97.70  0.8:95.90  0.9:95.50   -> 0.7  (moved)
+  reselection counter (cycles)   10-30:96.40  20-60:97.30*  30-90:98.00  50-150:97.30  100-300:96.50   -> 30-90  (moved)
+  first-pick counter (cycles)    off:96.60  1-3:97.60  2-5:97.90  5-10:97.30*   -> 2-5  (moved)
+  combined new center: 96.80% (was 97.30%)
+  combined was worse -> keep only the best single move: reselection counter (cycles)
+SSA FINAL: 96.10% (old setting) -> 98.00% (tuned) on tuning seeds
+  flags: --enableP1Ssa=true --dataSlotUs=400 --slotGuardBandUs=30 --p2Copies=2 --p2SmartPick=true --p2TxPower=4 --numSlots=24 --numChannels=10 --p2ExtraRx=3 --p1AvoidDist=50 --p1TxPower=7 --p1SlotUs=140 --p1PoolFrac=0.35 --p1SenseDecay=0.6 --p1ReselMin=30 --p1ReselMax=90 --p1ReselInitMin=5 --p1ReselInitMax=10
+
+P2 pass 1: center P2 PRR 96.10%
+  P2 power (dBm)                 2:92.30  3:94.60  4:96.10*  5:96.50  6:96.70  7:96.70   -> 5  (moved)  [knee rule]
+  extra neighbours listened      1:95.40  2:96.00  3:96.10*  4:96.10  5:96.00   -> 2  (moved)  [knee rule]
+  slot-avoid distance (m)        40:96.30  45:96.20  50:96.10*  55:96.00  60:95.20  70:95.20   -> 40  (moved)
+  combined new center: 96.60% (was 96.10%)
+P2 pass 2: center P2 PRR 96.60%
+  P2 power (dBm)                 2:92.50  3:94.80  4:96.20  5:96.60*  6:96.70  7:96.80   -> 5  [knee rule]
+  extra neighbours listened      1:95.80  2:96.60*  3:96.70  4:96.60  5:96.60   -> 2  [knee rule]
+  slot-avoid distance (m)        40:96.60*  45:96.50  50:96.40  55:96.30  60:95.50  70:95.50   -> 40
+  converged after pass 2
+P2 FINAL: 96.10% (old setting) -> 96.60% (tuned) on tuning seeds
+  flags: --dataSlotUs=400 --slotGuardBandUs=30 --p2Copies=2 --p2SmartPick=true --numSlots=24 --numChannels=10 --enableP1Ssa=true --p1TxPower=7 --p1SlotUs=140 --p1PoolFrac=0.35 --p1SenseDecay=0.6 --p1ReselMin=30 --p1ReselMax=90 --p1ReselInitMin=5 --p1ReselInitMax=10 --p2TxPower=5 --p2ExtraRx=2 --p1AvoidDist=40
+

@@ -360,6 +360,15 @@ class LrWpanPhy : public SpectrumPhy
     void SetPreambleLockThreshold(double thresholdDb);
 
     /**
+     * Idealized capture (comparison only, real BLE chips cannot do it): while locked onto a
+     * packet, re-synchronize to a new packet that is at least `margin` dB stronger.
+     * \param enable true to enable capture
+     */
+    void SetCaptureEnabled(bool enable);
+    /** \param marginDb power difference needed to capture (default 6 dB) */
+    void SetCaptureMargin(double marginDb);
+
+    /**
      * Get the preamble / sync-word lock threshold in dB.
      * @return SINR lock threshold in dB
      */
@@ -795,6 +804,9 @@ class LrWpanPhy : public SpectrumPhy
      */
     TracedCallback<Ptr<const Packet>> m_phyRxDropTrace;
 
+    /** Fired when a stronger packet captures the receiver (new packet, aborted packet). */
+    TracedCallback<Ptr<const Packet>, Ptr<const Packet>> m_phyRxCaptureTrace;
+
     /**
      * The trace source fired when the phy layer changes the transceiver state.
      *
@@ -1037,6 +1049,8 @@ class LrWpanPhy : public SpectrumPhy
      * Preamble / sync-word lock SINR threshold in dB (BLE 5.4 LE 2M co-channel C/I).
      */
     double m_preambleLockThresholdDb;
+    bool m_enableCapture;     //!< idealized post-lock re-sync (off by default)
+    double m_captureMarginDb; //!< power margin for capture in dB
 };
 
 } // namespace lrwpan

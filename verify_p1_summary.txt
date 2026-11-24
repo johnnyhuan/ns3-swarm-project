@@ -25,6 +25,12 @@ P1 verification suite (SSA tuned: 150 us x 66 slots, +7 dBm; CSMA tuned: +4 dBm,
      UAV 0 -> UAV 1: expect always -> PASS  (received 98 / sent 98 / cycles 98)  [slot 5 TX ends at 136 us, slot 6 TX starts at 190 us]
      UAV 1 -> UAV 0: expect always -> PASS  (received 98 / sent 98 / cycles 98)  [radio is back in RX 40 us after its own beacon]
      cross-check violations: 0
+  T7 capture OFF: weak beacon locks first, strong one is lost  (positions 0,0,10;10,0,10;-30,0,10; P1 slots 0:30;1:5;2:5)
+     UAV 1 -> UAV 0: expect lost_only_if_weak_first -> PASS  (received 76 / sent 98 / cycles 98)  [no re-sync: S is lost exactly when W started first and locked; lost 22, of which W did NOT start first: 0]
+     cross-check violations: 0
+  T8 capture ON: strong beacon (14.3 dB stronger) always captures  (positions 0,0,10;10,0,10;-30,0,10; P1 slots 0:30;1:5;2:5)
+     UAV 1 -> UAV 0: expect always -> PASS  (received 98 / sent 98 / cycles 98)  [re-sync to a packet >= 6 dB stronger]
+     cross-check violations: 0
 
 2. INDEPENDENT CROSS-CHECK OF EVERY BEACON RECEPTION (100 UAVs, 3 s, seed 1)
   swarm_ssa_3s: PASS (0 violations)

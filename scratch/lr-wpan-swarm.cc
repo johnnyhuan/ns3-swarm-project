@@ -55,6 +55,8 @@ static uint32_t Crc32(const uint8_t* d, size_t n) {
     }
     return ~c;
 }
+bool g_p1Capture = false;      // idealized P1 capture (re-sync to a >= 6 dB stronger packet); real BLE cannot
+static uint64_t g_p1CaptureEvents = 0;
 bool g_p2SmartPick = true;    // 2 copies: first book the copy whose cell no other heard neighbour also claims
 int g_p2ExtraRx = 3;          // P2: also listen to this many extra neighbours (RSSI rank 6, 7, ...) in free slots
 static uint64_t g_p2RxSlotsTotal = 0, g_p2ScheduleCount = 0;
@@ -353,6 +355,8 @@ public:
         Ptr<LrWpanPhy> phy = m_device->GetPhy();
         phy->SetPreambleLockThreshold(g_preambleLockDb);
         phy->SetRxSensitivity(g_rxSensitivityDbm);
+        phy->SetCaptureMargin(g_preambleLockDb);
+        phy->TraceConnectWithoutContext("PhyRxCapture", MakeCallback(&SwarmSchedulerApp::NotifyPhyRxCapture, this));
         g_dronePhyState[m_id] = IEEE_802_15_4_PHY_TRX_OFF;
         g_droneReceivingUid[m_id] = 0;
         g_droneCurrentChannel[m_id] = BROADCAST_CHANNEL;
@@ -531,6 +535,10 @@ public:
         g_vTxOpen.erase(v);
     }
 
+    void NotifyPhyRxCapture(Ptr<const Packet> newP, Ptr<const Packet> oldP) {
+        g_p1CaptureEvents++;
+    }
+
     void NotifyPhyTxEnd(Ptr<const Packet> p) {
         uint64_t uid = p->GetUid();
         if (g_verifyLog) WriteVTx(uid, false);
@@ -703,6 +711,7 @@ private:
 
         // Phase 1 (Broadcast): Configurable range
         SwitchChannelAndPower(BROADCAST_CHANNEL, (int8_t)g_p1TxPower);
+        m_device->GetPhy()->SetCaptureEnabled(g_p1Capture);   // idealized capture only in P1
         // SSA transmits in its slot without listen-before-talk
         if (m_csma) {
             m_csma->SetSkipCca(g_enableP1Ssa);
@@ -973,6 +982,7 @@ private:
         // Phase 2: BLE-style scheduled TX, no CCA (legacy single-shot CCA only with --p2Cca=true)
         if (m_csma) {
             m_csma->SetSkipCca(!g_p2Cca);
+            m_device->GetPhy()->SetCaptureEnabled(false);      // P2 never uses capture
             m_csma->SetMacMinBE(0);
             m_csma->SetMacMaxCSMABackoffs(0);
         }
@@ -1798,7 +1808,8 @@ void PrintGroundTruthReport() {
     ss << "       🔬 PHASE 1 PHYSICAL & MAC GROUND TRUTH ANALYSIS (Top-K within 50m) 🔬           \n";
     ss << "========================================================================================\n";
     ss << "MAC Scheme                                        : " << (g_enableP1Ssa ? "SSA (Sensing-based Slotted Access, no CSMA)" : "Continuous Random Delay + CSMA-CA") << "\n";
-    ss << "Post-lock Re-sync (Capture)                       : REMOVED (BLE chips never re-sync after Access Address lock)\n";
+    ss << "Post-lock Re-sync (Capture)                       : " << (g_p1Capture ? "IDEALIZED CAPTURE ON in P1 (>= lock dB stronger packet re-syncs; not possible on BLE chips)" : "off (BLE chips never re-sync after Access Address lock)") << "\n";
+    ss << "P1 Capture Events                                 : " << g_p1CaptureEvents << "\n";
     ss << "Preamble Lock SINR Threshold                      : " << g_preambleLockDb << " dB\n";
     ss << "Rx Sensitivity / Noise Floor                      : " << g_rxSensitivityDbm << " dBm / " << (g_rxSensitivityDbm - g_preambleLockDb) << " dBm\n";
     ss << "P1 Clock Sync Error (per node, per cycle)         : +-" << g_p1SyncErrUs << " us\n";
@@ -2139,6 +2150,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("positions", "Test mode: fixed positions 'x,y,z;x,y,z;...' (sets numNodes, speed 0)", g_testPositions);
     cmd.AddValue("forceP1Slots", "Test mode: fixed SSA P1 slots 'id:slot;...' (no reselection)", g_forceP1Slots);
     cmd.AddValue("forceCells", "Test mode: forced P2 cells 'id:slot:ch[:slot2:ch2];...'", g_forceCells);
+    cmd.AddValue("p1Capture", "Idealized P1 capture: re-sync to a packet >= preambleLockDb stronger (default false; real BLE cannot)", g_p1Capture);
     cmd.AddValue("p2SmartPick", "Phase 2 (2 copies): first book the copy whose cell no other heard neighbour claims (default true)", g_p2SmartPick);
     cmd.AddValue("p2Copies", "Phase 2: state packet copies per cycle, 1 or 2 (default 2; falls back to 1 above 32 slots)", g_p2Copies);
     cmd.AddValue("p2ExtraRx", "Phase 2: listen to this many extra neighbours beyond the 5 strongest (default 3)", g_p2ExtraRx);

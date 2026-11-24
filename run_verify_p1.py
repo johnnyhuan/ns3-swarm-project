@@ -75,6 +75,14 @@ TESTS = [
     dict(name="T6 adjacent slots (5 and 6) do not overlap", pos="0,0,10;10,0,10", slots="0:5;1:6",
          expect=[(0, 1, "always", "slot 5 TX ends at 136 us, slot 6 TX starts at 190 us"),
                  (1, 0, "always", "radio is back in RX 40 us after its own beacon")]),
+    # Idealized capture (not possible on BLE chips; kept only as a comparison line). Strong S at 10 m
+    # and weak W at 30 m share slot 5; a +-30 us clock error lets either start first.
+    dict(name="T7 capture OFF: weak beacon locks first, strong one is lost", pos="0,0,10;10,0,10;-30,0,10",
+         slots="0:30;1:5;2:5", extra="--p1SyncErrUs=30",
+         expect=[(1, 0, "lost_only_if_weak_first", "no re-sync: S is lost exactly when W started first and locked")]),
+    dict(name="T8 capture ON: strong beacon (14.3 dB stronger) always captures", pos="0,0,10;10,0,10;-30,0,10",
+         slots="0:30;1:5;2:5", extra="--p1SyncErrUs=30 --p1Capture=true",
+         expect=[(1, 0, "always", "re-sync to a packet >= 6 dB stronger")]),
 ]
 
 b = subprocess.run(["./ns3", "build", "scratch/lr-wpan-swarm"], cwd=NS3_DIR,
@@ -97,7 +105,7 @@ def run(tag, flags):
 jobs = [("swarm_ssa_3s", f"--simTime=3 {SWARM} {COMMON} {SSA} {P2} --verifyLog=true"),
         ("swarm_csma_3s", f"--simTime=3 {SWARM} {COMMON} {CSMA} {P2} --verifyLog=true")]
 for i, t in enumerate(TESTS):
-    jobs.append((f"test{i + 1}", f"--simTime=2 {COMMON} {SSA} {P2} --verifyLog=true --positions={t['pos']} --forceP1Slots={t['slots']}"))
+    jobs.append((f"test{i + 1}", f"--simTime=2 {COMMON} {SSA} {P2} --verifyLog=true --positions={t['pos']} --forceP1Slots={t['slots']} {t.get('extra', '')}"))
 
 print(f"▶ {len(jobs)} runs, {a.jobs} in parallel ...", flush=True)
 done = {}
@@ -128,6 +136,12 @@ for i, t in enumerate(TESTS):
         n = len(epochs)
         if exp == "always":
             ok = len(sent[s]) >= 0.9 * n and sent[s] <= got[(s, r)]
+        elif exp == "lost_only_if_weak_first":
+            start = {(x["epoch"], x["sender"]): x["start"] for x in m.tx}
+            lost = sent[s] - got[(s, r)]
+            bad = [e for e in lost if not start.get((e, 2), 1e18) < start.get((e, s), -1)]
+            ok = len(lost) > 0 and not bad
+            why = why + f"; lost {len(lost)}, of which W did NOT start first: {len(bad)}"
         else:
             ok = len(got[(s, r)]) == 0 and len(sent[s]) >= 0.9 * n
         ok_t &= ok

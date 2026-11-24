@@ -222,14 +222,21 @@ LrWpanPhy::GetTypeId()
                           "signal (BLE 5.4 LE 2M co-channel C/I).",
                           DoubleValue(6.0),
                           MakeDoubleAccessor(&LrWpanPhy::m_preambleLockThresholdDb),
-                          MakeDoubleChecker<double>());
+                          MakeDoubleChecker<double>())
+            .AddTraceSource("PhyRxCapture",
+                            "Idealized capture: a stronger packet preempted the locked one "
+                            "(new packet, aborted packet).",
+                            MakeTraceSourceAccessor(&LrWpanPhy::m_phyRxCaptureTrace),
+                            "ns3::Packet::TwoAddressTracedCallback");
     return tid;
 }
 
 LrWpanPhy::LrWpanPhy()
     : m_edRequest(),
       m_setTRXState(),
-      m_preambleLockThresholdDb(6.0)
+      m_preambleLockThresholdDb(6.0),
+      m_enableCapture(false),
+      m_captureMarginDb(6.0)
 {
     m_trxState = IEEE_802_15_4_PHY_TRX_OFF;
     m_trxStatePending = IEEE_802_15_4_PHY_IDLE;
@@ -434,6 +441,34 @@ LrWpanPhy::StartRx(Ptr<SpectrumSignalParameters> spectrumRxParams)
         return;
     }
 
+    if (m_trxState == IEEE_802_15_4_PHY_BUSY_RX && m_enableCapture && m_currentRxPacket.first)
+    {
+        // Idealized capture (NOT possible on BLE chips, comparison only): a new packet at least
+        // m_captureMarginDb stronger than the locked one aborts it and the receiver re-syncs
+        // to the new preamble (which still has to reach the lock SINR at its end).
+        double pCurr = LrWpanSpectrumValueHelper::TotalAvgPower(m_currentRxPacket.first->psd,
+                                                                m_phyPIBAttributes.phyCurrentChannel);
+        double pNew = LrWpanSpectrumValueHelper::TotalAvgPower(lrWpanRxParams->psd,
+                                                               m_phyPIBAttributes.phyCurrentChannel);
+        if (pCurr > 0.0 && pNew > 0.0 && 10.0 * log10(pNew / pCurr) >= m_captureMarginDb)
+        {
+            Ptr<Packet> currPacket = m_currentRxPacket.first->packetBurst->GetPackets().front();
+            Ptr<Packet> newPacket = lrWpanRxParams->packetBurst->GetPackets().front();
+            m_phyRxCaptureTrace(newPacket, currPacket);
+            m_currentRxPacket.second = true;
+            m_phyRxDropTrace(currPacket);
+            m_currentRxPacket = std::make_pair(nullptr, true);
+            ChangeTrxState(IEEE_802_15_4_PHY_RX_ON);
+            m_preambleMinSinr[lrWpanRxParams] = std::numeric_limits<double>::infinity();
+            m_preambleLastUpdate = Simulator::Now();
+            Simulator::Schedule(lrWpanRxParams->preambleDuration,
+                                &LrWpanPhy::EndPreamble,
+                                this,
+                                lrWpanRxParams);
+            return;
+        }
+    }
+
     if (m_trxState == IEEE_802_15_4_PHY_BUSY_RX)
     {
         // Already locked onto a packet: like a real BLE receiver, never re-synchronize.
@@ -519,6 +554,45 @@ LrWpanPhy::EndPreamble(Ptr<LrWpanSpectrumSignalParameters> lrWpanRxParams)
             m_phyRxDropTrace(p);
             NS_LOG_INFO(this << " packet undecodable due to low SINR: " << 10 * log10(sinr)
                              << " dB");
+        }
+    }
+    else if (m_trxState == IEEE_802_15_4_PHY_BUSY_RX && m_enableCapture && m_currentRxPacket.first &&
+             m_currentRxPacket.first != lrWpanRxParams &&
+             10.0 * log10(LrWpanSpectrumValueHelper::TotalAvgPower(lrWpanRxParams->psd,
+                                                                   m_phyPIBAttributes.phyCurrentChannel) /
+                          std::max(1e-30,
+                                   LrWpanSpectrumValueHelper::TotalAvgPower(
+                                       m_currentRxPacket.first->psd,
+                                       m_phyPIBAttributes.phyCurrentChannel))) >= m_captureMarginDb)
+    {
+        // Idealized capture (comparison only): the other packet locked first, but this one is
+        // >= margin stronger and its whole preamble reached the lock SINR -> switch to it.
+        CheckInterference();
+        Ptr<SpectrumValue> interferenceAndNoise = m_signal->GetSignalPsd();
+        *interferenceAndNoise -= *lrWpanRxParams->psd;
+        *interferenceAndNoise += *m_noise;
+        double sinr = LrWpanSpectrumValueHelper::TotalAvgPower(lrWpanRxParams->psd,
+                                                               m_phyPIBAttributes.phyCurrentChannel) /
+                      LrWpanSpectrumValueHelper::TotalAvgPower(interferenceAndNoise,
+                                                               m_phyPIBAttributes.phyCurrentChannel);
+        sinr = std::min(sinr, preambleMinSinr);
+        if (10.0 * log10(sinr) > m_preambleLockThresholdDb)
+        {
+            Ptr<Packet> currPacket = m_currentRxPacket.first->packetBurst->GetPackets().front();
+            m_phyRxCaptureTrace(p, currPacket);
+            m_currentRxPacket.second = true;
+            m_phyRxDropTrace(currPacket);
+            m_currentRxPacket = std::make_pair(lrWpanRxParams, false);
+            m_phyRxBeginTrace(p);
+            m_rxLastUpdate = Simulator::Now();
+            m_rssi = static_cast<int8_t>(10 * log10(LrWpanSpectrumValueHelper::TotalAvgPower(
+                                                  m_signal->GetSignalPsd(),
+                                                  m_phyPIBAttributes.phyCurrentChannel)) +
+                                         30);
+        }
+        else
+        {
+            m_phyRxDropTrace(p);
         }
     }
     else if (m_trxState == IEEE_802_15_4_PHY_BUSY_RX)
@@ -2046,6 +2120,18 @@ LrWpanPhy::SetPostReceptionErrorModel(const Ptr<ErrorModel> em)
 {
     NS_LOG_FUNCTION(this << em);
     m_postReceptionErrorModel = em;
+}
+
+void
+LrWpanPhy::SetCaptureEnabled(bool enable)
+{
+    m_enableCapture = enable;
+}
+
+void
+LrWpanPhy::SetCaptureMargin(double marginDb)
+{
+    m_captureMarginDb = marginDb;
 }
 
 void

@@ -28,13 +28,14 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 
 COMMON = ("--simTime=10 --numNodes=100 --nodeSpeed=10.0 --spaceSize=200 --spaceZ=80 "
-          "--p1Duration=10 --preambleLockDb=6 --autoPush=false --rxSensitivityDbm=-94")
+          "--p1Duration=10 --preambleLockDb=6 --autoPush=false --rxSensitivityDbm=-94 --topK=7")
+TOPK = 7   # each UAV must receive its 7 nearest neighbours within 50 m
 
 # ---------------- final settings ----------------
 P2_FINAL = dict(dataSlotUs=400, slotGuardBandUs=30, numSlots=24, numChannels=10, p2ExtraRx=3, p2TxPower=5,
                 p1AvoidDist=50, p2Copies=2, p2SmartPick="true")
 SSA_FINAL = dict(enableP1Ssa="true", p1SlotUs=150, p1TxPower=7, p1PoolFrac=0.25, p1SenseDecay=0.6,
-                 p1ReselMin=30, p1ReselMax=90, p1ReselInitMin=2, p1ReselInitMax=5)
+                 p1ReselMin=20, p1ReselMax=60, p1ReselInitMin=-1, p1ReselInitMax=-1)
 CSMA_FINAL = dict(enableP1Ssa="false", p1TxPower=5, p1CcaThresholdDbm=-94, p1MaxBackoffs=1, p1MinBE=0,
                   p1RetryMinMs=0.1, p1RetryMaxMs=0.5, p1Copies=1)
 
@@ -69,12 +70,11 @@ EXPERIMENTS = {
             ("slot\n300 -> 150 us", dict(p1SlotUs=150)),
             ("RSSI memory\ndecay 0.6", dict(p1SenseDecay=0.6)),
             ("TX power\n+4 -> +7 dBm", dict(p1TxPower=7)),
-            ("reselection\n5-15 -> 30-90", dict(p1ReselMin=30, p1ReselMax=90)),
-            ("first pick\nreselect 2-5\n(= SSA final)", dict(p1ReselInitMin=2, p1ReselInitMax=5)),
+            ("reselection\n5-15 -> 20-60\n(= SSA final)", dict(p1ReselMin=20, p1ReselMax=60)),
         ])]),
     "buildup_p2": dict(
         steps=[(lbl, dict(p, **SSA_FINAL)) for lbl, p in chain(P2_OLD, [
-            ("old P2\n(750 us x 13, 6 ch,\n5 RX, 1 copy, +4)", {}),
+            ("old P2\n(750 us x 13, 6 ch,\nno extra RX, 1 copy, +4)", {}),
             ("slots\n400 us x 24", dict(dataSlotUs=400, slotGuardBandUs=30, numSlots=24)),
             ("listen to\n3 extra", dict(p2ExtraRx=3)),
             ("6 -> 10\nchannels", dict(numChannels=10)),
@@ -91,11 +91,13 @@ EXPERIMENTS = {
                for lo, hi in ((3, 9), (5, 15), (10, 30), (15, 45), (20, 60), (30, 90), (50, 150))]),
 }
 
-METRICS = ["P1", "P2", "AoI1_mean", "AoI1_p99", "AoI1_max", "AoI2_mean", "AoI2_p99", "AoI2_max"]
+METRICS = ["P1", "P2", "AoI1_mean", "AoI1_p99", "AoI1_max", "AoI2_mean", "AoI2_p99", "AoI2_max",
+           "AoI1_over100", "AoI1_over500", "AoI1_maxclose", "AoI2_over100", "AoI2_over500", "AoI2_maxclose"]
+BUILDUPS = ["buildup_csma", "buildup_ssa", "buildup_p2"]
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--exps", nargs="+", default=list(EXPERIMENTS), choices=list(EXPERIMENTS))
+    ap.add_argument("--exps", nargs="+", default=BUILDUPS, choices=list(EXPERIMENTS))
     ap.add_argument("--seeds", type=int, nargs="+", default=[1])
     ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 1))
     ap.add_argument("--no-push", action="store_true")
@@ -117,7 +119,7 @@ if __name__ == "__main__":
     def flags(params):
         return " ".join(f"--{k}={v}" for k, v in sorted(params.items()))
 
-    CSV_PATH = os.path.join(PROJECT_DIR, "results", "final_runs.csv")
+    CSV_PATH = os.path.join(PROJECT_DIR, "results", f"final_runs_top{TOPK}.csv")   # cache key = flags + seed
     os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
     cache = {}
     if os.path.exists(CSV_PATH):
@@ -141,9 +143,15 @@ if __name__ == "__main__":
         def aoi(t, k):
             m = re.search(rf"AoI {k} at cycle end \(mean / p99 / max\)\s*:\s*([\d.]+) / ([\d.]+) / ([\d.]+)", t)
             return [float(x) for x in m.groups()] if m else [float("nan")] * 3
+        def safety(t, k):
+            m = re.search(rf"AoI {k} safety \(>100 ms % / >500 ms % / max <=20 m\)\s*:\s*([\d.]+) / ([\d.]+) / ([\d.]+)", t)
+            return [float(x) for x in m.groups()] if m else [float("nan")] * 3
         a1, a2 = aoi(t2, "P1"), aoi(t2, "P2")
+        s1, s2 = safety(t2, "P1"), safety(t2, "P2")
         return dict(P1=prr(t1), P2=prr(t2), AoI1_mean=a1[0], AoI1_p99=a1[1], AoI1_max=a1[2],
-                    AoI2_mean=a2[0], AoI2_p99=a2[1], AoI2_max=a2[2])
+                    AoI2_mean=a2[0], AoI2_p99=a2[1], AoI2_max=a2[2],
+                    AoI1_over100=s1[0], AoI1_over500=s1[1], AoI1_maxclose=s1[2],
+                    AoI2_over100=s2[0], AoI2_over500=s2[1], AoI2_maxclose=s2[2])
 
     def run_one(job):
         fl, seed = job
@@ -208,7 +216,7 @@ if __name__ == "__main__":
         sys.exit(0)
     try:
         subprocess.run(["git", "pull", "--rebase", "--autostash", "origin", "main"], cwd=PROJECT_DIR, check=True)
-        subprocess.run(["git", "add", "-f", "results/final_runs.csv", "run_final.py"] + saved, cwd=PROJECT_DIR, check=True)
+        subprocess.run(["git", "add", "-f", os.path.relpath(CSV_PATH, PROJECT_DIR), "run_final.py"] + saved, cwd=PROJECT_DIR, check=True)
         subprocess.run(["git", "commit", "-m", f"data: final {' '.join(a.exps)} (seeds {a.seeds})"], cwd=PROJECT_DIR, check=True)
         subprocess.run(["git", "push", "origin", "HEAD:main"], cwd=PROJECT_DIR, check=True)
         print("✓ Results pushed to GitHub")

@@ -55,15 +55,19 @@ static uint32_t Crc32(const uint8_t* d, size_t n) {
     }
     return ~c;
 }
-// Age of Information, sampled once per cycle at the end of P2 for every true Top-5 (<= 50 m) link:
+// Age of Information, sampled once per cycle at the end of P2 for every true Top-K (<= 50 m) link:
 //   AoI = now - max(generation time of the newest packet received from that neighbour,
-//                   start of the cycle in which the neighbour (re)entered the Top-5)
+//                   start of the cycle in which the neighbour (re)entered the Top-K)
 // generation time = the packet's TX start. Separate for P1 beacons and P2 state packets.
 struct AoiLinkState { uint32_t lastEpoch = 0; double entryMs = 0.0; };
 static std::map<std::pair<uint16_t, uint16_t>, AoiLinkState> g_aoiLink;
 static std::map<std::pair<uint16_t, uint16_t>, double> g_aoiLastP1Gen, g_aoiLastP2Gen;
 static std::map<uint32_t, double> g_cycleStartMs;
 static std::vector<double> g_aoiP1Samples, g_aoiP2Samples;
+// Safety view: how often information is stale, and the worst age for close neighbours (<= 20 m)
+static uint64_t g_aoiP1Over100 = 0, g_aoiP1Over500 = 0, g_aoiP2Over100 = 0, g_aoiP2Over500 = 0;
+static double g_aoiP1MaxClose = 0.0, g_aoiP2MaxClose = 0.0;
+const double AOI_CLOSE_M = 20.0;
 bool g_p1Capture = false;      // idealized P1 capture (re-sync to a >= 6 dB stronger packet); real BLE cannot
 static uint64_t g_p1CaptureEvents = 0;
 bool g_p2SmartPick = true;    // 2 copies: first book the copy whose cell no other heard neighbour also claims
@@ -130,7 +134,7 @@ const uint8_t BROADCAST_CHANNEL = 11;
 // --- 目標條件設定 ---
 const double M_RADIUS_METERS = 50.0;    // 評估指標用的實際距離 (Ground Truth)
 // (Old threshold removed)
-const int K_CLOSEST = 5;                 // 從鄰居中挑選最近的 K 個
+int K_CLOSEST = 7;                       // Top-K: the K nearest neighbours within 50 m are the targets (--topK)
 
 // 全域統計
 static int g_totalDataPacketsReceived = 0;
@@ -1741,7 +1745,7 @@ private:
                 }
 
                 {
-                    // End-of-cycle AoI sample for this Top-5 link (P1 and P2)
+                    // End-of-cycle AoI sample for this Top-K link (P1 and P2)
                     std::pair<uint16_t, uint16_t> key{(uint16_t)r, sender};
                     AoiLinkState& st = g_aoiLink[key];
                     if (st.lastEpoch + 1 != epoch) {
@@ -1754,8 +1758,17 @@ private:
                     auto g2 = g_aoiLastP2Gen.find(key);
                     double ref1 = std::max(st.entryMs, g1 != g_aoiLastP1Gen.end() ? g1->second : -1e18);
                     double ref2 = std::max(st.entryMs, g2 != g_aoiLastP2Gen.end() ? g2->second : -1e18);
-                    g_aoiP1Samples.push_back(tNow - ref1);
-                    g_aoiP2Samples.push_back(tNow - ref2);
+                    double a1 = tNow - ref1, a2 = tNow - ref2;
+                    g_aoiP1Samples.push_back(a1);
+                    g_aoiP2Samples.push_back(a2);
+                    if (a1 > 100.0) g_aoiP1Over100++;
+                    if (a1 > 500.0) g_aoiP1Over500++;
+                    if (a2 > 100.0) g_aoiP2Over100++;
+                    if (a2 > 500.0) g_aoiP2Over500++;
+                    if (dist <= AOI_CLOSE_M) {
+                        g_aoiP1MaxClose = std::max(g_aoiP1MaxClose, a1);
+                        g_aoiP2MaxClose = std::max(g_aoiP2MaxClose, a2);
+                    }
                 }
                 auto genIt = g_lastBeaconRxGenTime.find({(uint16_t)r, sender});
                 if (genIt != g_lastBeaconRxGenTime.end()) {
@@ -2038,6 +2051,16 @@ void PrintPhase2GroundTruthReport() {
     ss << "Slot Guard Band (RX Turnaround)                   : " << g_slotGuardBandUs << " us\n";
     ss << "AoI P1 at cycle end (mean / p99 / max)            : " << AoiLine(g_aoiP1Samples) << "\n";
     ss << "AoI P2 at cycle end (mean / p99 / max)            : " << AoiLine(g_aoiP2Samples) << "\n";
+    {
+        double n1 = std::max<size_t>(1, g_aoiP1Samples.size()), n2 = std::max<size_t>(1, g_aoiP2Samples.size());
+        ss << std::fixed << std::setprecision(3)
+           << "AoI P1 safety (>100 ms % / >500 ms % / max <=20 m) : " << 100.0 * g_aoiP1Over100 / n1 << " / "
+           << 100.0 * g_aoiP1Over500 / n1 << " / " << std::setprecision(2) << g_aoiP1MaxClose << " ms\n"
+           << std::setprecision(3)
+           << "AoI P2 safety (>100 ms % / >500 ms % / max <=20 m) : " << 100.0 * g_aoiP2Over100 / n2 << " / "
+           << 100.0 * g_aoiP2Over500 / n2 << " / " << std::setprecision(2) << g_aoiP2MaxClose << " ms\n";
+        ss << "Top-K target neighbours (within 50 m)             : " << K_CLOSEST << "\n";
+    }
     ss << "P2 Payload Check (valid / bad / stale cycle)      : " << g_p2PayloadOk << " / " << g_p2PayloadBad << " / " << g_p2PayloadStale << "\n";
     ss << "P2 Access                                         : scheduled broadcast TDMA, " << (g_p2Cca ? "CCA before TX" : "no CCA (BLE)") << ", TX power " << g_p2TxPower << " dBm, " << g_p2Copies << " cop" << (g_p2Copies > 1 ? "ies" : "y") << " per cycle\n";
     ss << "P2 RX Slots per Cycle (avg, 5 + extra " << g_p2ExtraRx << ")      : " << std::fixed << std::setprecision(2) << (g_p2ScheduleCount ? (double)g_p2RxSlotsTotal / g_p2ScheduleCount : 0.0) << "\n";
@@ -2205,6 +2228,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("positions", "Test mode: fixed positions 'x,y,z;x,y,z;...' (sets numNodes, speed 0)", g_testPositions);
     cmd.AddValue("forceP1Slots", "Test mode: fixed SSA P1 slots 'id:slot;...' (no reselection)", g_forceP1Slots);
     cmd.AddValue("forceCells", "Test mode: forced P2 cells 'id:slot:ch[:slot2:ch2];...'", g_forceCells);
+    cmd.AddValue("topK", "Number of nearest neighbours within 50 m that each UAV must receive (default 7)", K_CLOSEST);
     cmd.AddValue("p1Capture", "Idealized P1 capture: re-sync to a packet >= preambleLockDb stronger (default false; real BLE cannot)", g_p1Capture);
     cmd.AddValue("p2SmartPick", "Phase 2 (2 copies): first book the copy whose cell no other heard neighbour claims (default true)", g_p2SmartPick);
     cmd.AddValue("p2Copies", "Phase 2: state packet copies per cycle, 1 or 2 (default 2; falls back to 1 above 32 slots)", g_p2Copies);

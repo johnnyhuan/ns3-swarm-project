@@ -32,10 +32,18 @@ TITLES = {
     "buildup_ssa": "P1 SSA: from the first version to final",
     "buildup_p2": "P2: from the old design to final (P1 = SSA final)",
 }
-PANELS = [("P1", "P1 PRR (%)", "%"), ("AoI1_mean", "P1 mean AoI (ms)", "ms"), ("AoI1_max", "P1 max AoI (ms)", "ms"),
-          ("P2", "P2 PRR (%)", "%"), ("AoI2_mean", "P2 mean AoI (ms)", "ms"), ("AoI2_max", "P2 max AoI (ms)", "ms")]
+PANELS = [("P1", "P1 PRR (%)", "%"), ("AoI1_mean", "P1 mean AoI (ms)", "ms"), ("AoI1_max", "P1 max & p99 AoI (ms)", "ms"),
+          ("P2", "P2 PRR (%)", "%"), ("AoI2_mean", "P2 mean AoI (ms)", "ms"), ("AoI2_max", "P2 max & p99 AoI (ms)", "ms")]
+
+
+def tint(hex_color, amount=0.55):
+    """Lighter step of the same hue (blend toward the surface)."""
+    h = hex_color.lstrip("#")
+    c = [int(h[i:i + 2], 16) for i in (0, 2, 4)]
+    sfc = [int(SURFACE[1:][i:i + 2], 16) for i in (0, 2, 4)]
+    return "#" + "".join(f"{round(v + (sv - v) * amount):02x}" for v, sv in zip(c, sfc))
 NOTE = ("100 UAVs, 200 x 200 x 80 m, 10 m/s, 10 s, seed 1. nRF54L15 DK (QFN48): TX <= +7 dBm, BLE 2M sensitivity -94 dBm. "
-        "PRR = share of each UAV's 5 nearest neighbours (<= 50 m) really received per cycle. "
+        "PRR = share of each UAV's 7 nearest neighbours (<= 50 m) really received per cycle. "
         "AoI = age of the newest packet held from each of those neighbours, sampled at the end of every cycle.")
 
 
@@ -65,7 +73,16 @@ for exp, title in TITLES.items():
     for ax, (key, name, unit) in zip(axes.flat, PANELS):
         color = BLUE if key.startswith(("P1", "AoI1")) else AQUA
         vals = [float(r[f"{key}_mean"]) for r in steps]
-        ax.bar(x, vals, width=0.62, color=color, edgecolor=SURFACE, linewidth=2)
+        is_max = key.endswith("_max")
+        ax.bar(x, vals, width=0.62, color=tint(color) if is_max else color, edgecolor=SURFACE, linewidth=2,
+               label="max" if is_max else None)
+        if is_max:
+            p99 = [float(r[f"{key.replace('_max', '_p99')}_mean"]) for r in steps]
+            ax.bar(x, p99, width=0.36, color=color, edgecolor=SURFACE, linewidth=2, label="p99")
+            for xi, v in zip(x, p99):
+                ax.annotate(fmt(v, unit), (xi, v), xytext=(0, 3), textcoords="offset points",
+                            ha="center", va="bottom", fontsize=9, color=INK)
+            ax.legend(loc="lower right", bbox_to_anchor=(1.0, 1.0), ncol=2, fontsize=9, borderaxespad=0.2)
         top = max(vals + [float(r[f"{key}_mean"]) for r in refs])
         for xi, v in zip(x, vals):
             ax.annotate(fmt(v, unit), (xi, v), xytext=(0, 3), textcoords="offset points",
@@ -73,7 +90,10 @@ for exp, title in TITLES.items():
         for r in refs:
             rv = float(r[f"{key}_mean"])
             ax.axhline(rv, color=INK2, ls="--", lw=1.4, label=f"{r['label']} (not possible on BLE chips)")
-            ax.annotate(fmt(rv, unit), (1.0, rv), xycoords=("axes fraction", "data"), xytext=(2, 0),
+            txt = fmt(rv, unit)
+            if is_max:
+                txt += f"\n(p99 {fmt(float(r[key.replace('_max', '_p99') + '_mean']), unit)})"
+            ax.annotate(txt, (1.0, rv), xycoords=("axes fraction", "data"), xytext=(2, 0),
                         textcoords="offset points", ha="left", va="center", fontsize=9, color=INK2)
         if unit == "%":
             lo = min(vals + [float(r[f"{key}_mean"]) for r in refs])

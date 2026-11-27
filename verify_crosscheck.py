@@ -62,7 +62,8 @@ def load(run_dir):
 
 
 class Model:
-    def __init__(self, run_dir, p2power, sens=-94.0, lock=6.0):
+    def __init__(self, run_dir, p2power, sens=-94.0, lock=6.0, idle_rx=False):
+        self.idle_rx = idle_rx   # False (default): the radio is off in P2 slots with nothing scheduled
         self.pos, self.tx, self.sched, self.rx, self.links = load(run_dir)
         self.p, self.lock, self.sens = p2power, lock, sens
         self.noise_mw = mw(sens - lock)
@@ -73,8 +74,11 @@ class Model:
             self.by_sender[(t["epoch"], t["sender"])].append(t)
 
     def radio_channel(self, epoch, node, slot):
-        """Channel the node's radio is on in `slot`: an IDLE slot keeps the last channel used."""
+        """Channel the node's radio is on in `slot` (None = radio off). With idle listening an IDLE
+        slot keeps the last channel used; without it the radio is off in IDLE slots."""
         sch = self.sched.get((epoch, node), {})
+        if not self.idle_rx:
+            return sch[slot][1] if slot in sch else None
         for s in range(slot, -1, -1):
             if s in sch:
                 return sch[s][1]

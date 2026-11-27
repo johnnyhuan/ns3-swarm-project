@@ -59,15 +59,21 @@ static uint32_t Crc32(const uint8_t* d, size_t n) {
 //   AoI = now - max(generation time of the newest packet received from that neighbour,
 //                   start of the cycle in which the neighbour (re)entered the Top-K)
 // generation time = the packet's TX start. Separate for P1 beacons and P2 state packets.
-struct AoiLinkState { uint32_t lastEpoch = 0; double entryMs = 0.0; };
+struct AoiLinkState { uint32_t lastEpoch = 0; double entryMs = 0.0; double lastEvalMs = 0.0; };
 static std::map<std::pair<uint16_t, uint16_t>, AoiLinkState> g_aoiLink;
 static std::map<std::pair<uint16_t, uint16_t>, double> g_aoiLastP1Gen, g_aoiLastP2Gen;
+// receptions since the last evaluation: (reception time, generation time), per (receiver, sender)
+static std::map<std::pair<uint16_t, uint16_t>, std::vector<std::pair<double, double>>> g_aoiPendP1, g_aoiPendP2;
+// time-average AoI = integral of the age sawtooth / observed time; peak AoI = age just before each update
+static double g_aoiArea[2] = {0, 0}, g_aoiTime[2] = {0, 0}, g_aoiOver100[2] = {0, 0}, g_aoiOver500[2] = {0, 0};
+static double g_aoiMaxOpen[2] = {0, 0};   // longest age still open at an evaluation (outage not ended yet)
 static std::map<uint32_t, double> g_cycleStartMs;
 static std::vector<double> g_aoiP1Samples, g_aoiP2Samples;
 // Safety view: how often information is stale, and the worst age for close neighbours (<= 20 m)
 static uint64_t g_aoiP1Over100 = 0, g_aoiP1Over500 = 0, g_aoiP2Over100 = 0, g_aoiP2Over500 = 0;
 static double g_aoiP1MaxClose = 0.0, g_aoiP2MaxClose = 0.0;
 const double AOI_CLOSE_M = 20.0;
+bool g_p2IdleRx = false;   // P2: keep the receiver on in slots with nothing scheduled (default off = radio off)
 bool g_p1Capture = false;      // idealized P1 capture (re-sync to a >= 6 dB stronger packet); real BLE cannot
 static uint64_t g_p1CaptureEvents = 0;
 bool g_p2SmartPick = true;    // 2 copies: first book the copy whose cell no other heard neighbour also claims
@@ -104,7 +110,7 @@ double g_p1SenseDecay = 0.8;     // SSA RSSI sensing: per-cycle decay of slot en
 double g_p1SlotUs = 300.0;       // Phase 1 SSA slot duration in us (default 300 us -> 33 slots in 10ms; slot start -> TX end = turnaround 40 + BLE air time 96 = 136 us, no CCA in SSA)
 // SSA slot grid starts after the radio is back in RX on the broadcast channel:
 // the channel switch at cycle start turns the radio off, RX_ON takes 40 us.
-const double P1_SLOT_OFFSET_US = 40.0;
+const double P1_SLOT_OFFSET_US = 150.0;  // P1 slot grid start: a P2 TX in the last P2 slot ends 40 us before the cycle, then T_IFS 150 us -> beacon request at >= 110 us (65 slots fit in 10 ms)
 // Worst-case time a P1 CSMA attempt can take (all backoffs at their max + CCAs + turnaround
 // + air time). Every attempt is started early enough to finish inside Phase 1, so no CSMA
 // is still running when Phase 2 switches channel.
@@ -1175,6 +1181,9 @@ private:
             SendPacket(DATA_PACKET_SIZE, p, 2); // msduHandle = 2 (Data packet)
         } else if (s.action == ScheduleSlot::RX) {
             SwitchChannelAndPower(s.channel, g_p2TxPower);
+        } else if (!g_p2IdleRx) {
+            // nothing scheduled: radio off (no unplanned receptions, no idle-listening energy)
+            m_device->GetPhy()->PlmeSetTRXStateRequest(IEEE_802_15_4_PHY_TRX_OFF);
         }
     }
 
@@ -1221,7 +1230,15 @@ private:
 
         // 2. Command UAV transceiver to switch to RX_ON!
         // Leaves guardUs (50us) for PLL turnaround (40us) to settle before next slot starts.
-        m_device->GetPhy()->PlmeSetTRXStateRequest(IEEE_802_15_4_PHY_RX_ON);
+        // Without idle listening the radio goes off instead when the next slot has nothing scheduled.
+        // After the last P2 slot it stays in RX: a P1 beacon in slot 0 has no time to power the radio up
+        // and then turn it around to TX (it would be cut at its slot end); nobody transmits in that gap.
+        bool nextIdle = (slotIndex + 1 < g_numDataSlots) && m_schedule[slotIndex + 1].action == ScheduleSlot::IDLE;
+        if (!g_p2IdleRx && nextIdle) {
+            m_device->GetPhy()->PlmeSetTRXStateRequest(IEEE_802_15_4_PHY_TRX_OFF);
+        } else {
+            m_device->GetPhy()->PlmeSetTRXStateRequest(IEEE_802_15_4_PHY_RX_ON);
+        }
     }
 
     void DataConfirm(McpsDataConfirmParams params) {
@@ -1321,8 +1338,7 @@ private:
             {
                 auto mi = g_p1PacketsMeta.find(p->GetUid());
                 if (mi != g_p1PacketsMeta.end()) {
-                    double& g = g_aoiLastP1Gen[{(uint16_t)myId, senderId}];
-                    g = std::max(g, mi->second.txStartTime);
+                    g_aoiPendP1[{(uint16_t)myId, senderId}].push_back({Simulator::Now().GetSeconds() * 1000.0, mi->second.txStartTime});
                 }
             }
             g_p2DiscoveredInP1[m_epoch][myId].insert(senderId);
@@ -1377,8 +1393,7 @@ private:
             {
                 auto mi = g_p2PacketsMeta.find(p->GetUid());
                 if (mi != g_p2PacketsMeta.end()) {
-                    double& g = g_aoiLastP2Gen[{(uint16_t)myId, srcId}];
-                    g = std::max(g, mi->second.txStartTime);
+                    g_aoiPendP2[{(uint16_t)myId, srcId}].push_back({Simulator::Now().GetSeconds() * 1000.0, mi->second.txStartTime});
                 }
             }
             
@@ -1748,26 +1763,56 @@ private:
                     // End-of-cycle AoI sample for this Top-K link (P1 and P2)
                     std::pair<uint16_t, uint16_t> key{(uint16_t)r, sender};
                     AoiLinkState& st = g_aoiLink[key];
-                    if (st.lastEpoch + 1 != epoch) {
+                    double tNow = Simulator::Now().GetSeconds() * 1000.0;
+                    double from;
+                    if (st.lastEpoch + 1 != epoch) {      // (re)entered the Top-K this cycle
                         auto cs = g_cycleStartMs.find(epoch);
-                        st.entryMs = (cs != g_cycleStartMs.end()) ? cs->second : nowMs;
+                        st.entryMs = (cs != g_cycleStartMs.end()) ? cs->second : tNow;
+                        from = st.entryMs;
+                    } else {
+                        from = st.lastEvalMs;              // contiguous with the previous evaluation
                     }
                     st.lastEpoch = epoch;
-                    double tNow = Simulator::Now().GetSeconds() * 1000.0;
-                    auto g1 = g_aoiLastP1Gen.find(key);
-                    auto g2 = g_aoiLastP2Gen.find(key);
-                    double ref1 = std::max(st.entryMs, g1 != g_aoiLastP1Gen.end() ? g1->second : -1e18);
-                    double ref2 = std::max(st.entryMs, g2 != g_aoiLastP2Gen.end() ? g2->second : -1e18);
-                    double a1 = tNow - ref1, a2 = tNow - ref2;
-                    g_aoiP1Samples.push_back(a1);
-                    g_aoiP2Samples.push_back(a2);
-                    if (a1 > 100.0) g_aoiP1Over100++;
-                    if (a1 > 500.0) g_aoiP1Over500++;
-                    if (a2 > 100.0) g_aoiP2Over100++;
-                    if (a2 > 500.0) g_aoiP2Over500++;
-                    if (dist <= AOI_CLOSE_M) {
-                        g_aoiP1MaxClose = std::max(g_aoiP1MaxClose, a1);
-                        g_aoiP2MaxClose = std::max(g_aoiP2MaxClose, a2);
+                    st.lastEvalMs = tNow;
+                    for (int ph = 0; ph < 2; ph++) {
+                        auto& lastMap = ph == 0 ? g_aoiLastP1Gen : g_aoiLastP2Gen;
+                        auto& pend = ph == 0 ? g_aoiPendP1 : g_aoiPendP2;
+                        auto& peaks = ph == 0 ? g_aoiP1Samples : g_aoiP2Samples;
+                        auto lg = lastMap.find(key);
+                        double cur = std::max(st.entryMs, lg != lastMap.end() ? lg->second : -1e18);
+                        double t = from;
+                        std::vector<std::pair<double, double>> ev;
+                        auto pe = pend.find(key);
+                        if (pe != pend.end()) ev = pe->second;
+                        std::sort(ev.begin(), ev.end());
+                        // age(t) = t - cur grows with slope 1; integrate segment [t0, t1]
+                        auto seg = [&](double t0, double t1) {
+                            if (t1 <= t0) return;
+                            double a0 = t0 - cur, a1 = t1 - cur;
+                            g_aoiArea[ph] += 0.5 * (a0 + a1) * (t1 - t0);
+                            g_aoiTime[ph] += t1 - t0;
+                            g_aoiOver100[ph] += std::max(0.0, a1 - std::max(a0, 100.0));
+                            g_aoiOver500[ph] += std::max(0.0, a1 - std::max(a0, 500.0));
+                        };
+                        for (auto& e : ev) {
+                            if (e.first <= t || e.second <= cur) continue;   // older copy, or before the window
+                            seg(t, e.first);
+                            double peak = e.first - cur;                  // age just before the update
+                            peaks.push_back(peak);
+                            if (dist <= AOI_CLOSE_M) {
+                                double& mc = ph == 0 ? g_aoiP1MaxClose : g_aoiP2MaxClose;
+                                mc = std::max(mc, peak);
+                            }
+                            cur = e.second;
+                            t = e.first;
+                        }
+                        seg(t, tNow);
+                        double open = tNow - cur;                        // outage still running
+                        g_aoiMaxOpen[ph] = std::max(g_aoiMaxOpen[ph], open);
+                        if (dist <= AOI_CLOSE_M) {
+                            double& mc = ph == 0 ? g_aoiP1MaxClose : g_aoiP2MaxClose;
+                            mc = std::max(mc, open);
+                        }
                     }
                 }
                 auto genIt = g_lastBeaconRxGenTime.find({(uint16_t)r, sender});
@@ -1804,6 +1849,16 @@ private:
         memset(g_p2RxDropEvent, 0, sizeof(g_p2RxDropEvent));
         memset(g_p2RxStateAtTxStart, 0, sizeof(g_p2RxStateAtTxStart));
         memset(g_p2RxChannelAtTxStart, 0, sizeof(g_p2RxChannelAtTxStart));
+        // AoI: fold this cycle's receptions into the newest-generation state of every link
+        for (int ph = 0; ph < 2; ph++) {
+            auto& lastMap = ph == 0 ? g_aoiLastP1Gen : g_aoiLastP2Gen;
+            auto& pend = ph == 0 ? g_aoiPendP1 : g_aoiPendP2;
+            for (auto& kv : pend) {
+                double& g = lastMap.emplace(kv.first, -1e18).first->second;
+                for (auto& e : kv.second) g = std::max(g, e.second);
+            }
+            pend.clear();
+        }
     }
 
     void PrintMetrics() {
@@ -1856,14 +1911,18 @@ private:
     }
 };
 
-static std::string AoiLine(std::vector<double> v) {
+// time-average AoI / p99 of peak AoI / max of peak AoI (including outages still open at an evaluation)
+static std::string AoiLine(int ph) {
+    std::vector<double> v = ph == 0 ? g_aoiP1Samples : g_aoiP2Samples;
     std::stringstream o;
-    if (v.empty()) { o << "n/a"; return o.str(); }
-    std::sort(v.begin(), v.end());
-    double sum = 0.0;
-    for (double x : v) sum += x;
-    double p99 = v[std::min(v.size() - 1, (size_t)(0.99 * v.size()))];
-    o << std::fixed << std::setprecision(2) << sum / v.size() << " / " << p99 << " / " << v.back() << " ms";
+    double mean = g_aoiTime[ph] > 0 ? g_aoiArea[ph] / g_aoiTime[ph] : 0.0;
+    double p99 = 0.0, mx = g_aoiMaxOpen[ph];
+    if (!v.empty()) {
+        std::sort(v.begin(), v.end());
+        p99 = v[std::min(v.size() - 1, (size_t)(0.99 * v.size()))];
+        mx = std::max(mx, v.back());
+    }
+    o << std::fixed << std::setprecision(2) << mean << " / " << p99 << " / " << mx << " ms";
     return o.str();
 }
 
@@ -1876,7 +1935,7 @@ void PrintGroundTruthReport() {
     ss << "Post-lock Re-sync (Capture)                       : " << (g_p1Capture ? "IDEALIZED CAPTURE ON in P1 (>= lock dB stronger packet re-syncs; not possible on BLE chips)" : "off (BLE chips never re-sync after Access Address lock)") << "\n";
     ss << "P1 Capture Events                                 : " << g_p1CaptureEvents << "\n";
     ss << "Preamble Lock SINR Threshold                      : " << g_preambleLockDb << " dB\n";
-    ss << "AoI P1 at cycle end (mean / p99 / max)            : " << AoiLine(g_aoiP1Samples) << "\n";
+    ss << "AoI P1 (time-avg / peak p99 / peak max)           : " << AoiLine(0) << "\n";
     ss << "Rx Sensitivity / Noise Floor                      : " << g_rxSensitivityDbm << " dBm / " << (g_rxSensitivityDbm - g_preambleLockDb) << " dBm\n";
     ss << "P1 Clock Sync Error (per node, per cycle)         : +-" << g_p1SyncErrUs << " us\n";
     if (g_enableP1Ssa) {
@@ -2049,16 +2108,18 @@ void PrintPhase2GroundTruthReport() {
     ss << "========================================================================================\n";
     ss << "Phase 2 Configuration                             : " << g_numDataSlots << " slots x " << g_dataSlotUs << " us (" << (g_numDataSlots * g_dataSlotUs / 1000.0) << " ms), " << g_numDataChannels << " channels\n";
     ss << "Slot Guard Band (RX Turnaround)                   : " << g_slotGuardBandUs << " us\n";
-    ss << "AoI P1 at cycle end (mean / p99 / max)            : " << AoiLine(g_aoiP1Samples) << "\n";
-    ss << "AoI P2 at cycle end (mean / p99 / max)            : " << AoiLine(g_aoiP2Samples) << "\n";
+    ss << "AoI P1 (time-avg / peak p99 / peak max)           : " << AoiLine(0) << "\n";
+    ss << "AoI P2 (time-avg / peak p99 / peak max)           : " << AoiLine(1) << "\n";
+    ss << "P2 idle-slot listening                            : " << (g_p2IdleRx ? "ON (radio stays in RX when nothing is scheduled)" : "off (radio off in unscheduled slots)") << "\n";
     {
-        double n1 = std::max<size_t>(1, g_aoiP1Samples.size()), n2 = std::max<size_t>(1, g_aoiP2Samples.size());
+        // share of observed link-time with AoI above 100 / 500 ms, worst age of a neighbour <= 20 m
+        double n1 = std::max(1e-9, g_aoiTime[0]), n2 = std::max(1e-9, g_aoiTime[1]);
         ss << std::fixed << std::setprecision(3)
-           << "AoI P1 safety (>100 ms % / >500 ms % / max <=20 m) : " << 100.0 * g_aoiP1Over100 / n1 << " / "
-           << 100.0 * g_aoiP1Over500 / n1 << " / " << std::setprecision(2) << g_aoiP1MaxClose << " ms\n"
+           << "AoI P1 safety (>100 ms % / >500 ms % / max <=20 m) : " << 100.0 * g_aoiOver100[0] / n1 << " / "
+           << 100.0 * g_aoiOver500[0] / n1 << " / " << std::setprecision(2) << g_aoiP1MaxClose << " ms\n"
            << std::setprecision(3)
-           << "AoI P2 safety (>100 ms % / >500 ms % / max <=20 m) : " << 100.0 * g_aoiP2Over100 / n2 << " / "
-           << 100.0 * g_aoiP2Over500 / n2 << " / " << std::setprecision(2) << g_aoiP2MaxClose << " ms\n";
+           << "AoI P2 safety (>100 ms % / >500 ms % / max <=20 m) : " << 100.0 * g_aoiOver100[1] / n2 << " / "
+           << 100.0 * g_aoiOver500[1] / n2 << " / " << std::setprecision(2) << g_aoiP2MaxClose << " ms\n";
         ss << "Top-K target neighbours (within 50 m)             : " << K_CLOSEST << "\n";
     }
     ss << "P2 Payload Check (valid / bad / stale cycle)      : " << g_p2PayloadOk << " / " << g_p2PayloadBad << " / " << g_p2PayloadStale << "\n";
@@ -2228,6 +2289,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("positions", "Test mode: fixed positions 'x,y,z;x,y,z;...' (sets numNodes, speed 0)", g_testPositions);
     cmd.AddValue("forceP1Slots", "Test mode: fixed SSA P1 slots 'id:slot;...' (no reselection)", g_forceP1Slots);
     cmd.AddValue("forceCells", "Test mode: forced P2 cells 'id:slot:ch[:slot2:ch2];...'", g_forceCells);
+    cmd.AddValue("p2IdleRx", "P2: keep listening in slots with nothing scheduled (default false = radio off)", g_p2IdleRx);
     cmd.AddValue("p1p2GapUs", "Gap between the end of P1 and the start of P2 in us (default 200)", GAP_US);
     cmd.AddValue("topK", "Number of nearest neighbours within 50 m that each UAV must receive (default 7)", K_CLOSEST);
     cmd.AddValue("p1Capture", "Idealized P1 capture: re-sync to a packet >= preambleLockDb stronger (default false; real BLE cannot)", g_p1Capture);

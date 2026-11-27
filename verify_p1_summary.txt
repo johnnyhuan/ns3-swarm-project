@@ -34,20 +34,17 @@ P1 verification suite (SSA tuned: 150 us x 66 slots, +7 dBm; CSMA tuned: +4 dBm,
 
 2. INDEPENDENT CROSS-CHECK OF EVERY BEACON RECEPTION (100 UAVs, 3 s, seed 1)
   swarm_ssa_3s: PASS (0 violations)
-    beacon receptions 232056, Top-5 links 102870 (delivered 94666)
+    beacon receptions 234657, Top-5 links 102870 (delivered 95698)
       V1 no matching TX (wrong sender/cycle): 0
       V2 TX was cut off                     : 0
       V4 receiver was transmitting          : 0
       V5 SINR below lock                    : 0
       V6 delivered without reception        : 0
       V7 reception not counted              : 0
-      borderline receptions (lock +-0.5 dB)     : 19414
+      borderline receptions (lock +-0.5 dB)     : 19205
       lost: an earlier beacon locked first (no re-sync)      : 0
       lost: receiver in RX/TX turnaround (own beacon <=40 us) : 0
-      unexplained losses                                     : 8
-          e.g. {'epoch': 108, 'rx': 65, 'tx': 58, 'dist': 41.206, 'delivered': 0, 'sinr': 7.09, 'start': 2118830.0}
-          e.g. {'epoch': 121, 'rx': 62, 'tx': 98, 'dist': 40.368, 'delivered': 0, 'sinr': 12.14, 'start': 2376230.0}
-          e.g. {'epoch': 140, 'rx': 10, 'tx': 98, 'dist': 42.845, 'delivered': 0, 'sinr': 8.85, 'start': 2752430.0}
+      unexplained losses                                     : 0
   swarm_csma_3s: PASS (0 violations)
     beacon receptions 113377, Top-5 links 102870 (delivered 78816)
       V1 no matching TX (wrong sender/cycle): 0

@@ -48,7 +48,10 @@ with ThreadPoolExecutor(max_workers=a.parallel) as ex:
     for n, rc, tail in ex.map(one, sorted(a.nodes, reverse=True)):
         print(f"{n:4d} UAVs: {'ok' if rc == 0 else 'FAILED'}  {' | '.join(tail)}", flush=True)
 
-subprocess.run([sys.executable, "plot_density_final.py", "--simtime", f"{a.simtime:g}"], cwd=HERE)
+# plot (the ns-3 venv python may lack matplotlib: fall back to the system python)
+for py in (sys.executable, "/usr/bin/python3"):
+    if subprocess.run([py, "plot_density_final.py", "--simtime", f"{a.simtime:g}"], cwd=HERE).returncode == 0:
+        break
 if not a.no_push:
     t = f"_t{a.simtime:g}" if a.simtime != 10 else ""
     files = [f"results/final_ssa_only{'' if n == 100 else f'_n{n}'}{t}.csv" for n in a.nodes] + \

@@ -27,7 +27,7 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
-COMMON = ("--simTime=10 --numNodes={nodes} --nodeSpeed=10.0 --spaceSize=200 --spaceZ=80 "
+COMMON = ("--simTime={simtime:g} --numNodes={nodes} --nodeSpeed=10.0 --spaceSize=200 --spaceZ=80 "
           "--p1Duration=10 --preambleLockDb=6 --autoPush=false --rxSensitivityDbm=-94 --topK=7")
 TOPK = 7   # each UAV must receive its 7 nearest neighbours within 50 m
 
@@ -96,6 +96,9 @@ METRICS = ["P1", "P2", "AoI1_mean", "AoI1_p99", "AoI1_max", "AoI2_mean", "AoI2_p
 BUILDUPS = ["buildup_csma", "buildup_ssa", "buildup_p2"]
 METRICS.append("DENS")   # mean number of UAVs within 50 m of a UAV (measured)
 
+# SSA final + P2 final only (density sweep: one invocation per swarm size)
+EXPERIMENTS["ssa_only"] = dict(steps=[("SSA (final)", dict(SSA_FINAL, **P2_FINAL))])
+
 # the three P1 methods with the final P2, for one chart per swarm size
 EXPERIMENTS["compare"] = dict(steps=[
     ("CSMA (final)", dict(CSMA_FINAL, **P2_FINAL)),
@@ -110,16 +113,18 @@ if __name__ == "__main__":
     ap.add_argument("--nodes", type=int, default=100, help="swarm size (same 200 x 200 x 80 m box)")
     ap.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 2) - 1))
     ap.add_argument("--no-push", action="store_true")
+    ap.add_argument("--simtime", type=float, default=10.0, help="simulated seconds per run (default 10)")
+    ap.add_argument("--skip-build", action="store_true", help="assume ns-3 is already built (parallel invocations)")
     a = ap.parse_args()
 
     PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
     NS3_DIR = os.path.expanduser(os.environ.get("NS3_DIR", "~/ns-3-dev"))
     if not os.path.exists(os.path.join(NS3_DIR, "ns3")):
         sys.exit(f"ns-3 not found at {NS3_DIR} (set NS3_DIR)")
-    for rel in ["scratch/lr-wpan-swarm.cc",
+    for rel in ([] if a.skip_build else ["scratch/lr-wpan-swarm.cc",
                 "src/lr-wpan/model/lr-wpan-phy.cc", "src/lr-wpan/model/lr-wpan-phy.h",
                 "src/lr-wpan/model/lr-wpan-csmaca.cc", "src/lr-wpan/model/lr-wpan-csmaca.h",
-                "src/lr-wpan/model/lr-wpan-mac.cc", "src/lr-wpan/model/lr-wpan-mac.h"]:
+                "src/lr-wpan/model/lr-wpan-mac.cc", "src/lr-wpan/model/lr-wpan-mac.h"]):
         s, d = os.path.join(PROJECT_DIR, rel), os.path.join(NS3_DIR, rel)
         if os.path.exists(s) and os.path.abspath(s) != os.path.abspath(d):
             os.makedirs(os.path.dirname(d), exist_ok=True)
@@ -128,8 +133,8 @@ if __name__ == "__main__":
     def flags(params):
         return " ".join(f"--{k}={v}" for k, v in sorted(params.items()))
 
-    COMMON = COMMON.format(nodes=a.nodes)
-    SUFFIX = "" if a.nodes == 100 else f"_n{a.nodes}"
+    COMMON = COMMON.format(nodes=a.nodes, simtime=a.simtime)
+    SUFFIX = ("" if a.nodes == 100 else f"_n{a.nodes}") + ("" if a.simtime == 10 else f"_t{a.simtime:g}")
     CSV_PATH = os.path.join(PROJECT_DIR, "results", f"final_runs_top{TOPK}{SUFFIX}.csv")   # cache key = flags + seed
     os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
     cache = {}
@@ -147,12 +152,12 @@ if __name__ == "__main__":
                 for (fl, sd), v in cache.items():
                     w.writerow([fl, sd] + [v[m] for m in METRICS])
 
-    b = subprocess.run(["./ns3", "build", "scratch/lr-wpan-swarm"], cwd=NS3_DIR,
+    b = subprocess.run(["true"] if a.skip_build else ["./ns3", "build", "scratch/lr-wpan-swarm"], cwd=NS3_DIR,
                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     if b.returncode != 0:
         print(b.stdout[-3000:])
         sys.exit("build failed")
-    run_root = os.path.join(NS3_DIR, f"final_runs_n{a.nodes}_{os.getpid()}")   # private per invocation
+    run_root = os.path.join(NS3_DIR, f"final_runs{SUFFIX}_{os.getpid()}")   # private per invocation
     os.makedirs(run_root, exist_ok=True)
 
     def parse(t1, t2):

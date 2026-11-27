@@ -2,66 +2,66 @@ P1 verification suite (SSA tuned: 150 us x 66 slots, +7 dBm; CSMA tuned: +4 dBm,
 ====================================================================================================
 1. KNOWN-ANSWER TESTS (SSA, fixed positions, forced P1 slots, +7 dBm, 2 s each)
   T1 range edge: 60 m at +7 dBm  (positions 0,0,10;60,0,10; P1 slots 0:10;1:40)
-     UAV 1 -> UAV 0: expect always -> PASS  (received 97 / sent 97 / cycles 98)  [RX -93.02 dBm >= -94 dBm]
-     UAV 0 -> UAV 1: expect always -> PASS  (received 98 / sent 98 / cycles 98)  [other direction]
+     UAV 1 -> UAV 0: expect always -> PASS  (received 101 / sent 101 / cycles 101)  [RX -93.02 dBm >= -94 dBm]
+     UAV 0 -> UAV 1: expect always -> PASS  (received 101 / sent 101 / cycles 101)  [other direction]
      cross-check violations: 0
   T2 range edge: 70 m at +7 dBm  (positions 0,0,10;70,0,10; P1 slots 0:10;1:40)
-     UAV 1 -> UAV 0: expect never  -> PASS  (received 0 / sent 97 / cycles 98)  [RX -95.03 dBm < -94 dBm]
-     UAV 0 -> UAV 1: expect never  -> PASS  (received 0 / sent 98 / cycles 98)  [other direction]
+     UAV 1 -> UAV 0: expect never  -> PASS  (received 0 / sent 101 / cycles 101)  [RX -95.03 dBm < -94 dBm]
+     UAV 0 -> UAV 1: expect never  -> PASS  (received 0 / sent 101 / cycles 101)  [other direction]
      cross-check violations: 0
   T3 same slot, interferer 1.5x farther  (positions 0,0,10;10,0,10;-15,0,10; P1 slots 0:30;1:5;2:5)
-     UAV 1 -> UAV 0: expect never  -> PASS  (received 0 / sent 98 / cycles 98)  [10 m vs 15 m: 5.28 dB < 6 dB]
-     UAV 2 -> UAV 0: expect never  -> PASS  (received 0 / sent 98 / cycles 98)  [weaker one]
+     UAV 1 -> UAV 0: expect never  -> PASS  (received 0 / sent 101 / cycles 101)  [10 m vs 15 m: 5.28 dB < 6 dB]
+     UAV 2 -> UAV 0: expect never  -> PASS  (received 0 / sent 101 / cycles 101)  [weaker one]
      cross-check violations: 0
   T4 same slot, interferer 2x farther  (positions 0,0,10;10,0,10;-20,0,10; P1 slots 0:30;1:5;2:5)
-     UAV 1 -> UAV 0: expect always -> PASS  (received 98 / sent 98 / cycles 98)  [10 m vs 20 m: 9.03 dB > 6 dB]
-     UAV 2 -> UAV 0: expect never  -> PASS  (received 0 / sent 98 / cycles 98)  [weaker one can never lock]
+     UAV 1 -> UAV 0: expect always -> PASS  (received 101 / sent 101 / cycles 101)  [10 m vs 20 m: 9.03 dB > 6 dB]
+     UAV 2 -> UAV 0: expect never  -> PASS  (received 0 / sent 101 / cycles 101)  [weaker one can never lock]
      cross-check violations: 0
   T5 half duplex: both in the same slot  (positions 0,0,10;10,0,10; P1 slots 0:5;1:5)
-     UAV 0 -> UAV 1: expect never  -> PASS  (received 0 / sent 98 / cycles 98)  [receiver is transmitting]
-     UAV 1 -> UAV 0: expect never  -> PASS  (received 0 / sent 98 / cycles 98)  [receiver is transmitting]
+     UAV 0 -> UAV 1: expect never  -> PASS  (received 0 / sent 101 / cycles 101)  [receiver is transmitting]
+     UAV 1 -> UAV 0: expect never  -> PASS  (received 0 / sent 101 / cycles 101)  [receiver is transmitting]
      cross-check violations: 0
   T6 adjacent slots (5 and 6) do not overlap  (positions 0,0,10;10,0,10; P1 slots 0:5;1:6)
-     UAV 0 -> UAV 1: expect always -> PASS  (received 98 / sent 98 / cycles 98)  [slot 5 TX ends at 136 us, slot 6 TX starts at 190 us]
-     UAV 1 -> UAV 0: expect always -> PASS  (received 98 / sent 98 / cycles 98)  [radio is back in RX 40 us after its own beacon]
+     UAV 0 -> UAV 1: expect always -> PASS  (received 101 / sent 101 / cycles 101)  [slot 5 TX ends at 136 us, slot 6 TX starts at 190 us]
+     UAV 1 -> UAV 0: expect always -> PASS  (received 101 / sent 101 / cycles 101)  [radio is back in RX 40 us after its own beacon]
      cross-check violations: 0
   T7 capture OFF: weak beacon locks first, strong one is lost  (positions 0,0,10;10,0,10;-30,0,10; P1 slots 0:30;1:5;2:5)
-     UAV 1 -> UAV 0: expect lost_only_if_weak_first -> PASS  (received 76 / sent 98 / cycles 98)  [no re-sync: S is lost exactly when W started first and locked; lost 22, of which W did NOT start first: 0]
+     UAV 1 -> UAV 0: expect lost_only_if_weak_first -> PASS  (received 78 / sent 101 / cycles 101)  [no re-sync: S is lost exactly when W started first and locked; lost 23, of which W did NOT start first: 0]
      cross-check violations: 0
   T8 capture ON: strong beacon (14.3 dB stronger) always captures  (positions 0,0,10;10,0,10;-30,0,10; P1 slots 0:30;1:5;2:5)
-     UAV 1 -> UAV 0: expect always -> PASS  (received 98 / sent 98 / cycles 98)  [re-sync to a packet >= 6 dB stronger]
+     UAV 1 -> UAV 0: expect always -> PASS  (received 101 / sent 101 / cycles 101)  [re-sync to a packet >= 6 dB stronger]
      cross-check violations: 0
 
 2. INDEPENDENT CROSS-CHECK OF EVERY BEACON RECEPTION (100 UAVs, 3 s, seed 1)
   swarm_ssa_3s: PASS (0 violations)
-    beacon receptions 223010, Top-5 links 72506 (delivered 67988)
+    beacon receptions 232056, Top-5 links 102870 (delivered 94666)
       V1 no matching TX (wrong sender/cycle): 0
       V2 TX was cut off                     : 0
       V4 receiver was transmitting          : 0
       V5 SINR below lock                    : 0
       V6 delivered without reception        : 0
       V7 reception not counted              : 0
-      borderline receptions (lock +-0.5 dB)     : 17490
+      borderline receptions (lock +-0.5 dB)     : 19414
       lost: an earlier beacon locked first (no re-sync)      : 0
       lost: receiver in RX/TX turnaround (own beacon <=40 us) : 0
-      unexplained losses                                     : 6
-          e.g. {'epoch': 76, 'rx': 18, 'tx': 9, 'dist': 26.956, 'delivered': 0, 'sinr': 13.95, 'start': 1545231.0}
-          e.g. {'epoch': 76, 'rx': 52, 'tx': 9, 'dist': 30.256, 'delivered': 0, 'sinr': 12.08, 'start': 1545231.0}
-          e.g. {'epoch': 76, 'rx': 95, 'tx': 9, 'dist': 22.118, 'delivered': 0, 'sinr': 16.99, 'start': 1545231.0}
+      unexplained losses                                     : 8
+          e.g. {'epoch': 108, 'rx': 65, 'tx': 58, 'dist': 41.206, 'delivered': 0, 'sinr': 7.09, 'start': 2118830.0}
+          e.g. {'epoch': 121, 'rx': 62, 'tx': 98, 'dist': 40.368, 'delivered': 0, 'sinr': 12.14, 'start': 2376230.0}
+          e.g. {'epoch': 140, 'rx': 10, 'tx': 98, 'dist': 42.845, 'delivered': 0, 'sinr': 8.85, 'start': 2752430.0}
   swarm_csma_3s: PASS (0 violations)
-    beacon receptions 108824, Top-5 links 72506 (delivered 59912)
+    beacon receptions 113377, Top-5 links 102870 (delivered 78816)
       V1 no matching TX (wrong sender/cycle): 0
       V2 TX was cut off                     : 0
       V4 receiver was transmitting          : 0
       V5 SINR below lock                    : 0
       V6 delivered without reception        : 0
       V7 reception not counted              : 0
-      borderline receptions (lock +-0.5 dB)     : 9480
-      lost: an earlier beacon locked first (no re-sync)      : 565
+      borderline receptions (lock +-0.5 dB)     : 9734
+      lost: an earlier beacon locked first (no re-sync)      : 492
       lost: receiver in RX/TX turnaround (own beacon <=40 us) : 0
-      unexplained losses                                     : 17
-          e.g. {'epoch': 6, 'rx': 4, 'tx': 22, 'dist': 35.167, 'delivered': 0, 'sinr': 8.96, 'start': 105094.0}
-          e.g. {'epoch': 6, 'rx': 51, 'tx': 22, 'dist': 40.827, 'delivered': 0, 'sinr': 7.44, 'start': 105094.0}
-          e.g. {'epoch': 8, 'rx': 95, 'tx': 82, 'dist': 31.763, 'delivered': 0, 'sinr': 11.43, 'start': 153386.0}
+      unexplained losses                                     : 41
+          e.g. {'epoch': 6, 'rx': 4, 'tx': 22, 'dist': 35.192, 'delivered': 0, 'sinr': 8.96, 'start': 101094.0}
+          e.g. {'epoch': 6, 'rx': 51, 'tx': 22, 'dist': 40.866, 'delivered': 0, 'sinr': 7.43, 'start': 101094.0}
+          e.g. {'epoch': 8, 'rx': 95, 'tx': 82, 'dist': 31.753, 'delivered': 0, 'sinr': 11.43, 'start': 147786.0}
 
 OVERALL: ALL PASS

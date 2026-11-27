@@ -80,7 +80,7 @@ double g_p1DurationMs = 10.0; // Phase 1 Duration in ms (configurable via cmd li
 double g_phase1DurationUs = 10000.0;
 double g_cycleMs = 21.0;            // Dynamically computed: g_p1DurationMs + 1 + (g_numDataSlots * g_dataSlotUs / 1000.0)
 double g_simTime = 10.0;            // Total simulation duration in seconds (default 10.0s)
-const double GAP_US = 1000.0; 
+double GAP_US = 200.0;   // P1 end -> P2 start (us): schedule computation (~tens of us on a 128 MHz M33) + margin (--p1p2GapUs; was 1000)
 const int MAX_DATA_SLOTS = 64;            // Maximum supported slot array buffer size
 const int MAX_DATA_CHANNELS = 16;        // Maximum supported data channels 
 
@@ -2228,6 +2228,7 @@ int main(int argc, char *argv[]) {
     cmd.AddValue("positions", "Test mode: fixed positions 'x,y,z;x,y,z;...' (sets numNodes, speed 0)", g_testPositions);
     cmd.AddValue("forceP1Slots", "Test mode: fixed SSA P1 slots 'id:slot;...' (no reselection)", g_forceP1Slots);
     cmd.AddValue("forceCells", "Test mode: forced P2 cells 'id:slot:ch[:slot2:ch2];...'", g_forceCells);
+    cmd.AddValue("p1p2GapUs", "Gap between the end of P1 and the start of P2 in us (default 200)", GAP_US);
     cmd.AddValue("topK", "Number of nearest neighbours within 50 m that each UAV must receive (default 7)", K_CLOSEST);
     cmd.AddValue("p1Capture", "Idealized P1 capture: re-sync to a packet >= preambleLockDb stronger (default false; real BLE cannot)", g_p1Capture);
     cmd.AddValue("p2SmartPick", "Phase 2 (2 copies): first book the copy whose cell no other heard neighbour claims (default true)", g_p2SmartPick);

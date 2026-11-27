@@ -54,9 +54,9 @@ for py in (sys.executable, "/usr/bin/python3"):
         break
 if not a.no_push:
     t = f"_t{a.simtime:g}" if a.simtime != 10 else ""
-    files = [f"results/final_ssa_only{'' if n == 100 else f'_n{n}'}{t}.csv" for n in a.nodes] + \
-            [f"results/final_runs_top7{'' if n == 100 else f'_n{n}'}{t}.csv" for n in a.nodes] + \
-            [f"figures/final/density_ssa{t}.png", "run_density_ssa.py", "run_final.py", "plot_density_final.py"]
+    files = [f"results/final_ssa_only_v2{'' if n == 100 else f'_n{n}'}{t}.csv" for n in a.nodes] + \
+            [f"results/final_runs_top7_gap200_v2{'' if n == 100 else f'_n{n}'}{t}.csv" for n in a.nodes] + \
+            [f"figures/final/density_ssa_v2{t}.png", "run_density_ssa.py", "run_final.py", "plot_density_final.py"]
     files = [f for f in files if os.path.exists(os.path.join(HERE, f))]
     try:
         subprocess.run(["git", "pull", "--rebase", "--autostash", "origin", "main"], cwd=HERE, check=True)

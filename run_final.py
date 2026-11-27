@@ -31,6 +31,7 @@ COMMON = ("--simTime={simtime:g} --numNodes={nodes} --nodeSpeed=10.0 --spaceSize
           "--p1Duration=10 --preambleLockDb=6 --autoPush=false --rxSensitivityDbm=-94 --topK=7 --p1p2GapUs=200")
 TOPK = 7   # each UAV must receive its 7 nearest neighbours within 50 m
 GAP_US = 200   # P1 -> P2 gap; part of the cache file name (results with the old 1000 us gap stay in the old files)
+MODEL_TAG = "v2"   # v2: radio off in idle P2 slots, time-average + peak AoI, P1 grid at 150 us (65 slots)
 
 # ---------------- final settings ----------------
 P2_FINAL = dict(dataSlotUs=400, slotGuardBandUs=30, numSlots=24, numChannels=10, p2ExtraRx=3, p2TxPower=5,
@@ -136,7 +137,7 @@ if __name__ == "__main__":
 
     COMMON = COMMON.format(nodes=a.nodes, simtime=a.simtime)
     SUFFIX = ("" if a.nodes == 100 else f"_n{a.nodes}") + ("" if a.simtime == 10 else f"_t{a.simtime:g}")
-    CSV_PATH = os.path.join(PROJECT_DIR, "results", f"final_runs_top{TOPK}_gap{GAP_US}{SUFFIX}.csv")   # cache key = flags + seed
+    CSV_PATH = os.path.join(PROJECT_DIR, "results", f"final_runs_top{TOPK}_gap{GAP_US}_{MODEL_TAG}{SUFFIX}.csv")   # cache key = flags + seed
     os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
     cache = {}
     if os.path.exists(CSV_PATH):
@@ -167,7 +168,7 @@ if __name__ == "__main__":
             return float(m.group(1)) if m else float("nan")
 
         def aoi(t, k):
-            m = re.search(rf"AoI {k} at cycle end \(mean / p99 / max\)\s*:\s*([\d.]+) / ([\d.]+) / ([\d.]+)", t)
+            m = re.search(rf"AoI {k} \(time-avg / peak p99 / peak max\)\s*:\s*([\d.]+) / ([\d.]+) / ([\d.]+)", t)
             return [float(x) for x in m.groups()] if m else [float("nan")] * 3
         def safety(t, k):
             m = re.search(rf"AoI {k} safety \(>100 ms % / >500 ms % / max <=20 m\)\s*:\s*([\d.]+) / ([\d.]+) / ([\d.]+)", t)
@@ -223,7 +224,7 @@ if __name__ == "__main__":
 
     saved = []
     for e, rows in plan.items():
-        path = os.path.join(PROJECT_DIR, "results", f"final_{e}{SUFFIX}.csv")
+        path = os.path.join(PROJECT_DIR, "results", f"final_{e}_{MODEL_TAG}{SUFFIX}.csv")
         with open(path, "w", newline="") as f:
             w = csv.writer(f)
             w.writerow(["step", "label", "kind", "seeds"] + [f"{m}_{s}" for m in METRICS for s in ("mean", "std")] + ["flags"])

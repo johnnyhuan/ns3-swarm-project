@@ -42,21 +42,16 @@ def read(path):
 
 
 pts = {}
-files = glob.glob(os.path.join(HERE, "results", f"final_ssa_only_n*{TSUF}.csv"))
-if SIMT == 10:
-    files += glob.glob(os.path.join(HERE, "results", "final_compare_n*.csv"))
-f100 = os.path.join(HERE, "results", f"final_ssa_only{TSUF}.csv")
-for f in files + ([f100] if os.path.exists(f100) else []):
-    m = re.search(r"_n(\d+)(?:_t[\d.]+)?\.csv$", f)
-    if SIMT == 10 and m is None and "_t" in os.path.basename(f):
+# current model only (v2: radio off in idle P2 slots, time-average + peak AoI, 65 P1 slots)
+for f in glob.glob(os.path.join(HERE, "results", f"final_ssa_only_v2*{TSUF}.csv")):
+    base = os.path.basename(f)
+    if TSUF == "" and "_t" in base.replace("final_", ""):
         continue
+    m = re.search(r"_n(\d+)", base)
     n = int(m.group(1)) if m else 100
     for r in read(f):
         if r["label"].startswith("SSA"):
             pts[n] = r
-fb = os.path.join(HERE, "results", "final_buildup_ssa.csv")
-if SIMT == 10 and os.path.exists(fb) and 100 not in pts:
-    pts[100] = [r for r in read(fb) if r["kind"] == "step"][-1]
 
 
 def val(r, k):
@@ -70,8 +65,9 @@ for n, r in pts.items():
 data.sort(key=lambda t: t[0])
 xs = [d for d, _ in data]
 
-PANELS = [("Success rate (%)", "P1", "P2", "%"), ("Mean AoI (ms)", "AoI1_mean", "AoI2_mean", "ms"),
-          ("p99 AoI (ms)", "AoI1_p99", "AoI2_p99", "ms"), ("Max AoI (ms)", "AoI1_max", "AoI2_max", "ms")]
+PANELS = [("Success rate (%)", "P1", "P2", "%"), ("Mean AoI: time average (ms)", "AoI1_mean", "AoI2_mean", "ms"),
+          ("Peak AoI p99 (ms): 99 % of updates arrive within", "AoI1_p99", "AoI2_p99", "ms"),
+          ("Peak AoI max (ms): longest time without an update", "AoI1_max", "AoI2_max", "ms")]
 fig, axes = plt.subplots(2, 2, figsize=(15, 9.6))
 for ax, (title, k1, k2, unit) in zip(axes.flat, PANELS):
     for k, color, mk, name in ((k1, BLUE, "o", "P1 (discovery)"), (k2, AQUA, "s", "P2 (state packets)")):
@@ -93,7 +89,8 @@ fig.legend(h, l, loc="upper right", bbox_to_anchor=(0.99, 0.995), ncol=2, fontsi
 fig.suptitle("SSA + P2 (final design) vs swarm density", fontsize=15, fontweight="bold", x=0.01, ha="left")
 fig.text(0.01, 0.005, f"200 x 200 x 80 m, 10 m/s random waypoint, {SIMT:g} s, seed 1; density changed by the number of UAVs. "
          "nRF54L15 DK (QFN48): TX <= +7 dBm, BLE 2M sensitivity -94 dBm. Success = each UAV's 7 nearest neighbours "
-         "(<= 50 m) really received per cycle; AoI sampled at the end of every cycle.", fontsize=9, color=INK2, wrap=True)
+         "(<= 50 m) really received per cycle. Mean AoI = time average of the age of the newest packet held from them; "
+         "peak AoI = age just before each new packet arrives.", fontsize=9, color=INK2, wrap=True)
 fig.tight_layout(rect=(0, 0.04, 1, 0.96))
-fig.savefig(os.path.join(OUT, f"density_ssa{TSUF}.png"), dpi=150)
-print(f"saved figures/final/density_ssa{TSUF}.png  points:", ", ".join(f"{d:.1f}" for d in xs))
+fig.savefig(os.path.join(OUT, f"density_ssa_v2{TSUF}.png"), dpi=150)
+print(f"saved figures/final/density_ssa_v2{TSUF}.png  points:", ", ".join(f"{d:.1f}" for d in xs))

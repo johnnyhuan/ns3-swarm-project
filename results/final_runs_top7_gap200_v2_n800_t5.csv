@@ -1,0 +1,2 @@
+flags,seed,P1,P2,AoI1_mean,AoI1_p99,AoI1_max,AoI2_mean,AoI2_p99,AoI2_max,AoI1_over100,AoI1_over500,AoI1_maxclose,AoI2_over100,AoI2_over500,AoI2_maxclose,DENS
+--dataSlotUs=400 --enableP1Ssa=true --numChannels=10 --numSlots=24 --p1AvoidDist=50 --p1PoolFrac=0.25 --p1ReselInitMax=-1 --p1ReselInitMin=-1 --p1ReselMax=60 --p1ReselMin=20 --p1SenseDecay=0.6 --p1SlotUs=150 --p1TxPower=7 --p2Copies=2 --p2ExtraRx=3 --p2SmartPick=true --p2TxPower=5 --slotGuardBandUs=30,1,54.2,77.6,418.26,28.6,4989.6,47.23,54.96,2257.92,39.616,24.825,4989.6,11.113,1.819,1980.0,124.84

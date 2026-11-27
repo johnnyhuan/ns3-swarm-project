@@ -91,6 +91,14 @@ EXPERIMENTS = {
                      p1ReselInitMin=2 if init else -1, p1ReselInitMax=5 if init else -1))
                for init in (False, True)
                for lo, hi in ((3, 9), (5, 15), (10, 30), (15, 45), (20, 60), (30, 90), (50, 150))]),
+    # SSA RSSI-memory decay sweep (1.0 = no decay, history halved at reselection), everything else final
+    "sweep_decay": dict(
+        steps=[(f"decay {d:.1f}", dict(SSA_FINAL, **P2_FINAL, p1SenseDecay=round(d, 1)))
+               for d in [x / 10 for x in range(1, 11)]]),
+    # SSA reselection counter sweep, no short first-pick counter, everything else final
+    "sweep_counter": dict(
+        steps=[(f"{lo}-{hi}", dict(SSA_FINAL, **P2_FINAL, p1ReselMin=lo, p1ReselMax=hi))
+               for lo, hi in ((2, 6), (5, 15), (10, 30), (15, 45), (20, 60), (30, 90))]),
 }
 
 METRICS = ["P1", "P2", "AoI1_mean", "AoI1_p99", "AoI1_max", "AoI2_mean", "AoI2_p99", "AoI2_max",

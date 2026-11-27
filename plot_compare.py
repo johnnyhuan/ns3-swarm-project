@@ -28,8 +28,9 @@ plt.rcParams.update({
     "axes.spines.top": False, "axes.spines.right": False,
 })
 import sys
-NODES = int(sys.argv[1]) if len(sys.argv) > 1 else 100   # usage: python3 plot_compare.py [nodes]
-DENSITY = 20.2   # 100 UAVs: measured mean UAVs within a 50 m sphere around each UAV (seed 1)
+NODES = int(sys.argv[1]) if len(sys.argv) > 1 else 100   # usage: python3 plot_compare.py [nodes] [simtime]
+SIMT = float(sys.argv[2]) if len(sys.argv) > 2 else 10.0
+SUFFIX = ("" if NODES == 100 else f"_n{NODES}") + ("" if SIMT == 10 else f"_t{SIMT:g}")
 
 
 def rows(path):
@@ -37,14 +38,9 @@ def rows(path):
         return list(csv.DictReader(f))
 
 
-if NODES == 100:
-    csma = rows("final_buildup_csma.csv")
-    ssa = rows("final_buildup_ssa.csv")
-    picked = [[r for r in csma if r["kind"] == "step"][-1], [r for r in csma if r["kind"] == "reference"][0],
-              [r for r in ssa if r["kind"] == "step"][-1]]
-else:
-    picked = rows(f"final_compare_n{NODES}.csv")   # order: CSMA, CSMA + capture, SSA
-    DENSITY = sum(float(r["DENS_mean"]) for r in picked) / len(picked)
+# model v2 (radio off in idle P2 slots, time-average + peak AoI, 65 P1 slots)
+picked = rows(f"final_compare_v2{SUFFIX}.csv")   # order: CSMA, CSMA + capture, SSA
+DENSITY = sum(float(r["DENS_mean"]) for r in picked) / len(picked)
 methods = [
     ("CSMA (final)", picked[0], BLUE, "-", "o"),
     ("CSMA + capture (idealized, not possible on BLE chips)", picked[1], BLUE, "--", "o"),
@@ -101,10 +97,10 @@ h, l = a2.get_legend_handles_labels()
 fig.legend(h, l, loc="upper right", bbox_to_anchor=(0.99, 0.995), ncol=3, fontsize=10.5)
 fig.suptitle(f"P1 method comparison (P2 = final design) | {NODES} UAVs, on average {DENSITY:.1f} UAVs within 50 m of each UAV",
              fontsize=14, fontweight="bold", x=0.01, ha="left", y=0.93)
-fig.text(0.01, 0.01, "200 x 200 x 80 m, 10 m/s random waypoint, 10 s, seed 1. nRF54L15 DK (QFN48): TX <= +7 dBm, "
+fig.text(0.01, 0.01, f"200 x 200 x 80 m, 10 m/s random waypoint, {SIMT:g} s, seed 1. nRF54L15 DK (QFN48): TX <= +7 dBm, "
          "BLE 2M sensitivity -94 dBm. Success = each UAV's 7 nearest neighbours (<= 50 m) really received per cycle; "
-         "AoI = age of the newest packet held from them, sampled at the end of every cycle.", fontsize=9, color=INK2, wrap=True)
+         "mean AoI = time average of the age of the newest packet held from them; p99 / max = peak AoI (age just before each new packet arrives).", fontsize=9, color=INK2, wrap=True)
 fig.tight_layout(rect=(0, 0.05, 1, 0.9))
-name = "compare_methods.png" if NODES == 100 else f"compare_methods_n{NODES}.png"
+name = f"compare_methods_v2{SUFFIX}.png"
 fig.savefig(os.path.join(OUT, name), dpi=150)
 print("saved figures/final/" + name)
